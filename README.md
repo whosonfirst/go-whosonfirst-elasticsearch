@@ -43,7 +43,17 @@ The `es-whosonfirst-index` tool is a thin wrapper around the `iterwriter` tool w
 
 The need to URL-encode `whosonfirst/go-writer/v2` URIs is unfortunate but is tolerated since the use to `gocloud.dev/runtimevar` URIs provides a means to keep secrets and other sensitive values out of command-line arguments (and by extension process lists). This may not be much of an issues for things like Elasticsearch but is an issue for things like MySQL DSN strings.
 
-#### Elasticsearch "writer" URIs
+### Environment variables
+
+You can set (or override) command line flags with environment variables. Environment variable are expected to:
+
+* Be upper-cased
+* Replace all instances of `-` with `_`
+* Be prefixed with `WOF_`
+
+For example the `-writer-uri` flag would be overridden by the `WOF_WRITER_URI` environment variable.
+
+## Elasticsearch "writer" URIs
 
 This code assumes Elasticsearch 7.x by default although this may change with future releases. It is possible to specify the use of Elasticsearch 7.x or 2.x for indexing as follows:
 

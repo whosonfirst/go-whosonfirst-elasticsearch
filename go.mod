@@ -15,7 +15,7 @@ require (
 	github.com/tidwall/sjson v1.2.5
 	github.com/whosonfirst/go-whosonfirst-feature v0.0.24
 	github.com/whosonfirst/go-whosonfirst-iterate-git/v2 v2.1.1
-	github.com/whosonfirst/go-whosonfirst-iterwriter v0.0.2
+	github.com/whosonfirst/go-whosonfirst-iterwriter v0.0.3
 	github.com/whosonfirst/go-whosonfirst-placetypes v0.3.0
 	github.com/whosonfirst/go-writer/v2 v2.0.0
 	gopkg.in/olivere/elastic.v3 v3.0.75
