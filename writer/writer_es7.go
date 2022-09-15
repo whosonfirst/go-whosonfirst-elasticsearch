@@ -32,6 +32,7 @@ type ElasticsearchV7Writer struct {
 	indexer         esutil.BulkIndexer
 	index_alt_files bool
 	prepare_funcs   []document.PrepareDocumentFunc
+	logger          *log.Logger
 }
 
 func NewElasticsearchV7Writer(ctx context.Context, uri string) (wof_writer.Writer, error) {
@@ -124,8 +125,11 @@ func NewElasticsearchV7Writer(ctx context.Context, uri string) (wof_writer.Write
 
 	bi, err := esutil.NewBulkIndexer(bi_cfg)
 
+	logger := log.Default()
+
 	wr := &ElasticsearchV7Writer{
 		indexer: bi,
+		logger:  logger,
 	}
 
 	str_index_alt := q.Get("index-alt-files")
@@ -244,6 +248,11 @@ func (wr *ElasticsearchV7Writer) Close(ctx context.Context) error {
 }
 
 func (wr *ElasticsearchV7Writer) Flush(ctx context.Context) error {
+	return nil
+}
+
+func (wr *ElasticsearchV7Writer) SetLogger(ctx context.Context, logger *log.Logger) error {
+	wr.logger = logger
 	return nil
 }
 

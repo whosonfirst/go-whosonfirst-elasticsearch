@@ -30,6 +30,7 @@ type ElasticsearchV2Writer struct {
 	index           string
 	index_alt_files bool
 	prepare_funcs   []document.PrepareDocumentFunc
+	logger          *log.Logger
 }
 
 func NewElasticsearchV2Writer(ctx context.Context, uri string) (wof_writer.Writer, error) {
@@ -106,10 +107,13 @@ func NewElasticsearchV2Writer(ctx context.Context, uri string) (wof_writer.Write
 	prepare_funcs := make([]document.PrepareDocumentFunc, 0)
 	prepare_funcs = append(prepare_funcs, document.PrepareSpelunkerV1Document)
 
+	logger := log.Default()
+
 	wr := &ElasticsearchV2Writer{
-		processor: bp,
-		index:     es_index,
+		processor:     bp,
+		index:         es_index,
 		prepare_funcs: prepare_funcs,
+		logger:        logger,
 	}
 
 	return wr, nil
@@ -223,5 +227,10 @@ func (wr *ElasticsearchV2Writer) Flush(ctx context.Context) error {
 		return fmt.Errorf("Failed to flush processor, %w", err)
 	}
 
+	return nil
+}
+
+func (wr *ElasticsearchV2Writer) SetLogger(ctx context.Context, logger *log.Logger) error {
+	wr.logger = logger
 	return nil
 }
