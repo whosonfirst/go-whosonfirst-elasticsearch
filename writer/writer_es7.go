@@ -254,10 +254,10 @@ func (wr *ElasticsearchV7Writer) Close(ctx context.Context) error {
 	stats := wr.indexer.Stats()
 
 	if stats.NumFailed > 0 {
-		return fmt.Errorf("Indexed [%d] documents with [%d] errors", stats.NumFlushed, stats.NumFailed)
+		return fmt.Errorf("Indexed (%d) documents with (%d) errors", stats.NumFlushed, stats.NumFailed)
 	}
 
-	wr.logger.Printf("Successfully indexed [%d] documents", stats.NumFlushed)
+	wr.logger.Printf("Successfully indexed (%d) documents", stats.NumFlushed)
 	return nil
 }
 
