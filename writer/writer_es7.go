@@ -229,7 +229,7 @@ func (wr *ElasticsearchV7Writer) Write(ctx context.Context, path string, r io.Re
 			}
 		},
 	}
-	
+
 	err = wr.indexer.Add(ctx, bulk_item)
 
 	if err != nil {
@@ -244,7 +244,21 @@ func (wr *ElasticsearchV7Writer) WriterURI(ctx context.Context, uri string) stri
 }
 
 func (wr *ElasticsearchV7Writer) Close(ctx context.Context) error {
-	return wr.indexer.Close(ctx)
+
+	err := wr.indexer.Close(ctx)
+
+	if err != nil {
+		return fmt.Errorf("Failed to close indexer, %w", err)
+	}
+
+	stats := wr.indexer.Stats()
+
+	if stats.NumFailed > 0 {
+		return fmt.Errorf("Indexed [%d] documents with [%d] errors", stats.NumFlushed, stats.NumFailed)
+	}
+
+	wr.logger.Printf("Successfully indexed [%d] documents", stats.NumFlushed)
+	return nil
 }
 
 func (wr *ElasticsearchV7Writer) Flush(ctx context.Context) error {
