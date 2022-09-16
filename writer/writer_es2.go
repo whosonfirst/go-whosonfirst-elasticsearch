@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/whosonfirst/go-whosonfirst-elasticsearch/document"
 	"github.com/whosonfirst/go-whosonfirst-feature/properties"
-	wof_writer "github.com/whosonfirst/go-writer/v2"
+	wof_writer "github.com/whosonfirst/go-writer/v3"
 	es "gopkg.in/olivere/elastic.v3"
 	"io"
 	"log"

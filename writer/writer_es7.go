@@ -11,7 +11,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v7/esutil"
 	"github.com/whosonfirst/go-whosonfirst-elasticsearch/document"
 	"github.com/whosonfirst/go-whosonfirst-feature/properties"
-	wof_writer "github.com/whosonfirst/go-writer/v2"
+	wof_writer "github.com/whosonfirst/go-writer/v3"
 	"io"
 	"log"
 	"net/url"
@@ -125,7 +125,7 @@ func NewElasticsearchV7Writer(ctx context.Context, uri string) (wof_writer.Write
 
 	bi, err := esutil.NewBulkIndexer(bi_cfg)
 
-	logger := log.Default()
+	logger := log.New(io.Discard, "", 0)
 
 	wr := &ElasticsearchV7Writer{
 		indexer: bi,
@@ -218,18 +218,18 @@ func (wr *ElasticsearchV7Writer) Write(ctx context.Context, path string, r io.Re
 		Body:       bytes.NewReader(enc_f),
 
 		OnSuccess: func(ctx context.Context, item esutil.BulkIndexerItem, res esutil.BulkIndexerResponseItem) {
-			// log.Printf("Indexed %s\n", path)
+			wr.logger.Printf("Indexed %s as %s\n", path, doc_id)
 		},
 
 		OnFailure: func(ctx context.Context, item esutil.BulkIndexerItem, res esutil.BulkIndexerResponseItem, err error) {
 			if err != nil {
-				log.Printf("ERROR: Failed to index %s, %s", path, err)
+				wr.logger.Printf("ERROR: Failed to index %s, %s", path, err)
 			} else {
-				log.Printf("ERROR: Failed to index %s, %s: %s", path, res.Error.Type, res.Error.Reason)
+				wr.logger.Printf("ERROR: Failed to index %s, %s: %s", path, res.Error.Type, res.Error.Reason)
 			}
 		},
 	}
-
+	
 	err = wr.indexer.Add(ctx, bulk_item)
 
 	if err != nil {
