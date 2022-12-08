@@ -34,7 +34,7 @@ type ElasticsearchV7Writer struct {
 	index_alt_files bool
 	prepare_funcs   []document.PrepareDocumentFunc
 	logger          *log.Logger
-	waitGroup *sync.WaitGroup
+	waitGroup       *sync.WaitGroup
 }
 
 func NewElasticsearchV7Writer(ctx context.Context, uri string) (wof_writer.Writer, error) {
@@ -130,10 +130,10 @@ func NewElasticsearchV7Writer(ctx context.Context, uri string) (wof_writer.Write
 	logger := log.New(io.Discard, "", 0)
 
 	wg := new(sync.WaitGroup)
-	
+
 	wr := &ElasticsearchV7Writer{
-		indexer: bi,
-		logger:  logger,
+		indexer:   bi,
+		logger:    logger,
 		waitGroup: wg,
 	}
 
@@ -237,7 +237,7 @@ func (wr *ElasticsearchV7Writer) Write(ctx context.Context, path string, r io.Re
 
 	wr.waitGroup.Add(1)
 	defer wr.waitGroup.Done()
-	
+
 	err = wr.indexer.Add(ctx, bulk_item)
 
 	if err != nil {
@@ -254,7 +254,7 @@ func (wr *ElasticsearchV7Writer) WriterURI(ctx context.Context, uri string) stri
 func (wr *ElasticsearchV7Writer) Close(ctx context.Context) error {
 
 	wr.waitGroup.Wait()
-	
+
 	err := wr.indexer.Close(ctx)
 
 	if err != nil {
