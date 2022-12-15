@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/cenkalti/backoff/v4"
 	es "github.com/elastic/go-elasticsearch/v7"
+	"github.com/elastic/go-elasticsearch/v7/esapi"
 	"github.com/elastic/go-elasticsearch/v7/estransport"
 	"github.com/elastic/go-elasticsearch/v7/esutil"
 	"github.com/whosonfirst/go-whosonfirst-elasticsearch/document"
@@ -30,6 +31,8 @@ func init() {
 
 type ElasticsearchV7Writer struct {
 	wof_writer.Writer
+	client          *es.Client
+	index           string
 	indexer         esutil.BulkIndexer
 	index_alt_files bool
 	prepare_funcs   []document.PrepareDocumentFunc
@@ -118,23 +121,48 @@ func NewElasticsearchV7Writer(ctx context.Context, uri string) (wof_writer.Write
 		workers = w
 	}
 
-	bi_cfg := esutil.BulkIndexerConfig{
-		Index:         es_index,
-		Client:        es_client,
-		NumWorkers:    workers,
-		FlushInterval: 30 * time.Second,
-	}
+	bulk_index := true
 
-	bi, err := esutil.NewBulkIndexer(bi_cfg)
+	q_bulk_index := q.Get("bulk-index")
+
+	if q_bulk_index != "" {
+
+		v, err := strconv.ParseBool(q_bulk_index)
+
+		if err != nil {
+			return nil, fmt.Errorf("Failed to parse ?bulk-index= parameter, %w", err)
+		}
+
+		bulk_index = v
+	}
 
 	logger := log.New(io.Discard, "", 0)
 
 	wg := new(sync.WaitGroup)
 
 	wr := &ElasticsearchV7Writer{
-		indexer:   bi,
+		client:    es_client,
+		index:     es_index,
 		logger:    logger,
 		waitGroup: wg,
+	}
+
+	if bulk_index {
+
+		bi_cfg := esutil.BulkIndexerConfig{
+			Index:         es_index,
+			Client:        es_client,
+			NumWorkers:    workers,
+			FlushInterval: 30 * time.Second,
+		}
+
+		bi, err := esutil.NewBulkIndexer(bi_cfg)
+
+		if err != nil {
+			return nil, fmt.Errorf("Failed to create bulk indexer, %w", err)
+		}
+
+		wr.indexer = bi
 	}
 
 	str_index_alt := q.Get("index-alt-files")
@@ -217,6 +245,43 @@ func (wr *ElasticsearchV7Writer) Write(ctx context.Context, path string, r io.Re
 		return 0, fmt.Errorf("Failed to marshal %s, %v", path, err)
 	}
 
+	wr.waitGroup.Add(1)
+	defer wr.waitGroup.Done()
+
+	// Do NOT bulk index. For example if you are using this in concert with
+	// go-writer.MultiWriter running in async mode in a Lambda function where
+	// the likelihood of that code being re-used across invocations is high.
+	// The problem is that the first invocation will call wr.indexer.Close()
+	// but then the second invocation, using the same code, will call wr.indexer.Add()
+	// which will trigger a panic because the code (in esutil) will try to send
+	// data on a closed channel. Computers...
+
+	if wr.indexer == nil {
+
+		req := esapi.IndexRequest{
+			Index:      wr.index,
+			DocumentID: doc_id,
+			Body:       bytes.NewReader(enc_f),
+			Refresh:    "true",
+		}
+
+		rsp, err := req.Do(ctx, wr.client)
+
+		if err != nil {
+			return 0, fmt.Errorf("Error getting response: %w", err)
+		}
+
+		defer rsp.Body.Close()
+
+		if rsp.IsError() {
+			return 0, fmt.Errorf("Failed to index document, %w", rsp.Status())
+		}
+
+		return 0, nil
+	}
+
+	// Do bulk index
+
 	bulk_item := esutil.BulkIndexerItem{
 		Action:     "index",
 		DocumentID: doc_id,
@@ -235,9 +300,6 @@ func (wr *ElasticsearchV7Writer) Write(ctx context.Context, path string, r io.Re
 		},
 	}
 
-	wr.waitGroup.Add(1)
-	defer wr.waitGroup.Done()
-
 	err = wr.indexer.Add(ctx, bulk_item)
 
 	if err != nil {
@@ -254,6 +316,14 @@ func (wr *ElasticsearchV7Writer) WriterURI(ctx context.Context, uri string) stri
 func (wr *ElasticsearchV7Writer) Close(ctx context.Context) error {
 
 	wr.waitGroup.Wait()
+
+	// Do NOT bulk index
+
+	if wr.indexer == nil {
+		return nil
+	}
+
+	// Do bulk index
 
 	err := wr.indexer.Close(ctx)
 
@@ -279,57 +349,3 @@ func (wr *ElasticsearchV7Writer) SetLogger(ctx context.Context, logger *log.Logg
 	wr.logger = logger
 	return nil
 }
-
-/*
-
-index/es7yyyindex/es7yfunc PrepareFuncsFromFlagSet(ctx context.Context, fs *flag.FlagSet) ([]document.PrepareDocumentFunc, error) {
-
-	index_spelunker_v1, err := lookup.BoolVar(fs, FLAG_INDEX_SPELUNKER_V1)
-
-	if err != nil {
-		return nil, err
-	}
-
-	append_spelunker_v1, err := lookup.BoolVar(fs, FLAG_APPEND_SPELUNKER_V1)
-
-	if err != nil {
-		return nil, err
-	}
-
-	index_only_props, err := lookup.BoolVar(fs, FLAG_INDEX_PROPS)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if index_spelunker_v1 {
-
-		if index_only_props {
-			msg := fmt.Sprintf("-%s can not be used when -%s is enabled", FLAG_INDEX_PROPS, FLAG_INDEX_SPELUNKER_V1)
-			return nil, errors.New(msg)
-		}
-
-		if append_spelunker_v1 {
-			msg := fmt.Sprintf("-%s can not be used when -%s is enabled", FLAG_APPEND_SPELUNKER_V1, FLAG_INDEX_SPELUNKER_V1)
-			return nil, errors.New(msg)
-		}
-	}
-
-	prepare_funcs := make([]document.PrepareDocumentFunc, 0)
-
-	if index_spelunker_v1 {
-		prepare_funcs = append(prepare_funcs, document.PrepareSpelunkerV1Document)
-	}
-
-	if index_only_props {
-		prepare_funcs = append(prepare_funcs, document.ExtractProperties)
-	}
-
-	if append_spelunker_v1 {
-		prepare_funcs = append(prepare_funcs, document.AppendSpelunkerV1Properties)
-	}
-
-	return prepare_funcs, nil
-}
-
-*/
