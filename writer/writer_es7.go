@@ -29,6 +29,8 @@ func init() {
 	wof_writer.RegisterWriter(ctx, "elasticsearch7", NewElasticsearchV7Writer)
 }
 
+// ElasticsearchV7Writer is a struct that implements the `Writer` interface for writing documents to an Elasticsearch
+// index using the github.com/elastic/go-elasticsearch/v7 package.
 type ElasticsearchV7Writer struct {
 	wof_writer.Writer
 	client          *es.Client
@@ -40,6 +42,17 @@ type ElasticsearchV7Writer struct {
 	waitGroup       *sync.WaitGroup
 }
 
+// NewElasticsearchV7Writer returns a new `ElasticsearchV7Writer` instance for writing documents to an
+// Elasticsearch index using the github.com/elastic/go-elasticsearch/v7 package configured by 'uri' which
+// is expected to take the form of:
+//
+//	elasticsearch://{HOST}:{PORT}/{INDEX}?{QUERY_PARAMETERS}
+//	elasticsearch7://{HOST}:{PORT}/{INDEX}?{QUERY_PARAMETERS}
+//
+// Where {QUERY_PARAMETERS} may be one or more of the following:
+// * ?debug={BOOLEAN}. If true then verbose Elasticsearch logging for requests and responses will be enabled. Default is false.
+// * ?bulk-index={BOOLEAN}. If true then writes will be performed using a "bulk indexer". Default is true.
+// * ?workers={INT}. The number of users to enable for bulk indexing. Default is 10.
 func NewElasticsearchV7Writer(ctx context.Context, uri string) (wof_writer.Writer, error) {
 
 	u, err := url.Parse(uri)
@@ -106,19 +119,15 @@ func NewElasticsearchV7Writer(ctx context.Context, uri string) (wof_writer.Write
 		return nil, fmt.Errorf("Failed to create ES client, %w", err)
 	}
 
-	workers := 10
+	logger := log.New(io.Discard, "", 0)
 
-	str_workers := q.Get("workers")
+	wg := new(sync.WaitGroup)
 
-	if str_workers != "" {
-
-		w, err := strconv.Atoi(str_workers)
-
-		if err != nil {
-			return nil, fmt.Errorf("Failed to parse ?workers= parameter, %w", err)
-		}
-
-		workers = w
+	wr := &ElasticsearchV7Writer{
+		client:    es_client,
+		index:     es_index,
+		logger:    logger,
+		waitGroup: wg,
 	}
 
 	bulk_index := true
@@ -136,18 +145,22 @@ func NewElasticsearchV7Writer(ctx context.Context, uri string) (wof_writer.Write
 		bulk_index = v
 	}
 
-	logger := log.New(io.Discard, "", 0)
-
-	wg := new(sync.WaitGroup)
-
-	wr := &ElasticsearchV7Writer{
-		client:    es_client,
-		index:     es_index,
-		logger:    logger,
-		waitGroup: wg,
-	}
-
 	if bulk_index {
+
+		workers := 10
+
+		q_workers := q.Get("workers")
+
+		if q_workers != "" {
+
+			w, err := strconv.Atoi(q_workers)
+
+			if err != nil {
+				return nil, fmt.Errorf("Failed to parse ?workers= parameter, %w", err)
+			}
+
+			workers = w
+		}
 
 		bi_cfg := esutil.BulkIndexerConfig{
 			Index:         es_index,
@@ -186,6 +199,7 @@ func NewElasticsearchV7Writer(ctx context.Context, uri string) (wof_writer.Write
 	return wr, nil
 }
 
+// Write copies the content of 'fh' to the Elasticsearch index defined in `NewElasticsearchV7Writer`.
 func (wr *ElasticsearchV7Writer) Write(ctx context.Context, path string, r io.ReadSeeker) (int64, error) {
 
 	body, err := io.ReadAll(r)
@@ -309,10 +323,12 @@ func (wr *ElasticsearchV7Writer) Write(ctx context.Context, path string, r io.Re
 	return 0, nil
 }
 
+// WriterURI returns 'uri' unchanged
 func (wr *ElasticsearchV7Writer) WriterURI(ctx context.Context, uri string) string {
 	return uri
 }
 
+// Close waits for all pending writes to complete and closes the underlying writer mechanism.
 func (wr *ElasticsearchV7Writer) Close(ctx context.Context) error {
 
 	wr.waitGroup.Wait()
@@ -341,10 +357,12 @@ func (wr *ElasticsearchV7Writer) Close(ctx context.Context) error {
 	return nil
 }
 
+// Flush() does nothing in a `ElasticsearchV7Writer` context.
 func (wr *ElasticsearchV7Writer) Flush(ctx context.Context) error {
 	return nil
 }
 
+// SetLogger assigns 'logger' to 'wr'.
 func (wr *ElasticsearchV7Writer) SetLogger(ctx context.Context, logger *log.Logger) error {
 	wr.logger = logger
 	return nil
