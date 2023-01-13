@@ -343,11 +343,10 @@ func (wr *ElasticsearchV7Writer) WriterURI(ctx context.Context, uri string) stri
 // Close waits for all pending writes to complete and closes the underlying writer mechanism.
 func (wr *ElasticsearchV7Writer) Close(ctx context.Context) error {
 
-	wr.waitGroup.Wait()
-
 	// Do NOT bulk index
 
 	if wr.indexer == nil {
+		wr.waitGroup.Wait()		
 		return nil
 	}
 
@@ -359,6 +358,8 @@ func (wr *ElasticsearchV7Writer) Close(ctx context.Context) error {
 		return fmt.Errorf("Failed to close indexer, %w", err)
 	}
 
+	wr.waitGroup.Wait()
+	
 	stats := wr.indexer.Stats()
 
 	if stats.NumFailed > 0 {
