@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/tidwall/gjson"
-	"github.com/tidwall/sjson"	
+	"github.com/tidwall/sjson"
 )
 
 // AppendNameStats appends statistics about the `name:*` properties in a Who's On First record.

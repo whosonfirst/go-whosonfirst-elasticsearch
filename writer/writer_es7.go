@@ -14,14 +14,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"	
+	"github.com/cenkalti/backoff/v4"
 	es "github.com/elastic/go-elasticsearch/v7"
 	"github.com/elastic/go-elasticsearch/v7/esapi"
 	"github.com/elastic/go-elasticsearch/v7/estransport"
 	"github.com/elastic/go-elasticsearch/v7/esutil"
 	"github.com/whosonfirst/go-whosonfirst-elasticsearch/document"
 	"github.com/whosonfirst/go-whosonfirst-feature/properties"
-	wof_writer "github.com/whosonfirst/go-writer/v3"	
+	wof_writer "github.com/whosonfirst/go-writer/v3"
 )
 
 func init() {
@@ -168,11 +168,11 @@ func NewElasticsearchV7Writer(ctx context.Context, uri string) (wof_writer.Write
 			Client:        es_client,
 			NumWorkers:    workers,
 			FlushInterval: 30 * time.Second,
-			OnError:      func(context.Context, error) {
+			OnError: func(context.Context, error) {
 				wr.logger.Printf("ES bulk indexer reported an error: %v\n", err)
 			},
 			// OnFlushStart func(context.Context) context.Context // Called when the flush starts.
-			OnFlushEnd:   func(context.Context) {
+			OnFlushEnd: func(context.Context) {
 				wr.logger.Printf("ES bulk indexer flush end")
 			},
 		}
@@ -266,7 +266,7 @@ func (wr *ElasticsearchV7Writer) Write(ctx context.Context, path string, r io.Re
 	if err != nil {
 		return 0, fmt.Errorf("Failed to marshal %s, %v", path, err)
 	}
-	
+
 	// Do NOT bulk index. For example if you are using this in concert with
 	// go-writer.MultiWriter running in async mode in a Lambda function where
 	// the likelihood of that code being re-used across invocations is high.
@@ -305,7 +305,7 @@ func (wr *ElasticsearchV7Writer) Write(ctx context.Context, path string, r io.Re
 	// Do bulk index
 
 	wr.waitGroup.Add(1)
-	
+
 	bulk_item := esutil.BulkIndexerItem{
 		Action:     "index",
 		DocumentID: doc_id,
@@ -313,7 +313,7 @@ func (wr *ElasticsearchV7Writer) Write(ctx context.Context, path string, r io.Re
 
 		OnSuccess: func(ctx context.Context, item esutil.BulkIndexerItem, res esutil.BulkIndexerResponseItem) {
 			wr.logger.Printf("Indexed %s as %s\n", path, doc_id)
-			wr.waitGroup.Done()			
+			wr.waitGroup.Done()
 		},
 
 		OnFailure: func(ctx context.Context, item esutil.BulkIndexerItem, res esutil.BulkIndexerResponseItem, err error) {
@@ -323,7 +323,7 @@ func (wr *ElasticsearchV7Writer) Write(ctx context.Context, path string, r io.Re
 				wr.logger.Printf("ERROR: Failed to index %s, %s: %s", path, res.Error.Type, res.Error.Reason)
 			}
 
-			wr.waitGroup.Done()			
+			wr.waitGroup.Done()
 		},
 	}
 
@@ -347,7 +347,7 @@ func (wr *ElasticsearchV7Writer) Close(ctx context.Context) error {
 	// Do NOT bulk index
 
 	if wr.indexer == nil {
-		wr.waitGroup.Wait()		
+		wr.waitGroup.Wait()
 		return nil
 	}
 
@@ -360,7 +360,7 @@ func (wr *ElasticsearchV7Writer) Close(ctx context.Context) error {
 	}
 
 	wr.waitGroup.Wait()
-	
+
 	stats := wr.indexer.Stats()
 
 	if stats.NumFailed > 0 {

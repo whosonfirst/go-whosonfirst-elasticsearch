@@ -20,9 +20,10 @@ import (
 	es "github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
 	"github.com/elastic/go-elasticsearch/v8/esutil"
+	"github.com/sfomuseum/runtimevar"
 	"github.com/whosonfirst/go-whosonfirst-elasticsearch/document"
 	"github.com/whosonfirst/go-whosonfirst-feature/properties"
-	wof_writer "github.com/whosonfirst/go-writer/v3"	
+	wof_writer "github.com/whosonfirst/go-writer/v3"
 )
 
 func init() {
@@ -47,10 +48,12 @@ type ElasticsearchV8Writer struct {
 // Elasticsearch index using the github.com/elastic/go-elasticsearch/v8 package configured by 'uri' which
 // is expected to take the form of:
 //
-//	elasticsearch://{HOST}:{PORT}/{INDEX}?{QUERY_PARAMETERS}
-//	elasticsearch7://{HOST}:{PORT}/{INDEX}?{QUERY_PARAMETERS}
+//	elasticsearch://{USER}:{PASSWORD}@{HOST}:{PORT}/{INDEX}?{QUERY_PARAMETERS}
+//	elasticsearch7://{USER}:{PASSWORD}@{HOST}:{PORT}/{INDEX}?{QUERY_PARAMETERS}
 //
 // Where {QUERY_PARAMETERS} may be one or more of the following:
+// * ?ca-cert-uri={STRING}. A valid gocloud.dev/runtimevar URI which, when dereferenced, will contain the Elasticsearch CA certificate to use for HTTPS requests.
+// * ?es-password-uri={STRING}. An optional gocloud.dev/runtimevar URI which, when dereferenced, will contain the password for the {USER} account when making requests. If present, this value supersedes any password set in the "{USER}:{PATH}" component of 'uri'.
 // * ?debug={BOOLEAN}. If true then verbose Elasticsearch logging for requests and responses will be enabled. Default is false.
 // * ?bulk-index={BOOLEAN}. If true then writes will be performed using a "bulk indexer". Default is true.
 // * ?workers={INT}. The number of users to enable for bulk indexing. Default is 10.
@@ -62,16 +65,46 @@ func NewElasticsearchV8Writer(ctx context.Context, uri string) (wof_writer.Write
 		return nil, fmt.Errorf("Failed to parse URI, %w", err)
 	}
 
-	es_endpoint := fmt.Sprintf("https://%s:%d", u.Host, u.Port())
+	es_endpoint := fmt.Sprintf("https://%s:%s", u.Host, u.Port())
 
 	es_index := strings.TrimLeft(u.Path, "/")
 
+	es_user := u.User.Username()
+	es_pswd, _ := u.User.Password()
+
 	q := u.Query()
+
+	q_cert_uri := q.Get("ca-cert-uri")
+	q_pswd_uri := q.Get("es-password-uri")
+
+	runtime_ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	es_cert, err := runtimevar.StringVar(runtime_ctx, q_cert_uri)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to load CA cert runtimevar URI, %w", err)
+	}
+
+	if q_pswd_uri != "" {
+
+		pswd, err := runtimevar.StringVar(runtime_ctx, q_pswd_uri)
+
+		if err != nil {
+			return nil, fmt.Errorf("Failed to load ES password URI, %w", err)
+		}
+
+		es_pswd = pswd
+	}
 
 	retry := backoff.NewExponentialBackOff()
 
 	es_cfg := es.Config{
 		Addresses: []string{es_endpoint},
+
+		Username: es_user,
+		Password: es_pswd,
+		CACert:   []byte(es_cert),
 
 		RetryOnStatus: []int{502, 503, 504, 429},
 		RetryBackoff: func(i int) time.Duration {
@@ -153,11 +186,11 @@ func NewElasticsearchV8Writer(ctx context.Context, uri string) (wof_writer.Write
 			Client:        es_client,
 			NumWorkers:    workers,
 			FlushInterval: 30 * time.Second,
-			OnError:      func(context.Context, error) {
+			OnError: func(context.Context, error) {
 				wr.logger.Printf("ES bulk indexer reported an error: %v\n", err)
 			},
 			// OnFlushStart func(context.Context) context.Context // Called when the flush starts.
-			OnFlushEnd:   func(context.Context) {
+			OnFlushEnd: func(context.Context) {
 				wr.logger.Printf("ES bulk indexer flush end")
 			},
 		}
@@ -251,7 +284,7 @@ func (wr *ElasticsearchV8Writer) Write(ctx context.Context, path string, r io.Re
 	if err != nil {
 		return 0, fmt.Errorf("Failed to marshal %s, %v", path, err)
 	}
-	
+
 	// Do NOT bulk index. For example if you are using this in concert with
 	// go-writer.MultiWriter running in async mode in a Lambda function where
 	// the likelihood of that code being re-used across invocations is high.
@@ -290,7 +323,7 @@ func (wr *ElasticsearchV8Writer) Write(ctx context.Context, path string, r io.Re
 	// Do bulk index
 
 	wr.waitGroup.Add(1)
-	
+
 	bulk_item := esutil.BulkIndexerItem{
 		Action:     "index",
 		DocumentID: doc_id,
@@ -298,7 +331,7 @@ func (wr *ElasticsearchV8Writer) Write(ctx context.Context, path string, r io.Re
 
 		OnSuccess: func(ctx context.Context, item esutil.BulkIndexerItem, res esutil.BulkIndexerResponseItem) {
 			wr.logger.Printf("Indexed %s as %s\n", path, doc_id)
-			wr.waitGroup.Done()			
+			wr.waitGroup.Done()
 		},
 
 		OnFailure: func(ctx context.Context, item esutil.BulkIndexerItem, res esutil.BulkIndexerResponseItem, err error) {
@@ -308,7 +341,7 @@ func (wr *ElasticsearchV8Writer) Write(ctx context.Context, path string, r io.Re
 				wr.logger.Printf("ERROR: Failed to index %s, %s: %s", path, res.Error.Type, res.Error.Reason)
 			}
 
-			wr.waitGroup.Done()			
+			wr.waitGroup.Done()
 		},
 	}
 
@@ -332,7 +365,7 @@ func (wr *ElasticsearchV8Writer) Close(ctx context.Context) error {
 	// Do NOT bulk index
 
 	if wr.indexer == nil {
-		wr.waitGroup.Wait()		
+		wr.waitGroup.Wait()
 		return nil
 	}
 
@@ -345,7 +378,7 @@ func (wr *ElasticsearchV8Writer) Close(ctx context.Context) error {
 	}
 
 	wr.waitGroup.Wait()
-	
+
 	stats := wr.indexer.Stats()
 
 	if stats.NumFailed > 0 {

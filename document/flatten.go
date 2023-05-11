@@ -5,7 +5,7 @@ import (
 	_ "log"
 
 	"github.com/tidwall/gjson"
-	"github.com/tidwall/sjson"	
+	"github.com/tidwall/sjson"
 )
 
 // ...
