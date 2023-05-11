@@ -9,6 +9,7 @@ go 1.18
 
 require (
 	github.com/cenkalti/backoff/v4 v4.2.1
+	github.com/elastic/elastic-transport-go/v8 v8.2.0
 	github.com/elastic/go-elasticsearch/v7 v7.13.0
 	github.com/elastic/go-elasticsearch/v8 v8.7.1
 	github.com/sfomuseum/go-edtf v1.1.1
@@ -17,7 +18,7 @@ require (
 	github.com/tidwall/sjson v1.2.5
 	github.com/whosonfirst/go-whosonfirst-feature v0.0.26
 	github.com/whosonfirst/go-whosonfirst-iterate-git/v2 v2.1.3
-	github.com/whosonfirst/go-whosonfirst-iterwriter v0.0.9
+	github.com/whosonfirst/go-whosonfirst-iterwriter v0.0.11
 	github.com/whosonfirst/go-whosonfirst-placetypes v0.7.0
 	github.com/whosonfirst/go-writer/v3 v3.1.0
 	gopkg.in/olivere/elastic.v3 v3.0.75
@@ -27,7 +28,7 @@ require (
 	github.com/Microsoft/go-winio v0.5.2 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20221026131551-cf6655e29de4 // indirect
 	github.com/aaronland/go-aws-session v0.1.0 // indirect
-	github.com/aaronland/go-json-query v0.1.3 // indirect
+	github.com/aaronland/go-json-query v0.1.4 // indirect
 	github.com/aaronland/go-roster v1.0.0 // indirect
 	github.com/aaronland/go-string v1.0.0 // indirect
 	github.com/acomagu/bufpipe v1.0.3 // indirect
@@ -46,7 +47,6 @@ require (
 	github.com/aws/smithy-go v1.12.0 // indirect
 	github.com/cloudflare/circl v1.1.0 // indirect
 	github.com/dominikbraun/graph v0.16.1 // indirect
-	github.com/elastic/elastic-transport-go/v8 v8.2.0 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/g8rswimmer/error-chain v1.0.0 // indirect
@@ -72,19 +72,19 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/whosonfirst/go-ioutil v1.0.2 // indirect
-	github.com/whosonfirst/go-whosonfirst-crawl v0.2.1 // indirect
+	github.com/whosonfirst/go-whosonfirst-crawl v0.2.2 // indirect
 	github.com/whosonfirst/go-whosonfirst-flags v0.4.4 // indirect
-	github.com/whosonfirst/go-whosonfirst-iterate/v2 v2.3.1 // indirect
+	github.com/whosonfirst/go-whosonfirst-iterate/v2 v2.3.4 // indirect
 	github.com/whosonfirst/go-whosonfirst-sources v0.1.0 // indirect
-	github.com/whosonfirst/go-whosonfirst-uri v1.2.0 // indirect
-	github.com/whosonfirst/walk v0.0.1 // indirect
+	github.com/whosonfirst/go-whosonfirst-uri v1.3.0 // indirect
+	github.com/whosonfirst/walk v0.0.2 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	go.opencensus.io v0.23.0 // indirect
 	gocloud.dev v0.27.0 // indirect
 	golang.org/x/crypto v0.3.0 // indirect
-	golang.org/x/net v0.2.0 // indirect
-	golang.org/x/sys v0.3.0 // indirect
-	golang.org/x/text v0.4.0 // indirect
+	golang.org/x/net v0.7.0 // indirect
+	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/text v0.7.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220609144429-65e65417b02f // indirect
 	google.golang.org/api v0.91.0 // indirect
 	google.golang.org/genproto v0.0.0-20220802133213-ce4fa296bf78 // indirect

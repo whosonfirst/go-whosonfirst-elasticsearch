@@ -4,6 +4,7 @@ package writer
 // https://www.elastic.co/guide/en/elasticsearch/reference/7.17/removal-of-types.html
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -11,12 +12,14 @@ import (
 	"io"
 	"log"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
+	"github.com/elastic/elastic-transport-go/v8/elastictransport"
 	es "github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
 	"github.com/elastic/go-elasticsearch/v8/esutil"
@@ -65,7 +68,7 @@ func NewElasticsearchV8Writer(ctx context.Context, uri string) (wof_writer.Write
 		return nil, fmt.Errorf("Failed to parse URI, %w", err)
 	}
 
-	es_endpoint := fmt.Sprintf("https://%s:%s", u.Host, u.Port())
+	es_endpoint := fmt.Sprintf("https://%s", u.Host)
 
 	es_index := strings.TrimLeft(u.Path, "/")
 
@@ -75,15 +78,24 @@ func NewElasticsearchV8Writer(ctx context.Context, uri string) (wof_writer.Write
 	q := u.Query()
 
 	q_cert_uri := q.Get("ca-cert-uri")
+	q_fingerprint_uri := q.Get("ca-fingerprint-uri")
 	q_pswd_uri := q.Get("es-password-uri")
 
 	runtime_ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
+	// ! ERROR: tls: failed to verify certificate: x509: certificate signed by unknown authority (possibly because of "crypto/rsa: verification error" while trying to verify candidate authority certificate "Elasticsearch security auto-configuration HTTP CA")
+
 	es_cert, err := runtimevar.StringVar(runtime_ctx, q_cert_uri)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to load CA cert runtimevar URI, %w", err)
+	}
+
+	es_cert_fingerprint, err := runtimevar.StringVar(runtime_ctx, q_fingerprint_uri)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to load CA fingerprint runtimevar URI, %w", err)
 	}
 
 	if q_pswd_uri != "" {
@@ -104,7 +116,18 @@ func NewElasticsearchV8Writer(ctx context.Context, uri string) (wof_writer.Write
 
 		Username: es_user,
 		Password: es_pswd,
-		CACert:   []byte(es_cert),
+
+		// The documentation for custom CAs in ES8 is kind of all over the map with the main docs
+		// not jibing with the "security" docs. Likewise, without passing in the CertificateFingerprint
+		// everything fails with unknown CA errors. On the other hand, even with the argument everything
+		// still fails but with different and unspecified errors:
+		// "2023/05/11 10:13:46 Failed to iterate, Failed to iterate with writer, Failed to close ES writer, One or more Close operations failed: Indexed (522) documents with (1065) errors exit status 1"
+		//
+		// https://github.com/elastic/go-elasticsearch
+		// https://github.com/elastic/go-elasticsearch/blob/main/_examples/security/tls_configure_ca.go
+
+		CACert:                 []byte(es_cert),
+		CertificateFingerprint: es_cert_fingerprint,
 
 		RetryOnStatus: []int{502, 503, 504, 429},
 		RetryBackoff: func(i int) time.Duration {
@@ -128,7 +151,13 @@ func NewElasticsearchV8Writer(ctx context.Context, uri string) (wof_writer.Write
 
 		if debug {
 
-			// Logging?
+			// https://github.com/elastic/go-elasticsearch/blob/67ab061a41de345b2af16ba4b67ccf6fd164f497/_examples/logging/default.go
+
+			es_logger := &elastictransport.TextLogger{
+				Output: os.Stdout,
+			}
+
+			es_cfg.Logger = es_logger
 		}
 	}
 
@@ -186,11 +215,11 @@ func NewElasticsearchV8Writer(ctx context.Context, uri string) (wof_writer.Write
 			Client:        es_client,
 			NumWorkers:    workers,
 			FlushInterval: 30 * time.Second,
-			OnError: func(context.Context, error) {
+			OnError: func(ctx context.Context, err error) {
 				wr.logger.Printf("ES bulk indexer reported an error: %v\n", err)
 			},
 			// OnFlushStart func(context.Context) context.Context // Called when the flush starts.
-			OnFlushEnd: func(context.Context) {
+			OnFlushEnd: func(ctx context.Context) {
 				wr.logger.Printf("ES bulk indexer flush end")
 			},
 		}
@@ -314,7 +343,20 @@ func (wr *ElasticsearchV8Writer) Write(ctx context.Context, path string, r io.Re
 		defer rsp.Body.Close()
 
 		if rsp.IsError() {
-			return 0, fmt.Errorf("Failed to index document, %w", rsp.Status())
+
+			var error_msg string
+
+			var buf bytes.Buffer
+			buf_wr := bufio.NewWriter(&buf)
+
+			_, err := io.Copy(buf_wr, rsp.Body)
+
+			if err == nil {
+				buf_wr.Flush()
+				error_msg = buf.String()
+			}
+
+			return 0, fmt.Errorf("Failed to index document, %s: %s", rsp.Status(), error_msg)
 		}
 
 		return 0, nil

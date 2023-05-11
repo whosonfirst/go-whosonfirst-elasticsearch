@@ -3,13 +3,14 @@ package iterwriter
 import (
 	"context"
 	"fmt"
+	"io"
+	"log"
+
 	"github.com/sfomuseum/go-timings"
 	"github.com/whosonfirst/go-whosonfirst-iterate/v2/emitter"
 	"github.com/whosonfirst/go-whosonfirst-iterate/v2/iterator"
 	"github.com/whosonfirst/go-whosonfirst-uri"
 	"github.com/whosonfirst/go-writer/v3"
-	"io"
-	"log"
 )
 
 // Type IterwriterCallbackFunc defines a function to be invoked that will return a `emitter.EmitterCallbackFunc`
