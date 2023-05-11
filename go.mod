@@ -8,15 +8,16 @@ go 1.18
 // Good times...
 
 require (
-	github.com/cenkalti/backoff/v4 v4.2.0
+	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/elastic/go-elasticsearch/v7 v7.13.0
+	github.com/elastic/go-elasticsearch/v8 v8.7.1
 	github.com/sfomuseum/go-edtf v1.1.1
 	github.com/tidwall/gjson v1.14.4
 	github.com/tidwall/sjson v1.2.5
 	github.com/whosonfirst/go-whosonfirst-feature v0.0.26
 	github.com/whosonfirst/go-whosonfirst-iterate-git/v2 v2.1.3
 	github.com/whosonfirst/go-whosonfirst-iterwriter v0.0.9
-	github.com/whosonfirst/go-whosonfirst-placetypes v0.4.2
+	github.com/whosonfirst/go-whosonfirst-placetypes v0.7.0
 	github.com/whosonfirst/go-writer/v3 v3.1.0
 	gopkg.in/olivere/elastic.v3 v3.0.75
 )
@@ -43,6 +44,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.16.10 // indirect
 	github.com/aws/smithy-go v1.12.0 // indirect
 	github.com/cloudflare/circl v1.1.0 // indirect
+	github.com/dominikbraun/graph v0.16.1 // indirect
+	github.com/elastic/elastic-transport-go/v8 v8.2.0 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/g8rswimmer/error-chain v1.0.0 // indirect

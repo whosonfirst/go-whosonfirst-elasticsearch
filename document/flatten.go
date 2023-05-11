@@ -2,9 +2,10 @@ package document
 
 import (
 	"context"
-	"github.com/tidwall/gjson"
-	"github.com/tidwall/sjson"
 	_ "log"
+
+	"github.com/tidwall/gjson"
+	"github.com/tidwall/sjson"	
 )
 
 // ...

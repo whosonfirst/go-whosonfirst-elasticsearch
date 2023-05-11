@@ -3,10 +3,11 @@ package document
 import (
 	"context"
 	"fmt"
+	_ "log"
+
 	"github.com/sfomuseum/go-edtf/unix"
 	"github.com/tidwall/gjson"
-	"github.com/tidwall/sjson"
-	_ "log"
+	"github.com/tidwall/sjson"	
 )
 
 // AppendEDTFRanges appends numeric date ranges derived from `edtf:inception` and `edtf:cessation` properties

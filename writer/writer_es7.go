@@ -5,14 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/cenkalti/backoff/v4"
-	es "github.com/elastic/go-elasticsearch/v7"
-	"github.com/elastic/go-elasticsearch/v7/esapi"
-	"github.com/elastic/go-elasticsearch/v7/estransport"
-	"github.com/elastic/go-elasticsearch/v7/esutil"
-	"github.com/whosonfirst/go-whosonfirst-elasticsearch/document"
-	"github.com/whosonfirst/go-whosonfirst-feature/properties"
-	wof_writer "github.com/whosonfirst/go-writer/v3"
 	"io"
 	"log"
 	"net/url"
@@ -21,6 +13,15 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/cenkalti/backoff/v4"	
+	es "github.com/elastic/go-elasticsearch/v7"
+	"github.com/elastic/go-elasticsearch/v7/esapi"
+	"github.com/elastic/go-elasticsearch/v7/estransport"
+	"github.com/elastic/go-elasticsearch/v7/esutil"
+	"github.com/whosonfirst/go-whosonfirst-elasticsearch/document"
+	"github.com/whosonfirst/go-whosonfirst-feature/properties"
+	wof_writer "github.com/whosonfirst/go-writer/v3"	
 )
 
 func init() {
@@ -312,7 +313,7 @@ func (wr *ElasticsearchV7Writer) Write(ctx context.Context, path string, r io.Re
 
 		OnSuccess: func(ctx context.Context, item esutil.BulkIndexerItem, res esutil.BulkIndexerResponseItem) {
 			wr.logger.Printf("Indexed %s as %s\n", path, doc_id)
-			defer wr.waitGroup.Done()			
+			wr.waitGroup.Done()			
 		},
 
 		OnFailure: func(ctx context.Context, item esutil.BulkIndexerItem, res esutil.BulkIndexerResponseItem, err error) {
@@ -322,7 +323,7 @@ func (wr *ElasticsearchV7Writer) Write(ctx context.Context, path string, r io.Re
 				wr.logger.Printf("ERROR: Failed to index %s, %s: %s", path, res.Error.Type, res.Error.Reason)
 			}
 
-			defer wr.waitGroup.Done()			
+			wr.waitGroup.Done()			
 		},
 	}
 

@@ -4,16 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/whosonfirst/go-whosonfirst-elasticsearch/document"
-	"github.com/whosonfirst/go-whosonfirst-feature/properties"
-	wof_writer "github.com/whosonfirst/go-writer/v3"
-	es "gopkg.in/olivere/elastic.v3"
 	"io"
 	"log"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/whosonfirst/go-whosonfirst-elasticsearch/document"
+	"github.com/whosonfirst/go-whosonfirst-feature/properties"
+	wof_writer "github.com/whosonfirst/go-writer/v3"
+	es "gopkg.in/olivere/elastic.v3"	
 )
 
 // https://github.com/olivere/elastic/wiki/BulkProcessor

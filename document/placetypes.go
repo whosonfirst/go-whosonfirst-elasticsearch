@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	_ "log"
+
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
-	"github.com/whosonfirst/go-whosonfirst-placetypes"
-	_ "log"
+	"github.com/whosonfirst/go-whosonfirst-placetypes"	
 )
 
 // AppendPlacetypeDetails appends addition properties related to the `wof:placetype` and `wof:placetype_alt` properties in a Who's On First record.
