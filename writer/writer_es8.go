@@ -1,7 +1,10 @@
 package writer
 
-// https://www.elastic.co/guide/en/elasticsearch/reference/8.0/rest-api-compatibility.html
-// https://www.elastic.co/guide/en/elasticsearch/reference/7.17/removal-of-types.html
+/*
+
+./bin/wof-index-elasticsearch -monitor-uri counter://PT10S -writer-uri 'constant://?val=elasticsearch8%3A%2F%2Felastic%3A...%40localhost%3A9200%2Fcollection%3Fca-cert-uri%3Dfile%3A%2F%2F%2Fusr%2Flocal%2Fwhosonfirst%2Fgo-whosonfirst-elasticsearch%2Fhttp_ca.crt%26ca-fingerprint-uri%3Dfile%3A%2F%2F%2Fusr%2Flocal%2Fwhosonfirst%2Fgo-whosonfirst-elasticsearch%2Ffingerprint%26debug%3Dtrue%26bulk-index%3Dtrue' /usr/local/data/sfomuseum-data-architecture
+
+*/
 
 import (
 	"bufio"
