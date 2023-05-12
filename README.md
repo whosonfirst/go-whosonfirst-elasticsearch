@@ -53,7 +53,7 @@ For example the `-writer-uri` flag would be overridden by the `WOF_WRITER_URI` e
 
 ## Elasticsearch "writer" URIs
 
-This code assumes Elasticsearch 7.x by default although this may change with future releases. It is possible to specify the use of Elasticsearch 7.x or 2.x for indexing as follows:
+This code assumes Elasticsearch 7.x by default although this may change with future releases. It is possible to specify the use of Elasticsearch 8.x, 7.x or 2.x for indexing as follows:
 
 ### Default (Elasticsearch 7.x)
 
