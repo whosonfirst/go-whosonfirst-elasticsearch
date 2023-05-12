@@ -6,15 +6,13 @@ Go package for indexing Who's On First records in Elasticsearch.
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/whosonfirst/go-whosonfirst-elasticsearch.svg)](https://pkg.go.dev/github.com/whosonfirst/go-whosonfirst-elasticsearch)
 
-Documentation is incomplete at this time.
-
 ## Tools
 
 To build binary versions of these tools run the `cli` Makefile target. For example:
 
 ```
 $> make cli
-go build -mod vendor -o bin/es-whosonfirst-index cmd/es-whosonfirst-index/main.go
+go build -mod vendor -ldflags="-s -w"  -o bin/wof-index-elasticsearch cmd/wof-index-elasticsearch/main.go
 ```
 
 ### es-whosonfirst-index
@@ -62,6 +60,20 @@ This code assumes Elasticsearch 7.x by default although this may change with fut
 ```
 elasticsearch://{ES_ENDPOINT}/{ES_INDEX}
 ```
+
+### Elasticsearch 8.x
+
+```
+elasticsearch7://{USER}:{PASSWORD}@{ES_ENDPOINT}/{ES_INDEX}?ca-cert-uri={CA_CERTIFICATE}&ca-cert-fingerprint={CA_FINGERPRINT}
+```
+
+Where `{CA_CERTIFICATE}` and `{CA_FINGERPRINT}` are valid `gocloud.dev/runtimevar` URI strings that will dereference to a valid Elasticsearch 8.x CA certificate and fingerprint value respectively. You can also pass in an optional `?es-password-uri=` parameter containing its own `gocloud.dev/runtimevar` URI string that will be dereferenced to an Elasticsearch password value if you don't want to include in the "{USER}:{PASSWORD}" constuct.
+
+#### Related
+
+* https://www.elastic.co/guide/en/elasticsearch/reference/8.7/configuring-stack-security.html
+* https://gocloud.dev/runtimevar
+* https://github.com/sfomuseum/runtimevar
 
 ### Elasticsearch 7.x
 
