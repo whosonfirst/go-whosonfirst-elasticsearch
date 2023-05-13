@@ -3,7 +3,7 @@ package main
 import (
 	_ "github.com/whosonfirst/go-whosonfirst-elasticsearch/writer"
 	_ "github.com/whosonfirst/go-whosonfirst-iterate-git/v2"
-	_ "github.com/whosonfirst/go-whosonfirst-iterate-organization"	
+	_ "github.com/whosonfirst/go-whosonfirst-iterate-organization"
 )
 
 import (

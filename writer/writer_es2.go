@@ -157,8 +157,6 @@ func (wr *ElasticsearchV2Writer) Write(ctx context.Context, path string, r io.Re
 		return 0, fmt.Errorf("Failed to derive placetype for %s, %w", path, err)
 	}
 
-	// START OF manipulate body here...
-
 	for _, f := range wr.prepare_funcs {
 
 		new_body, err := f(ctx, body)
@@ -169,21 +167,6 @@ func (wr *ElasticsearchV2Writer) Write(ctx context.Context, path string, r io.Re
 
 		body = new_body
 	}
-
-	// END OF manipulate body here...
-
-	for _, f := range wr.prepare_funcs {
-
-		new_body, err := f(ctx, body)
-
-		if err != nil {
-			return 0, fmt.Errorf("Failed to prepare body for %s (%v), %v\n", path, f, err)
-		}
-
-		body = new_body
-	}
-
-	// END OF manipulate body here...
 
 	var f interface{}
 	err = json.Unmarshal(body, &f)
