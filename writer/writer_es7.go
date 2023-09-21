@@ -296,7 +296,7 @@ func (wr *ElasticsearchV7Writer) Write(ctx context.Context, path string, r io.Re
 		defer rsp.Body.Close()
 
 		if rsp.IsError() {
-			return 0, fmt.Errorf("Failed to index document, %w", rsp.Status())
+			return 0, fmt.Errorf("Failed to index document, %s", rsp.Status())
 		}
 
 		return 0, nil
