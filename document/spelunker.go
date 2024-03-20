@@ -1,5 +1,8 @@
 package document
 
+// Most of this code should be moved in to whosonfirst/go-whosonfirst-spelunker
+// (20240320/thisisaaronland)
+
 import (
 	"context"
 )
@@ -37,6 +40,12 @@ func AppendSpelunkerV1Properties(ctx context.Context, body []byte) ([]byte, erro
 		return nil, err
 	}
 
+	body, err = AppendConcordancesMachineTags(ctx, body)
+
+	if err != nil {
+		return nil, err
+	}
+	
 	body, err = AppendPlacetypeDetails(ctx, body)
 
 	if err != nil {
