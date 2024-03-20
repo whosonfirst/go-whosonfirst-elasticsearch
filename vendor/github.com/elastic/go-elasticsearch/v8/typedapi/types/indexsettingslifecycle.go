@@ -16,28 +16,26 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // IndexSettingsLifecycle type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/indices/_types/IndexSettings.ts#L267-L300
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/indices/_types/IndexSettings.ts#L266-L299
 type IndexSettingsLifecycle struct {
 	// IndexingComplete Indicates whether or not the index has been rolled over. Automatically set to
 	// true when ILM completes the rollover action.
 	// You can explicitly set it to skip rollover.
-	IndexingComplete *bool `json:"indexing_complete,omitempty"`
+	IndexingComplete Stringifiedboolean `json:"indexing_complete,omitempty"`
 	// Name The name of the policy to use to manage the index. For information about how
 	// Elasticsearch applies policy changes, see Policy updates.
 	Name string `json:"name"`
@@ -81,17 +79,8 @@ func (s *IndexSettingsLifecycle) UnmarshalJSON(data []byte) error {
 		switch t {
 
 		case "indexing_complete":
-			var tmp interface{}
-			dec.Decode(&tmp)
-			switch v := tmp.(type) {
-			case string:
-				value, err := strconv.ParseBool(v)
-				if err != nil {
-					return err
-				}
-				s.IndexingComplete = &value
-			case bool:
-				s.IndexingComplete = &v
+			if err := dec.Decode(&s.IndexingComplete); err != nil {
+				return err
 			}
 
 		case "name":
@@ -133,7 +122,11 @@ func (s *IndexSettingsLifecycle) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.RolloverAlias = &o
 
 		case "step":

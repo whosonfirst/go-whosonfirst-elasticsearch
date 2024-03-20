@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Stops one or more datafeeds.
 package stopdatafeed
@@ -30,7 +30,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
@@ -51,14 +50,19 @@ type StopDatafeed struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
-
-	req *Request
 	raw io.Reader
+
+	req      *Request
+	deferred []func(request *Request) error
+	buf      *gobytes.Buffer
 
 	paramSet int
 
 	datafeedid string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewStopDatafeed type alias for index.
@@ -70,7 +74,7 @@ func NewStopDatafeedFunc(tp elastictransport.Interface) NewStopDatafeed {
 	return func(datafeedid string) *StopDatafeed {
 		n := New(tp)
 
-		n.DatafeedId(datafeedid)
+		n._datafeedid(datafeedid)
 
 		return n
 	}
@@ -84,7 +88,16 @@ func New(tp elastictransport.Interface) *StopDatafeed {
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+
+		buf: gobytes.NewBuffer(nil),
+
+		req: NewRequest(),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -114,9 +127,17 @@ func (r *StopDatafeed) HttpRequest(ctx context.Context) (*http.Request, error) {
 
 	var err error
 
-	if r.raw != nil {
-		r.buf.ReadFrom(r.raw)
-	} else if r.req != nil {
+	if len(r.deferred) > 0 {
+		for _, f := range r.deferred {
+			deferredErr := f(r.req)
+			if deferredErr != nil {
+				return nil, deferredErr
+			}
+		}
+	}
+
+	if r.raw == nil && r.req != nil {
+
 		data, err := json.Marshal(r.req)
 
 		if err != nil {
@@ -124,6 +145,11 @@ func (r *StopDatafeed) HttpRequest(ctx context.Context) (*http.Request, error) {
 		}
 
 		r.buf.Write(data)
+
+	}
+
+	if r.buf.Len() > 0 {
+		r.raw = r.buf
 	}
 
 	r.path.Scheme = "http"
@@ -136,6 +162,9 @@ func (r *StopDatafeed) HttpRequest(ctx context.Context) (*http.Request, error) {
 		path.WriteString("datafeeds")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "datafeedid", r.datafeedid)
+		}
 		path.WriteString(r.datafeedid)
 		path.WriteString("/")
 		path.WriteString("_stop")
@@ -151,15 +180,15 @@ func (r *StopDatafeed) HttpRequest(ctx context.Context) (*http.Request, error) {
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
 
 	if req.Header.Get("Content-Type") == "" {
-		if r.buf.Len() > 0 {
+		if r.raw != nil {
 			req.Header.Set("Content-Type", "application/vnd.elasticsearch+json;compatible-with=8")
 		}
 	}
@@ -176,27 +205,66 @@ func (r *StopDatafeed) HttpRequest(ctx context.Context) (*http.Request, error) {
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r StopDatafeed) Perform(ctx context.Context) (*http.Response, error) {
+func (r StopDatafeed) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "ml.stop_datafeed")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "ml.stop_datafeed")
+		if reader := instrument.RecordRequestBody(ctx, "ml.stop_datafeed", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "ml.stop_datafeed")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the StopDatafeed query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the StopDatafeed query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a stopdatafeed.Response
-func (r StopDatafeed) Do(ctx context.Context) (*Response, error) {
+func (r StopDatafeed) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "ml.stop_datafeed")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -204,6 +272,9 @@ func (r StopDatafeed) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -213,9 +284,19 @@ func (r StopDatafeed) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
@@ -232,43 +313,33 @@ func (r *StopDatafeed) Header(key, value string) *StopDatafeed {
 // using `_all` or by specifying `*` as
 // the identifier.
 // API Name: datafeedid
-func (r *StopDatafeed) DatafeedId(v string) *StopDatafeed {
+func (r *StopDatafeed) _datafeedid(datafeedid string) *StopDatafeed {
 	r.paramSet |= datafeedidMask
-	r.datafeedid = v
+	r.datafeedid = datafeedid
 
 	return r
 }
 
-// AllowNoMatch Specifies what to do when the request:
-//
-// * Contains wildcard expressions and there are no datafeeds that match.
-// * Contains the `_all` string or no identifiers and there are no matches.
-// * Contains wildcard expressions and there are only partial matches.
-//
-// If `true`, the API returns an empty datafeeds array when there are no matches
-// and the subset of results when
-// there are partial matches. If `false`, the API returns a 404 status code when
-// there are no matches or only
-// partial matches.
+// AllowNoMatch Refer to the description for the `allow_no_match` query parameter.
 // API name: allow_no_match
-func (r *StopDatafeed) AllowNoMatch(b bool) *StopDatafeed {
-	r.values.Set("allow_no_match", strconv.FormatBool(b))
+func (r *StopDatafeed) AllowNoMatch(allownomatch bool) *StopDatafeed {
+	r.req.AllowNoMatch = &allownomatch
 
 	return r
 }
 
-// Force If `true`, the datafeed is stopped forcefully.
+// Force Refer to the description for the `force` query parameter.
 // API name: force
-func (r *StopDatafeed) Force(b bool) *StopDatafeed {
-	r.values.Set("force", strconv.FormatBool(b))
+func (r *StopDatafeed) Force(force bool) *StopDatafeed {
+	r.req.Force = &force
 
 	return r
 }
 
-// Timeout Specifies the amount of time to wait until a datafeed stops.
+// Timeout Refer to the description for the `timeout` query parameter.
 // API name: timeout
-func (r *StopDatafeed) Timeout(v string) *StopDatafeed {
-	r.values.Set("timeout", v)
+func (r *StopDatafeed) Timeout(duration types.Duration) *StopDatafeed {
+	r.req.Timeout = duration
 
 	return r
 }

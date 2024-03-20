@@ -16,33 +16,44 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // InferenceProcessor type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ingest/_types/Processors.ts#L237-L242
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ingest/_types/Processors.ts#L721-L740
 type InferenceProcessor struct {
-	Description     *string                    `json:"description,omitempty"`
-	FieldMap        map[string]json.RawMessage `json:"field_map,omitempty"`
-	If              *string                    `json:"if,omitempty"`
-	IgnoreFailure   *bool                      `json:"ignore_failure,omitempty"`
-	InferenceConfig *InferenceConfig           `json:"inference_config,omitempty"`
-	ModelId         string                     `json:"model_id"`
-	OnFailure       []ProcessorContainer       `json:"on_failure,omitempty"`
-	Tag             *string                    `json:"tag,omitempty"`
-	TargetField     *string                    `json:"target_field,omitempty"`
+	// Description Description of the processor.
+	// Useful for describing the purpose of the processor or its configuration.
+	Description *string `json:"description,omitempty"`
+	// FieldMap Maps the document field names to the known field names of the model.
+	// This mapping takes precedence over any default mappings provided in the model
+	// configuration.
+	FieldMap map[string]json.RawMessage `json:"field_map,omitempty"`
+	// If Conditionally execute the processor.
+	If *string `json:"if,omitempty"`
+	// IgnoreFailure Ignore failures for the processor.
+	IgnoreFailure *bool `json:"ignore_failure,omitempty"`
+	// InferenceConfig Contains the inference type and its options.
+	InferenceConfig *InferenceConfig `json:"inference_config,omitempty"`
+	// ModelId The ID or alias for the trained model, or the ID of the deployment.
+	ModelId string `json:"model_id"`
+	// OnFailure Handle failures for the processor.
+	OnFailure []ProcessorContainer `json:"on_failure,omitempty"`
+	// Tag Identifier for the processor.
+	// Useful for debugging and metrics.
+	Tag *string `json:"tag,omitempty"`
+	// TargetField Field added to incoming documents to contain results objects.
+	TargetField *string `json:"target_field,omitempty"`
 }
 
 func (s *InferenceProcessor) UnmarshalJSON(data []byte) error {
@@ -65,7 +76,11 @@ func (s *InferenceProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Description = &o
 
 		case "field_map":
@@ -81,7 +96,11 @@ func (s *InferenceProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.If = &o
 
 		case "ignore_failure":
@@ -118,7 +137,11 @@ func (s *InferenceProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Tag = &o
 
 		case "target_field":

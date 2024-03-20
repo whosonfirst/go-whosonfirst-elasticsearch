@@ -16,24 +16,25 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // TDigest type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/aggregations/metric.ts#L123-L125
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/aggregations/metric.ts#L223-L228
 type TDigest struct {
+	// Compression Limits the maximum number of nodes used by the underlying TDigest algorithm
+	// to `20 * compression`, enabling control of memory usage and approximation
+	// error.
 	Compression *int `json:"compression,omitempty"`
 }
 

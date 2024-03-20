@@ -16,13 +16,12 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Performs the force merge operation on one or more indices.
 package forcemerge
 
 import (
-	gobytes "bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -36,6 +35,7 @@ import (
 
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/expandwildcard"
 )
 
 const (
@@ -52,11 +52,15 @@ type Forcemerge struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	index string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewForcemerge type alias for index.
@@ -74,13 +78,18 @@ func NewForcemergeFunc(tp elastictransport.Interface) NewForcemerge {
 
 // Performs the force merge operation on one or more indices.
 //
-// https://www.elastic.co/guide/en/elasticsearch/reference/master/indices-forcemerge.html
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-forcemerge.html
 func New(tp elastictransport.Interface) *Forcemerge {
 	r := &Forcemerge{
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -106,6 +115,9 @@ func (r *Forcemerge) HttpRequest(ctx context.Context) (*http.Request, error) {
 	case r.paramSet == indexMask:
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "index", r.index)
+		}
 		path.WriteString(r.index)
 		path.WriteString("/")
 		path.WriteString("_forcemerge")
@@ -121,9 +133,9 @@ func (r *Forcemerge) HttpRequest(ctx context.Context) (*http.Request, error) {
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
@@ -140,27 +152,66 @@ func (r *Forcemerge) HttpRequest(ctx context.Context) (*http.Request, error) {
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r Forcemerge) Perform(ctx context.Context) (*http.Response, error) {
+func (r Forcemerge) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "indices.forcemerge")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "indices.forcemerge")
+		if reader := instrument.RecordRequestBody(ctx, "indices.forcemerge", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "indices.forcemerge")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the Forcemerge query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the Forcemerge query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a forcemerge.Response
-func (r Forcemerge) Do(ctx context.Context) (*Response, error) {
+func (r Forcemerge) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "indices.forcemerge")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -168,6 +219,9 @@ func (r Forcemerge) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -177,15 +231,35 @@ func (r Forcemerge) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r Forcemerge) IsSuccess(ctx context.Context) (bool, error) {
+func (r Forcemerge) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "indices.forcemerge")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -201,6 +275,14 @@ func (r Forcemerge) IsSuccess(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the Forcemerge query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -214,9 +296,9 @@ func (r *Forcemerge) Header(key, value string) *Forcemerge {
 // Index A comma-separated list of index names; use `_all` or empty string to perform
 // the operation on all indices
 // API Name: index
-func (r *Forcemerge) Index(v string) *Forcemerge {
+func (r *Forcemerge) Index(index string) *Forcemerge {
 	r.paramSet |= indexMask
-	r.index = v
+	r.index = index
 
 	return r
 }
@@ -224,8 +306,8 @@ func (r *Forcemerge) Index(v string) *Forcemerge {
 // AllowNoIndices Whether to ignore if a wildcard indices expression resolves into no concrete
 // indices. (This includes `_all` string or when no indices have been specified)
 // API name: allow_no_indices
-func (r *Forcemerge) AllowNoIndices(b bool) *Forcemerge {
-	r.values.Set("allow_no_indices", strconv.FormatBool(b))
+func (r *Forcemerge) AllowNoIndices(allownoindices bool) *Forcemerge {
+	r.values.Set("allow_no_indices", strconv.FormatBool(allownoindices))
 
 	return r
 }
@@ -233,8 +315,12 @@ func (r *Forcemerge) AllowNoIndices(b bool) *Forcemerge {
 // ExpandWildcards Whether to expand wildcard expression to concrete indices that are open,
 // closed or both.
 // API name: expand_wildcards
-func (r *Forcemerge) ExpandWildcards(v string) *Forcemerge {
-	r.values.Set("expand_wildcards", v)
+func (r *Forcemerge) ExpandWildcards(expandwildcards ...expandwildcard.ExpandWildcard) *Forcemerge {
+	tmp := []string{}
+	for _, item := range expandwildcards {
+		tmp = append(tmp, item.String())
+	}
+	r.values.Set("expand_wildcards", strings.Join(tmp, ","))
 
 	return r
 }
@@ -242,8 +328,8 @@ func (r *Forcemerge) ExpandWildcards(v string) *Forcemerge {
 // Flush Specify whether the index should be flushed after performing the operation
 // (default: true)
 // API name: flush
-func (r *Forcemerge) Flush(b bool) *Forcemerge {
-	r.values.Set("flush", strconv.FormatBool(b))
+func (r *Forcemerge) Flush(flush bool) *Forcemerge {
+	r.values.Set("flush", strconv.FormatBool(flush))
 
 	return r
 }
@@ -251,32 +337,32 @@ func (r *Forcemerge) Flush(b bool) *Forcemerge {
 // IgnoreUnavailable Whether specified concrete indices should be ignored when unavailable
 // (missing or closed)
 // API name: ignore_unavailable
-func (r *Forcemerge) IgnoreUnavailable(b bool) *Forcemerge {
-	r.values.Set("ignore_unavailable", strconv.FormatBool(b))
+func (r *Forcemerge) IgnoreUnavailable(ignoreunavailable bool) *Forcemerge {
+	r.values.Set("ignore_unavailable", strconv.FormatBool(ignoreunavailable))
 
 	return r
 }
 
 // MaxNumSegments The number of segments the index should be merged into (default: dynamic)
 // API name: max_num_segments
-func (r *Forcemerge) MaxNumSegments(v string) *Forcemerge {
-	r.values.Set("max_num_segments", v)
+func (r *Forcemerge) MaxNumSegments(maxnumsegments string) *Forcemerge {
+	r.values.Set("max_num_segments", maxnumsegments)
 
 	return r
 }
 
 // OnlyExpungeDeletes Specify whether the operation should only expunge deleted documents
 // API name: only_expunge_deletes
-func (r *Forcemerge) OnlyExpungeDeletes(b bool) *Forcemerge {
-	r.values.Set("only_expunge_deletes", strconv.FormatBool(b))
+func (r *Forcemerge) OnlyExpungeDeletes(onlyexpungedeletes bool) *Forcemerge {
+	r.values.Set("only_expunge_deletes", strconv.FormatBool(onlyexpungedeletes))
 
 	return r
 }
 
 // WaitForCompletion Should the request wait until the force merge is completed.
 // API name: wait_for_completion
-func (r *Forcemerge) WaitForCompletion(b bool) *Forcemerge {
-	r.values.Set("wait_for_completion", strconv.FormatBool(b))
+func (r *Forcemerge) WaitForCompletion(waitforcompletion bool) *Forcemerge {
+	r.values.Set("wait_for_completion", strconv.FormatBool(waitforcompletion))
 
 	return r
 }

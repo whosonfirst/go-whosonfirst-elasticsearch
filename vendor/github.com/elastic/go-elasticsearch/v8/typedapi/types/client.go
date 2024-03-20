@@ -16,35 +16,46 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // Client type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/nodes/_types/Stats.ts#L272-L284
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/nodes/_types/Stats.ts#L649-L696
 type Client struct {
-	Agent                 *string `json:"agent,omitempty"`
-	ClosedTimeMillis      *int64  `json:"closed_time_millis,omitempty"`
-	Id                    *int64  `json:"id,omitempty"`
-	LastRequestTimeMillis *int64  `json:"last_request_time_millis,omitempty"`
-	LastUri               *string `json:"last_uri,omitempty"`
-	LocalAddress          *string `json:"local_address,omitempty"`
-	OpenedTimeMillis      *int64  `json:"opened_time_millis,omitempty"`
-	RemoteAddress         *string `json:"remote_address,omitempty"`
-	RequestCount          *int64  `json:"request_count,omitempty"`
-	RequestSizeBytes      *int64  `json:"request_size_bytes,omitempty"`
-	XOpaqueId             *string `json:"x_opaque_id,omitempty"`
+	// Agent Reported agent for the HTTP client.
+	// If unavailable, this property is not included in the response.
+	Agent *string `json:"agent,omitempty"`
+	// ClosedTimeMillis Time at which the client closed the connection if the connection is closed.
+	ClosedTimeMillis *int64 `json:"closed_time_millis,omitempty"`
+	// Id Unique ID for the HTTP client.
+	Id *int64 `json:"id,omitempty"`
+	// LastRequestTimeMillis Time of the most recent request from this client.
+	LastRequestTimeMillis *int64 `json:"last_request_time_millis,omitempty"`
+	// LastUri The URI of the client’s most recent request.
+	LastUri *string `json:"last_uri,omitempty"`
+	// LocalAddress Local address for the HTTP connection.
+	LocalAddress *string `json:"local_address,omitempty"`
+	// OpenedTimeMillis Time at which the client opened the connection.
+	OpenedTimeMillis *int64 `json:"opened_time_millis,omitempty"`
+	// RemoteAddress Remote address for the HTTP connection.
+	RemoteAddress *string `json:"remote_address,omitempty"`
+	// RequestCount Number of requests from this client.
+	RequestCount *int64 `json:"request_count,omitempty"`
+	// RequestSizeBytes Cumulative size in bytes of all requests from this client.
+	RequestSizeBytes *int64 `json:"request_size_bytes,omitempty"`
+	// XOpaqueId Value from the client’s `x-opaque-id` HTTP header.
+	// If unavailable, this property is not included in the response.
+	XOpaqueId *string `json:"x_opaque_id,omitempty"`
 }
 
 func (s *Client) UnmarshalJSON(data []byte) error {
@@ -67,7 +78,11 @@ func (s *Client) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Agent = &o
 
 		case "closed_time_millis":
@@ -120,7 +135,11 @@ func (s *Client) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.LastUri = &o
 
 		case "local_address":
@@ -128,7 +147,11 @@ func (s *Client) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.LocalAddress = &o
 
 		case "opened_time_millis":
@@ -151,7 +174,11 @@ func (s *Client) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.RemoteAddress = &o
 
 		case "request_count":
@@ -189,7 +216,11 @@ func (s *Client) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.XOpaqueId = &o
 
 		}

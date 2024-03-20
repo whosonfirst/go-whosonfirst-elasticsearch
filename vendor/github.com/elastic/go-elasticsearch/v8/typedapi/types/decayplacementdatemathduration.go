@@ -16,28 +16,33 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // DecayPlacementDateMathDuration type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/query_dsl/compound.ts#L77-L82
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/query_dsl/compound.ts#L153-L172
 type DecayPlacementDateMathDuration struct {
-	Decay  *Float64 `json:"decay,omitempty"`
+	// Decay Defines how documents are scored at the distance given at scale.
+	Decay *Float64 `json:"decay,omitempty"`
+	// Offset If defined, the decay function will only compute the decay function for
+	// documents with a distance greater than the defined `offset`.
 	Offset Duration `json:"offset,omitempty"`
-	Origin *string  `json:"origin,omitempty"`
-	Scale  Duration `json:"scale,omitempty"`
+	// Origin The point of origin used for calculating distance. Must be given as a number
+	// for numeric field, date for date fields and geo point for geo fields.
+	Origin *string `json:"origin,omitempty"`
+	// Scale Defines the distance from origin + offset at which the computed score will
+	// equal `decay` parameter.
+	Scale Duration `json:"scale,omitempty"`
 }
 
 func (s *DecayPlacementDateMathDuration) UnmarshalJSON(data []byte) error {

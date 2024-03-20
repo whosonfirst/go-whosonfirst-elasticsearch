@@ -16,21 +16,20 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
-	"encoding/json"
 )
 
 // MatchOnlyTextProperty type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/mapping/core.ts#L208-L233
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/mapping/core.ts#L215-L240
 type MatchOnlyTextProperty struct {
 	// CopyTo Allows you to copy the values of multiple fields into a group
 	// field, which can then be queried as a single field.
@@ -88,7 +87,9 @@ func (s *MatchOnlyTextProperty) UnmarshalJSON(data []byte) error {
 				localDec := json.NewDecoder(buf)
 				localDec.Decode(&kind)
 				buf.Seek(0, io.SeekStart)
-
+				if _, ok := kind["type"]; !ok {
+					kind["type"] = "object"
+				}
 				switch kind["type"] {
 				case "binary":
 					oo := NewBinaryProperty()
@@ -188,6 +189,12 @@ func (s *MatchOnlyTextProperty) UnmarshalJSON(data []byte) error {
 					s.Fields[key] = oo
 				case "dense_vector":
 					oo := NewDenseVectorProperty()
+					if err := localDec.Decode(&oo); err != nil {
+						return err
+					}
+					s.Fields[key] = oo
+				case "sparse_vector":
+					oo := NewSparseVectorProperty()
 					if err := localDec.Decode(&oo); err != nil {
 						return err
 					}
@@ -367,9 +374,11 @@ func (s *MatchOnlyTextProperty) UnmarshalJSON(data []byte) error {
 					}
 					s.Fields[key] = oo
 				default:
-					if err := localDec.Decode(&s.Fields); err != nil {
+					oo := new(Property)
+					if err := localDec.Decode(&oo); err != nil {
 						return err
 					}
+					s.Fields[key] = oo
 				}
 			}
 
@@ -391,14 +400,27 @@ func (s *MatchOnlyTextProperty) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s MatchOnlyTextProperty) MarshalJSON() ([]byte, error) {
+	type innerMatchOnlyTextProperty MatchOnlyTextProperty
+	tmp := innerMatchOnlyTextProperty{
+		CopyTo: s.CopyTo,
+		Fields: s.Fields,
+		Meta:   s.Meta,
+		Type:   s.Type,
+	}
+
+	tmp.Type = "match_only_text"
+
+	return json.Marshal(tmp)
+}
+
 // NewMatchOnlyTextProperty returns a MatchOnlyTextProperty.
 func NewMatchOnlyTextProperty() *MatchOnlyTextProperty {
 	r := &MatchOnlyTextProperty{
 		Fields: make(map[string]Property, 0),
 		Meta:   make(map[string]string, 0),
 	}
-
-	r.Type = "match_only_text"
 
 	return r
 }

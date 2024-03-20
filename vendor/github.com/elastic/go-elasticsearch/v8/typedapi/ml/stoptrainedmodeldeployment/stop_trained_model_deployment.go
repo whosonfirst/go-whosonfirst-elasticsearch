@@ -16,13 +16,12 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Stop a trained model deployment.
 package stoptrainedmodeldeployment
 
 import (
-	gobytes "bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -52,11 +51,15 @@ type StopTrainedModelDeployment struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	modelid string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewStopTrainedModelDeployment type alias for index.
@@ -68,7 +71,7 @@ func NewStopTrainedModelDeploymentFunc(tp elastictransport.Interface) NewStopTra
 	return func(modelid string) *StopTrainedModelDeployment {
 		n := New(tp)
 
-		n.ModelId(modelid)
+		n._modelid(modelid)
 
 		return n
 	}
@@ -76,13 +79,18 @@ func NewStopTrainedModelDeploymentFunc(tp elastictransport.Interface) NewStopTra
 
 // Stop a trained model deployment.
 //
-// https://www.elastic.co/guide/en/elasticsearch/reference/master/stop-trained-model-deployment.html
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/stop-trained-model-deployment.html
 func New(tp elastictransport.Interface) *StopTrainedModelDeployment {
 	r := &StopTrainedModelDeployment{
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -107,6 +115,9 @@ func (r *StopTrainedModelDeployment) HttpRequest(ctx context.Context) (*http.Req
 		path.WriteString("trained_models")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "modelid", r.modelid)
+		}
 		path.WriteString(r.modelid)
 		path.WriteString("/")
 		path.WriteString("deployment")
@@ -124,15 +135,15 @@ func (r *StopTrainedModelDeployment) HttpRequest(ctx context.Context) (*http.Req
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
 
 	if req.Header.Get("Content-Type") == "" {
-		if r.buf.Len() > 0 {
+		if r.raw != nil {
 			req.Header.Set("Content-Type", "application/vnd.elasticsearch+json;compatible-with=8")
 		}
 	}
@@ -149,27 +160,66 @@ func (r *StopTrainedModelDeployment) HttpRequest(ctx context.Context) (*http.Req
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r StopTrainedModelDeployment) Perform(ctx context.Context) (*http.Response, error) {
+func (r StopTrainedModelDeployment) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "ml.stop_trained_model_deployment")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "ml.stop_trained_model_deployment")
+		if reader := instrument.RecordRequestBody(ctx, "ml.stop_trained_model_deployment", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "ml.stop_trained_model_deployment")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the StopTrainedModelDeployment query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the StopTrainedModelDeployment query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a stoptrainedmodeldeployment.Response
-func (r StopTrainedModelDeployment) Do(ctx context.Context) (*Response, error) {
+func (r StopTrainedModelDeployment) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "ml.stop_trained_model_deployment")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -177,6 +227,9 @@ func (r StopTrainedModelDeployment) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -186,15 +239,35 @@ func (r StopTrainedModelDeployment) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r StopTrainedModelDeployment) IsSuccess(ctx context.Context) (bool, error) {
+func (r StopTrainedModelDeployment) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "ml.stop_trained_model_deployment")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -210,6 +283,14 @@ func (r StopTrainedModelDeployment) IsSuccess(ctx context.Context) (bool, error)
 		return true, nil
 	}
 
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the StopTrainedModelDeployment query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -222,9 +303,9 @@ func (r *StopTrainedModelDeployment) Header(key, value string) *StopTrainedModel
 
 // ModelId The unique identifier of the trained model.
 // API Name: modelid
-func (r *StopTrainedModelDeployment) ModelId(v string) *StopTrainedModelDeployment {
+func (r *StopTrainedModelDeployment) _modelid(modelid string) *StopTrainedModelDeployment {
 	r.paramSet |= modelidMask
-	r.modelid = v
+	r.modelid = modelid
 
 	return r
 }
@@ -239,8 +320,8 @@ func (r *StopTrainedModelDeployment) ModelId(v string) *StopTrainedModelDeployme
 // If `false`, the request returns a 404 status code when there are no matches
 // or only partial matches.
 // API name: allow_no_match
-func (r *StopTrainedModelDeployment) AllowNoMatch(b bool) *StopTrainedModelDeployment {
-	r.values.Set("allow_no_match", strconv.FormatBool(b))
+func (r *StopTrainedModelDeployment) AllowNoMatch(allownomatch bool) *StopTrainedModelDeployment {
+	r.values.Set("allow_no_match", strconv.FormatBool(allownomatch))
 
 	return r
 }
@@ -249,8 +330,8 @@ func (r *StopTrainedModelDeployment) AllowNoMatch(b bool) *StopTrainedModelDeplo
 // can't use these pipelines until you
 // restart the model deployment.
 // API name: force
-func (r *StopTrainedModelDeployment) Force(b bool) *StopTrainedModelDeployment {
-	r.values.Set("force", strconv.FormatBool(b))
+func (r *StopTrainedModelDeployment) Force(force bool) *StopTrainedModelDeployment {
+	r.values.Set("force", strconv.FormatBool(force))
 
 	return r
 }

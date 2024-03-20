@@ -16,23 +16,22 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/snowballlanguage"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/snowballlanguage"
 )
 
 // SnowballTokenFilter type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/token_filters.ts#L309-L312
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/token_filters.ts#L309-L312
 type SnowballTokenFilter struct {
 	Language snowballlanguage.SnowballLanguage `json:"language"`
 	Type     string                            `json:"type,omitempty"`
@@ -74,11 +73,23 @@ func (s *SnowballTokenFilter) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s SnowballTokenFilter) MarshalJSON() ([]byte, error) {
+	type innerSnowballTokenFilter SnowballTokenFilter
+	tmp := innerSnowballTokenFilter{
+		Language: s.Language,
+		Type:     s.Type,
+		Version:  s.Version,
+	}
+
+	tmp.Type = "snowball"
+
+	return json.Marshal(tmp)
+}
+
 // NewSnowballTokenFilter returns a SnowballTokenFilter.
 func NewSnowballTokenFilter() *SnowballTokenFilter {
 	r := &SnowballTokenFilter{}
-
-	r.Type = "snowball"
 
 	return r
 }

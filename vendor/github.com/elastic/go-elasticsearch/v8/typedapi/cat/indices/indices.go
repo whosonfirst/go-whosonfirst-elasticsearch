@@ -16,14 +16,13 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Returns information about indices: number of primaries and replicas, document
 // counts, disk size, ...
 package indices
 
 import (
-	gobytes "bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -37,8 +36,8 @@ import (
 
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
-
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/bytes"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/expandwildcard"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/healthstatus"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/timeunit"
 )
@@ -57,11 +56,15 @@ type Indices struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	index string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewIndices type alias for index.
@@ -80,13 +83,18 @@ func NewIndicesFunc(tp elastictransport.Interface) NewIndices {
 // Returns information about indices: number of primaries and replicas, document
 // counts, disk size, ...
 //
-// https://www.elastic.co/guide/en/elasticsearch/reference/{branch}/cat-indices.html
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/cat-indices.html
 func New(tp elastictransport.Interface) *Indices {
 	r := &Indices{
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -118,6 +126,9 @@ func (r *Indices) HttpRequest(ctx context.Context) (*http.Request, error) {
 		path.WriteString("indices")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "index", r.index)
+		}
 		path.WriteString(r.index)
 
 		method = http.MethodGet
@@ -131,9 +142,9 @@ func (r *Indices) HttpRequest(ctx context.Context) (*http.Request, error) {
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
@@ -150,27 +161,66 @@ func (r *Indices) HttpRequest(ctx context.Context) (*http.Request, error) {
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r Indices) Perform(ctx context.Context) (*http.Response, error) {
+func (r Indices) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "cat.indices")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "cat.indices")
+		if reader := instrument.RecordRequestBody(ctx, "cat.indices", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "cat.indices")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the Indices query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the Indices query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a indices.Response
-func (r Indices) Do(ctx context.Context) (Response, error) {
+func (r Indices) Do(providedCtx context.Context) (Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "cat.indices")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -178,6 +228,9 @@ func (r Indices) Do(ctx context.Context) (Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(&response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -187,15 +240,35 @@ func (r Indices) Do(ctx context.Context) (Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r Indices) IsSuccess(ctx context.Context) (bool, error) {
+func (r Indices) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "cat.indices")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -211,6 +284,14 @@ func (r Indices) IsSuccess(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the Indices query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -221,62 +302,68 @@ func (r *Indices) Header(key, value string) *Indices {
 	return r
 }
 
-// Index A comma-separated list of index names to limit the returned information
+// Index Comma-separated list of data streams, indices, and aliases used to limit the
+// request.
+// Supports wildcards (`*`). To target all data streams and indices, omit this
+// parameter or use `*` or `_all`.
 // API Name: index
-func (r *Indices) Index(v string) *Indices {
+func (r *Indices) Index(index string) *Indices {
 	r.paramSet |= indexMask
-	r.index = v
+	r.index = index
 
 	return r
 }
 
-// Bytes The unit in which to display byte values
+// Bytes The unit used to display byte values.
 // API name: bytes
-func (r *Indices) Bytes(enum bytes.Bytes) *Indices {
-	r.values.Set("bytes", enum.String())
+func (r *Indices) Bytes(bytes bytes.Bytes) *Indices {
+	r.values.Set("bytes", bytes.String())
 
 	return r
 }
 
-// ExpandWildcards Whether to expand wildcard expression to concrete indices that are open,
-// closed or both.
+// ExpandWildcards The type of index that wildcard patterns can match.
 // API name: expand_wildcards
-func (r *Indices) ExpandWildcards(v string) *Indices {
-	r.values.Set("expand_wildcards", v)
+func (r *Indices) ExpandWildcards(expandwildcards ...expandwildcard.ExpandWildcard) *Indices {
+	tmp := []string{}
+	for _, item := range expandwildcards {
+		tmp = append(tmp, item.String())
+	}
+	r.values.Set("expand_wildcards", strings.Join(tmp, ","))
 
 	return r
 }
 
-// Health A health status ("green", "yellow", or "red" to filter only indices matching
-// the specified health status
+// Health The health status used to limit returned indices. By default, the response
+// includes indices of any health status.
 // API name: health
-func (r *Indices) Health(enum healthstatus.HealthStatus) *Indices {
-	r.values.Set("health", enum.String())
+func (r *Indices) Health(health healthstatus.HealthStatus) *Indices {
+	r.values.Set("health", health.String())
 
 	return r
 }
 
-// IncludeUnloadedSegments If set to true segment stats will include stats for segments that are not
-// currently loaded into memory
+// IncludeUnloadedSegments If true, the response includes information from segments that are not loaded
+// into memory.
 // API name: include_unloaded_segments
-func (r *Indices) IncludeUnloadedSegments(b bool) *Indices {
-	r.values.Set("include_unloaded_segments", strconv.FormatBool(b))
+func (r *Indices) IncludeUnloadedSegments(includeunloadedsegments bool) *Indices {
+	r.values.Set("include_unloaded_segments", strconv.FormatBool(includeunloadedsegments))
 
 	return r
 }
 
-// Pri Set to true to return stats only for primary shards
+// Pri If true, the response only includes information from primary shards.
 // API name: pri
-func (r *Indices) Pri(b bool) *Indices {
-	r.values.Set("pri", strconv.FormatBool(b))
+func (r *Indices) Pri(pri bool) *Indices {
+	r.values.Set("pri", strconv.FormatBool(pri))
 
 	return r
 }
 
-// Time The unit in which to display time values
+// Time The unit used to display time values.
 // API name: time
-func (r *Indices) Time(enum timeunit.TimeUnit) *Indices {
-	r.values.Set("time", enum.String())
+func (r *Indices) Time(time timeunit.TimeUnit) *Indices {
+	r.values.Set("time", time.String())
 
 	return r
 }

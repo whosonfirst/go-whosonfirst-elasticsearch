@@ -16,19 +16,19 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package upgradejobsnapshot
 
 // Response holds the response body struct for the package upgradejobsnapshot
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ml/upgrade_job_snapshot/MlUpgradeJobSnapshotResponse.ts#L22-L29
-
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ml/upgrade_job_snapshot/MlUpgradeJobSnapshotResponse.ts#L22-L31
 type Response struct {
 
 	// Completed When true, this means the task is complete. When false, it is still running.
 	Completed bool `json:"completed"`
-	// Node The ID of the assigned node for the upgrade task if it is still running.
+	// Node The ID of the node that the upgrade task was started on if it is still
+	// running. In serverless this will be the "serverless".
 	Node string `json:"node"`
 }
 

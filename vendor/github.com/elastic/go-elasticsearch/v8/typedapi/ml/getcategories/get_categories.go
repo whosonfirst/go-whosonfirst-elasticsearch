@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Retrieves anomaly detection job results for one or more categories.
 package getcategories
@@ -53,15 +53,20 @@ type GetCategories struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
-
-	req *Request
 	raw io.Reader
+
+	req      *Request
+	deferred []func(request *Request) error
+	buf      *gobytes.Buffer
 
 	paramSet int
 
 	jobid      string
 	categoryid string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewGetCategories type alias for index.
@@ -73,7 +78,7 @@ func NewGetCategoriesFunc(tp elastictransport.Interface) NewGetCategories {
 	return func(jobid string) *GetCategories {
 		n := New(tp)
 
-		n.JobId(jobid)
+		n._jobid(jobid)
 
 		return n
 	}
@@ -87,7 +92,16 @@ func New(tp elastictransport.Interface) *GetCategories {
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+
+		buf: gobytes.NewBuffer(nil),
+
+		req: NewRequest(),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -117,9 +131,17 @@ func (r *GetCategories) HttpRequest(ctx context.Context) (*http.Request, error) 
 
 	var err error
 
-	if r.raw != nil {
-		r.buf.ReadFrom(r.raw)
-	} else if r.req != nil {
+	if len(r.deferred) > 0 {
+		for _, f := range r.deferred {
+			deferredErr := f(r.req)
+			if deferredErr != nil {
+				return nil, deferredErr
+			}
+		}
+	}
+
+	if r.raw == nil && r.req != nil {
+
 		data, err := json.Marshal(r.req)
 
 		if err != nil {
@@ -127,6 +149,11 @@ func (r *GetCategories) HttpRequest(ctx context.Context) (*http.Request, error) 
 		}
 
 		r.buf.Write(data)
+
+	}
+
+	if r.buf.Len() > 0 {
+		r.raw = r.buf
 	}
 
 	r.path.Scheme = "http"
@@ -139,6 +166,9 @@ func (r *GetCategories) HttpRequest(ctx context.Context) (*http.Request, error) 
 		path.WriteString("anomaly_detectors")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "jobid", r.jobid)
+		}
 		path.WriteString(r.jobid)
 		path.WriteString("/")
 		path.WriteString("results")
@@ -146,6 +176,9 @@ func (r *GetCategories) HttpRequest(ctx context.Context) (*http.Request, error) 
 		path.WriteString("categories")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "categoryid", r.categoryid)
+		}
 		path.WriteString(r.categoryid)
 
 		method = http.MethodPost
@@ -156,12 +189,15 @@ func (r *GetCategories) HttpRequest(ctx context.Context) (*http.Request, error) 
 		path.WriteString("anomaly_detectors")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "jobid", r.jobid)
+		}
 		path.WriteString(r.jobid)
 		path.WriteString("/")
 		path.WriteString("results")
 		path.WriteString("/")
 		path.WriteString("categories")
-		path.WriteString("/")
+
 		method = http.MethodPost
 	}
 
@@ -173,15 +209,15 @@ func (r *GetCategories) HttpRequest(ctx context.Context) (*http.Request, error) 
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
 
 	if req.Header.Get("Content-Type") == "" {
-		if r.buf.Len() > 0 {
+		if r.raw != nil {
 			req.Header.Set("Content-Type", "application/vnd.elasticsearch+json;compatible-with=8")
 		}
 	}
@@ -198,27 +234,66 @@ func (r *GetCategories) HttpRequest(ctx context.Context) (*http.Request, error) 
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r GetCategories) Perform(ctx context.Context) (*http.Response, error) {
+func (r GetCategories) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "ml.get_categories")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "ml.get_categories")
+		if reader := instrument.RecordRequestBody(ctx, "ml.get_categories", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "ml.get_categories")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the GetCategories query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the GetCategories query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a getcategories.Response
-func (r GetCategories) Do(ctx context.Context) (*Response, error) {
+func (r GetCategories) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "ml.get_categories")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -226,6 +301,9 @@ func (r GetCategories) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -235,9 +313,19 @@ func (r GetCategories) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
@@ -250,9 +338,9 @@ func (r *GetCategories) Header(key, value string) *GetCategories {
 
 // JobId Identifier for the anomaly detection job.
 // API Name: jobid
-func (r *GetCategories) JobId(v string) *GetCategories {
+func (r *GetCategories) _jobid(jobid string) *GetCategories {
 	r.paramSet |= jobidMask
-	r.jobid = v
+	r.jobid = jobid
 
 	return r
 }
@@ -263,33 +351,43 @@ func (r *GetCategories) JobId(v string) *GetCategories {
 // partition_field_value, it returns information about all categories for
 // the specified partition.
 // API Name: categoryid
-func (r *GetCategories) CategoryId(v string) *GetCategories {
+func (r *GetCategories) CategoryId(categoryid string) *GetCategories {
 	r.paramSet |= categoryidMask
-	r.categoryid = v
+	r.categoryid = categoryid
 
 	return r
 }
 
 // From Skips the specified number of categories.
 // API name: from
-func (r *GetCategories) From(i int) *GetCategories {
-	r.values.Set("from", strconv.Itoa(i))
+func (r *GetCategories) From(from int) *GetCategories {
+	r.values.Set("from", strconv.Itoa(from))
 
 	return r
 }
 
 // PartitionFieldValue Only return categories for the specified partition.
 // API name: partition_field_value
-func (r *GetCategories) PartitionFieldValue(v string) *GetCategories {
-	r.values.Set("partition_field_value", v)
+func (r *GetCategories) PartitionFieldValue(partitionfieldvalue string) *GetCategories {
+	r.values.Set("partition_field_value", partitionfieldvalue)
 
 	return r
 }
 
 // Size Specifies the maximum number of categories to obtain.
 // API name: size
-func (r *GetCategories) Size(i int) *GetCategories {
-	r.values.Set("size", strconv.Itoa(i))
+func (r *GetCategories) Size(size int) *GetCategories {
+	r.values.Set("size", strconv.Itoa(size))
+
+	return r
+}
+
+// Page Configures pagination.
+// This parameter has the `from` and `size` properties.
+// API name: page
+func (r *GetCategories) Page(page *types.Page) *GetCategories {
+
+	r.req.Page = page
 
 	return r
 }

@@ -16,28 +16,34 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // IntervalsAllOf type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/query_dsl/fulltext.ts#L49-L56
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/query_dsl/fulltext.ts#L50-L70
 type IntervalsAllOf struct {
-	Filter    *IntervalsFilter `json:"filter,omitempty"`
-	Intervals []Intervals      `json:"intervals"`
-	MaxGaps   *int             `json:"max_gaps,omitempty"`
-	Ordered   *bool            `json:"ordered,omitempty"`
+	// Filter Rule used to filter returned intervals.
+	Filter *IntervalsFilter `json:"filter,omitempty"`
+	// Intervals An array of rules to combine. All rules must produce a match in a document
+	// for the overall source to match.
+	Intervals []Intervals `json:"intervals"`
+	// MaxGaps Maximum number of positions between the matching terms.
+	// Intervals produced by the rules further apart than this are not considered
+	// matches.
+	MaxGaps *int `json:"max_gaps,omitempty"`
+	// Ordered If `true`, intervals produced by the rules should appear in the order in
+	// which they are specified.
+	Ordered *bool `json:"ordered,omitempty"`
 }
 
 func (s *IntervalsAllOf) UnmarshalJSON(data []byte) error {

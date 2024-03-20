@@ -16,38 +16,63 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/geoshaperelation"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/geoshaperelation"
 )
 
 // EnrichProcessor type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ingest/_types/Processors.ts#L201-L209
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ingest/_types/Processors.ts#L603-L642
 type EnrichProcessor struct {
-	Description   *string                            `json:"description,omitempty"`
-	Field         string                             `json:"field"`
-	If            *string                            `json:"if,omitempty"`
-	IgnoreFailure *bool                              `json:"ignore_failure,omitempty"`
-	IgnoreMissing *bool                              `json:"ignore_missing,omitempty"`
-	MaxMatches    *int                               `json:"max_matches,omitempty"`
-	OnFailure     []ProcessorContainer               `json:"on_failure,omitempty"`
-	Override      *bool                              `json:"override,omitempty"`
-	PolicyName    string                             `json:"policy_name"`
+	// Description Description of the processor.
+	// Useful for describing the purpose of the processor or its configuration.
+	Description *string `json:"description,omitempty"`
+	// Field The field in the input document that matches the policies match_field used to
+	// retrieve the enrichment data.
+	// Supports template snippets.
+	Field string `json:"field"`
+	// If Conditionally execute the processor.
+	If *string `json:"if,omitempty"`
+	// IgnoreFailure Ignore failures for the processor.
+	IgnoreFailure *bool `json:"ignore_failure,omitempty"`
+	// IgnoreMissing If `true` and `field` does not exist, the processor quietly exits without
+	// modifying the document.
+	IgnoreMissing *bool `json:"ignore_missing,omitempty"`
+	// MaxMatches The maximum number of matched documents to include under the configured
+	// target field.
+	// The `target_field` will be turned into a json array if `max_matches` is
+	// higher than 1, otherwise `target_field` will become a json object.
+	// In order to avoid documents getting too large, the maximum allowed value is
+	// 128.
+	MaxMatches *int `json:"max_matches,omitempty"`
+	// OnFailure Handle failures for the processor.
+	OnFailure []ProcessorContainer `json:"on_failure,omitempty"`
+	// Override If processor will update fields with pre-existing non-null-valued field.
+	// When set to `false`, such fields will not be touched.
+	Override *bool `json:"override,omitempty"`
+	// PolicyName The name of the enrich policy to use.
+	PolicyName string `json:"policy_name"`
+	// ShapeRelation A spatial relation operator used to match the geoshape of incoming documents
+	// to documents in the enrich index.
+	// This option is only used for `geo_match` enrich policy types.
 	ShapeRelation *geoshaperelation.GeoShapeRelation `json:"shape_relation,omitempty"`
-	Tag           *string                            `json:"tag,omitempty"`
-	TargetField   string                             `json:"target_field"`
+	// Tag Identifier for the processor.
+	// Useful for debugging and metrics.
+	Tag *string `json:"tag,omitempty"`
+	// TargetField Field added to incoming documents to contain enrich data. This field contains
+	// both the `match_field` and `enrich_fields` specified in the enrich policy.
+	// Supports template snippets.
+	TargetField string `json:"target_field"`
 }
 
 func (s *EnrichProcessor) UnmarshalJSON(data []byte) error {
@@ -70,7 +95,11 @@ func (s *EnrichProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Description = &o
 
 		case "field":
@@ -83,7 +112,11 @@ func (s *EnrichProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.If = &o
 
 		case "ignore_failure":
@@ -154,7 +187,11 @@ func (s *EnrichProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.PolicyName = o
 
 		case "shape_relation":
@@ -167,7 +204,11 @@ func (s *EnrichProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Tag = &o
 
 		case "target_field":

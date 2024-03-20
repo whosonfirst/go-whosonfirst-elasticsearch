@@ -16,24 +16,35 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
+	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/managedby"
 )
 
 // DataStreamIndex type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/indices/_types/DataStream.ts#L52-L55
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/indices/_types/DataStream.ts#L120-L141
 type DataStreamIndex struct {
+	// IlmPolicy Name of the current ILM lifecycle policy configured for this backing index.
+	IlmPolicy *string `json:"ilm_policy,omitempty"`
+	// IndexName Name of the backing index.
 	IndexName string `json:"index_name"`
+	// IndexUuid Universally unique identifier (UUID) for the index.
 	IndexUuid string `json:"index_uuid"`
+	// ManagedBy Name of the lifecycle system that's currently managing this backing index.
+	ManagedBy managedby.ManagedBy `json:"managed_by"`
+	// PreferIlm Indicates if ILM should take precedence over DSL in case both are configured
+	// to manage this index.
+	PreferIlm bool `json:"prefer_ilm"`
 }
 
 func (s *DataStreamIndex) UnmarshalJSON(data []byte) error {
@@ -51,6 +62,11 @@ func (s *DataStreamIndex) UnmarshalJSON(data []byte) error {
 
 		switch t {
 
+		case "ilm_policy":
+			if err := dec.Decode(&s.IlmPolicy); err != nil {
+				return err
+			}
+
 		case "index_name":
 			if err := dec.Decode(&s.IndexName); err != nil {
 				return err
@@ -59,6 +75,25 @@ func (s *DataStreamIndex) UnmarshalJSON(data []byte) error {
 		case "index_uuid":
 			if err := dec.Decode(&s.IndexUuid); err != nil {
 				return err
+			}
+
+		case "managed_by":
+			if err := dec.Decode(&s.ManagedBy); err != nil {
+				return err
+			}
+
+		case "prefer_ilm":
+			var tmp interface{}
+			dec.Decode(&tmp)
+			switch v := tmp.(type) {
+			case string:
+				value, err := strconv.ParseBool(v)
+				if err != nil {
+					return err
+				}
+				s.PreferIlm = value
+			case bool:
+				s.PreferIlm = v
 			}
 
 		}

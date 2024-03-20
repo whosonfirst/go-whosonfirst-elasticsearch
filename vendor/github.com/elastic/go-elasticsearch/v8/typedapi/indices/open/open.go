@@ -16,13 +16,12 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Opens an index.
 package open
 
 import (
-	gobytes "bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -36,6 +35,7 @@ import (
 
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/expandwildcard"
 )
 
 const (
@@ -52,11 +52,15 @@ type Open struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	index string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewOpen type alias for index.
@@ -68,7 +72,7 @@ func NewOpenFunc(tp elastictransport.Interface) NewOpen {
 	return func(index string) *Open {
 		n := New(tp)
 
-		n.Index(index)
+		n._index(index)
 
 		return n
 	}
@@ -76,13 +80,18 @@ func NewOpenFunc(tp elastictransport.Interface) NewOpen {
 
 // Opens an index.
 //
-// https://www.elastic.co/guide/en/elasticsearch/reference/master/indices-open-close.html
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-open-close.html
 func New(tp elastictransport.Interface) *Open {
 	r := &Open{
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -103,6 +112,9 @@ func (r *Open) HttpRequest(ctx context.Context) (*http.Request, error) {
 	case r.paramSet == indexMask:
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "index", r.index)
+		}
 		path.WriteString(r.index)
 		path.WriteString("/")
 		path.WriteString("_open")
@@ -118,9 +130,9 @@ func (r *Open) HttpRequest(ctx context.Context) (*http.Request, error) {
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
@@ -137,27 +149,66 @@ func (r *Open) HttpRequest(ctx context.Context) (*http.Request, error) {
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r Open) Perform(ctx context.Context) (*http.Response, error) {
+func (r Open) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "indices.open")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "indices.open")
+		if reader := instrument.RecordRequestBody(ctx, "indices.open", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "indices.open")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the Open query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the Open query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a open.Response
-func (r Open) Do(ctx context.Context) (*Response, error) {
+func (r Open) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "indices.open")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -165,6 +216,9 @@ func (r Open) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -174,15 +228,35 @@ func (r Open) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r Open) IsSuccess(ctx context.Context) (bool, error) {
+func (r Open) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "indices.open")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -198,6 +272,14 @@ func (r Open) IsSuccess(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the Open query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -208,62 +290,85 @@ func (r *Open) Header(key, value string) *Open {
 	return r
 }
 
-// Index A comma separated list of indices to open
+// Index Comma-separated list of data streams, indices, and aliases used to limit the
+// request.
+// Supports wildcards (`*`).
+// By default, you must explicitly name the indices you using to limit the
+// request.
+// To limit a request using `_all`, `*`, or other wildcard expressions, change
+// the `action.destructive_requires_name` setting to false.
+// You can update this setting in the `elasticsearch.yml` file or using the
+// cluster update settings API.
 // API Name: index
-func (r *Open) Index(v string) *Open {
+func (r *Open) _index(index string) *Open {
 	r.paramSet |= indexMask
-	r.index = v
+	r.index = index
 
 	return r
 }
 
-// AllowNoIndices Whether to ignore if a wildcard indices expression resolves into no concrete
-// indices. (This includes `_all` string or when no indices have been specified)
+// AllowNoIndices If `false`, the request returns an error if any wildcard expression, index
+// alias, or `_all` value targets only missing or closed indices.
+// This behavior applies even if the request targets other open indices.
 // API name: allow_no_indices
-func (r *Open) AllowNoIndices(b bool) *Open {
-	r.values.Set("allow_no_indices", strconv.FormatBool(b))
+func (r *Open) AllowNoIndices(allownoindices bool) *Open {
+	r.values.Set("allow_no_indices", strconv.FormatBool(allownoindices))
 
 	return r
 }
 
-// ExpandWildcards Whether to expand wildcard expression to concrete indices that are open,
-// closed or both.
+// ExpandWildcards Type of index that wildcard patterns can match.
+// If the request can target data streams, this argument determines whether
+// wildcard expressions match hidden data streams.
+// Supports comma-separated values, such as `open,hidden`.
+// Valid values are: `all`, `open`, `closed`, `hidden`, `none`.
 // API name: expand_wildcards
-func (r *Open) ExpandWildcards(v string) *Open {
-	r.values.Set("expand_wildcards", v)
+func (r *Open) ExpandWildcards(expandwildcards ...expandwildcard.ExpandWildcard) *Open {
+	tmp := []string{}
+	for _, item := range expandwildcards {
+		tmp = append(tmp, item.String())
+	}
+	r.values.Set("expand_wildcards", strings.Join(tmp, ","))
 
 	return r
 }
 
-// IgnoreUnavailable Whether specified concrete indices should be ignored when unavailable
-// (missing or closed)
+// IgnoreUnavailable If `false`, the request returns an error if it targets a missing or closed
+// index.
 // API name: ignore_unavailable
-func (r *Open) IgnoreUnavailable(b bool) *Open {
-	r.values.Set("ignore_unavailable", strconv.FormatBool(b))
+func (r *Open) IgnoreUnavailable(ignoreunavailable bool) *Open {
+	r.values.Set("ignore_unavailable", strconv.FormatBool(ignoreunavailable))
 
 	return r
 }
 
-// MasterTimeout Specify timeout for connection to master
+// MasterTimeout Period to wait for a connection to the master node.
+// If no response is received before the timeout expires, the request fails and
+// returns an error.
 // API name: master_timeout
-func (r *Open) MasterTimeout(v string) *Open {
-	r.values.Set("master_timeout", v)
+func (r *Open) MasterTimeout(duration string) *Open {
+	r.values.Set("master_timeout", duration)
 
 	return r
 }
 
-// Timeout Explicit operation timeout
+// Timeout Period to wait for a response.
+// If no response is received before the timeout expires, the request fails and
+// returns an error.
 // API name: timeout
-func (r *Open) Timeout(v string) *Open {
-	r.values.Set("timeout", v)
+func (r *Open) Timeout(duration string) *Open {
+	r.values.Set("timeout", duration)
 
 	return r
 }
 
-// WaitForActiveShards Sets the number of active shards to wait for before the operation returns.
+// WaitForActiveShards The number of shard copies that must be active before proceeding with the
+// operation.
+// Set to `all` or any positive integer up to the total number of shards in the
+// index (`number_of_replicas+1`).
 // API name: wait_for_active_shards
-func (r *Open) WaitForActiveShards(v string) *Open {
-	r.values.Set("wait_for_active_shards", v)
+func (r *Open) WaitForActiveShards(waitforactiveshards string) *Open {
+	r.values.Set("wait_for_active_shards", waitforactiveshards)
 
 	return r
 }

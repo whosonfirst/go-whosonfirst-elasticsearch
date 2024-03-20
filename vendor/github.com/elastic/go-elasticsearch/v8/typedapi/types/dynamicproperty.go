@@ -16,29 +16,27 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"io"
+	"strconv"
+
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/dynamicmapping"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/indexoptions"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/onscripterror"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/termvectoroption"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/timeseriesmetrictype"
-
-	"bytes"
-	"errors"
-	"io"
-
-	"strconv"
-
-	"encoding/json"
 )
 
 // DynamicProperty type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/mapping/core.ts#L275-L306
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/mapping/core.ts#L285-L316
 type DynamicProperty struct {
 	Analyzer            *string                        `json:"analyzer,omitempty"`
 	Boost               *Float64                       `json:"boost,omitempty"`
@@ -95,7 +93,11 @@ func (s *DynamicProperty) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Analyzer = &o
 
 		case "boost":
@@ -203,7 +205,9 @@ func (s *DynamicProperty) UnmarshalJSON(data []byte) error {
 				localDec := json.NewDecoder(buf)
 				localDec.Decode(&kind)
 				buf.Seek(0, io.SeekStart)
-
+				if _, ok := kind["type"]; !ok {
+					kind["type"] = "object"
+				}
 				switch kind["type"] {
 				case "binary":
 					oo := NewBinaryProperty()
@@ -303,6 +307,12 @@ func (s *DynamicProperty) UnmarshalJSON(data []byte) error {
 					s.Fields[key] = oo
 				case "dense_vector":
 					oo := NewDenseVectorProperty()
+					if err := localDec.Decode(&oo); err != nil {
+						return err
+					}
+					s.Fields[key] = oo
+				case "sparse_vector":
+					oo := NewSparseVectorProperty()
 					if err := localDec.Decode(&oo); err != nil {
 						return err
 					}
@@ -482,9 +492,11 @@ func (s *DynamicProperty) UnmarshalJSON(data []byte) error {
 					}
 					s.Fields[key] = oo
 				default:
-					if err := localDec.Decode(&s.Fields); err != nil {
+					oo := new(Property)
+					if err := localDec.Decode(&oo); err != nil {
 						return err
 					}
+					s.Fields[key] = oo
 				}
 			}
 
@@ -493,7 +505,11 @@ func (s *DynamicProperty) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Format = &o
 
 		case "ignore_above":
@@ -569,7 +585,11 @@ func (s *DynamicProperty) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Locale = &o
 
 		case "meta":
@@ -648,7 +668,9 @@ func (s *DynamicProperty) UnmarshalJSON(data []byte) error {
 				localDec := json.NewDecoder(buf)
 				localDec.Decode(&kind)
 				buf.Seek(0, io.SeekStart)
-
+				if _, ok := kind["type"]; !ok {
+					kind["type"] = "object"
+				}
 				switch kind["type"] {
 				case "binary":
 					oo := NewBinaryProperty()
@@ -748,6 +770,12 @@ func (s *DynamicProperty) UnmarshalJSON(data []byte) error {
 					s.Properties[key] = oo
 				case "dense_vector":
 					oo := NewDenseVectorProperty()
+					if err := localDec.Decode(&oo); err != nil {
+						return err
+					}
+					s.Properties[key] = oo
+				case "sparse_vector":
+					oo := NewSparseVectorProperty()
 					if err := localDec.Decode(&oo); err != nil {
 						return err
 					}
@@ -927,15 +955,48 @@ func (s *DynamicProperty) UnmarshalJSON(data []byte) error {
 					}
 					s.Properties[key] = oo
 				default:
-					if err := localDec.Decode(&s.Properties); err != nil {
+					oo := new(Property)
+					if err := localDec.Decode(&oo); err != nil {
 						return err
 					}
+					s.Properties[key] = oo
 				}
 			}
 
 		case "script":
-			if err := dec.Decode(&s.Script); err != nil {
+			message := json.RawMessage{}
+			if err := dec.Decode(&message); err != nil {
 				return err
+			}
+			keyDec := json.NewDecoder(bytes.NewReader(message))
+			for {
+				t, err := keyDec.Token()
+				if err != nil {
+					if errors.Is(err, io.EOF) {
+						break
+					}
+					return err
+				}
+
+				switch t {
+
+				case "lang", "options", "source":
+					o := NewInlineScript()
+					localDec := json.NewDecoder(bytes.NewReader(message))
+					if err := localDec.Decode(&o); err != nil {
+						return err
+					}
+					s.Script = o
+
+				case "id":
+					o := NewStoredScriptId()
+					localDec := json.NewDecoder(bytes.NewReader(message))
+					if err := localDec.Decode(&o); err != nil {
+						return err
+					}
+					s.Script = o
+
+				}
 			}
 
 		case "search_analyzer":
@@ -943,7 +1004,11 @@ func (s *DynamicProperty) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.SearchAnalyzer = &o
 
 		case "search_quote_analyzer":
@@ -951,7 +1016,11 @@ func (s *DynamicProperty) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.SearchQuoteAnalyzer = &o
 
 		case "similarity":
@@ -959,7 +1028,11 @@ func (s *DynamicProperty) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Similarity = &o
 
 		case "store":
@@ -996,6 +1069,49 @@ func (s *DynamicProperty) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s DynamicProperty) MarshalJSON() ([]byte, error) {
+	type innerDynamicProperty DynamicProperty
+	tmp := innerDynamicProperty{
+		Analyzer:             s.Analyzer,
+		Boost:                s.Boost,
+		Coerce:               s.Coerce,
+		CopyTo:               s.CopyTo,
+		DocValues:            s.DocValues,
+		Dynamic:              s.Dynamic,
+		EagerGlobalOrdinals:  s.EagerGlobalOrdinals,
+		Enabled:              s.Enabled,
+		Fields:               s.Fields,
+		Format:               s.Format,
+		IgnoreAbove:          s.IgnoreAbove,
+		IgnoreMalformed:      s.IgnoreMalformed,
+		Index:                s.Index,
+		IndexOptions:         s.IndexOptions,
+		IndexPhrases:         s.IndexPhrases,
+		IndexPrefixes:        s.IndexPrefixes,
+		Locale:               s.Locale,
+		Meta:                 s.Meta,
+		Norms:                s.Norms,
+		NullValue:            s.NullValue,
+		OnScriptError:        s.OnScriptError,
+		PositionIncrementGap: s.PositionIncrementGap,
+		PrecisionStep:        s.PrecisionStep,
+		Properties:           s.Properties,
+		Script:               s.Script,
+		SearchAnalyzer:       s.SearchAnalyzer,
+		SearchQuoteAnalyzer:  s.SearchQuoteAnalyzer,
+		Similarity:           s.Similarity,
+		Store:                s.Store,
+		TermVector:           s.TermVector,
+		TimeSeriesMetric:     s.TimeSeriesMetric,
+		Type:                 s.Type,
+	}
+
+	tmp.Type = "{dynamic_property}"
+
+	return json.Marshal(tmp)
+}
+
 // NewDynamicProperty returns a DynamicProperty.
 func NewDynamicProperty() *DynamicProperty {
 	r := &DynamicProperty{
@@ -1003,8 +1119,6 @@ func NewDynamicProperty() *DynamicProperty {
 		Meta:       make(map[string]string, 0),
 		Properties: make(map[string]Property, 0),
 	}
-
-	r.Type = "{dynamic_property}"
 
 	return r
 }

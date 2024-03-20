@@ -16,24 +16,24 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/licensestatus"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/licensetype"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
+	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/licensestatus"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/licensetype"
 )
 
 // LicenseInformation type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/license/get/types.ts#L25-L38
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/license/get/types.ts#L25-L38
 type LicenseInformation struct {
 	ExpiryDate         DateTime                    `json:"expiry_date,omitempty"`
 	ExpiryDateInMillis *int64                      `json:"expiry_date_in_millis,omitempty"`
@@ -89,7 +89,11 @@ func (s *LicenseInformation) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.IssuedTo = o
 
 		case "issuer":
@@ -97,7 +101,11 @@ func (s *LicenseInformation) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Issuer = o
 
 		case "max_nodes":

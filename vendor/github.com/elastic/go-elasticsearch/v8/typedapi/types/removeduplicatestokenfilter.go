@@ -16,21 +16,20 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
-	"encoding/json"
 )
 
 // RemoveDuplicatesTokenFilter type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/token_filters.ts#L301-L303
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/token_filters.ts#L301-L303
 type RemoveDuplicatesTokenFilter struct {
 	Type    string  `json:"type,omitempty"`
 	Version *string `json:"version,omitempty"`
@@ -66,11 +65,22 @@ func (s *RemoveDuplicatesTokenFilter) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s RemoveDuplicatesTokenFilter) MarshalJSON() ([]byte, error) {
+	type innerRemoveDuplicatesTokenFilter RemoveDuplicatesTokenFilter
+	tmp := innerRemoveDuplicatesTokenFilter{
+		Type:    s.Type,
+		Version: s.Version,
+	}
+
+	tmp.Type = "remove_duplicates"
+
+	return json.Marshal(tmp)
+}
+
 // NewRemoveDuplicatesTokenFilter returns a RemoveDuplicatesTokenFilter.
 func NewRemoveDuplicatesTokenFilter() *RemoveDuplicatesTokenFilter {
 	r := &RemoveDuplicatesTokenFilter{}
-
-	r.Type = "remove_duplicates"
 
 	return r
 }

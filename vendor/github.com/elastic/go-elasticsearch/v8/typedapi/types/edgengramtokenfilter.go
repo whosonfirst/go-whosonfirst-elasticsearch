@@ -16,29 +16,27 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/edgengramside"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/edgengramside"
 )
 
 // EdgeNGramTokenFilter type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/token_filters.ts#L79-L85
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/token_filters.ts#L79-L85
 type EdgeNGramTokenFilter struct {
 	MaxGram          *int                         `json:"max_gram,omitempty"`
 	MinGram          *int                         `json:"min_gram,omitempty"`
-	PreserveOriginal *bool                        `json:"preserve_original,omitempty"`
+	PreserveOriginal Stringifiedboolean           `json:"preserve_original,omitempty"`
 	Side             *edgengramside.EdgeNGramSide `json:"side,omitempty"`
 	Type             string                       `json:"type,omitempty"`
 	Version          *string                      `json:"version,omitempty"`
@@ -92,17 +90,8 @@ func (s *EdgeNGramTokenFilter) UnmarshalJSON(data []byte) error {
 			}
 
 		case "preserve_original":
-			var tmp interface{}
-			dec.Decode(&tmp)
-			switch v := tmp.(type) {
-			case string:
-				value, err := strconv.ParseBool(v)
-				if err != nil {
-					return err
-				}
-				s.PreserveOriginal = &value
-			case bool:
-				s.PreserveOriginal = &v
+			if err := dec.Decode(&s.PreserveOriginal); err != nil {
+				return err
 			}
 
 		case "side":
@@ -125,11 +114,26 @@ func (s *EdgeNGramTokenFilter) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s EdgeNGramTokenFilter) MarshalJSON() ([]byte, error) {
+	type innerEdgeNGramTokenFilter EdgeNGramTokenFilter
+	tmp := innerEdgeNGramTokenFilter{
+		MaxGram:          s.MaxGram,
+		MinGram:          s.MinGram,
+		PreserveOriginal: s.PreserveOriginal,
+		Side:             s.Side,
+		Type:             s.Type,
+		Version:          s.Version,
+	}
+
+	tmp.Type = "edge_ngram"
+
+	return json.Marshal(tmp)
+}
+
 // NewEdgeNGramTokenFilter returns a EdgeNGramTokenFilter.
 func NewEdgeNGramTokenFilter() *EdgeNGramTokenFilter {
 	r := &EdgeNGramTokenFilter{}
-
-	r.Type = "edge_ngram"
 
 	return r
 }

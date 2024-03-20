@@ -16,27 +16,23 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"fmt"
-
 	"bytes"
-	"errors"
-	"io"
-
-	"strings"
-
-	"strconv"
-
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"strconv"
+	"strings"
 )
 
 // MultiTermsBucket type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/aggregations/Aggregate.ts#L464-L468
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/aggregations/Aggregate.ts#L465-L469
 type MultiTermsBucket struct {
 	Aggregations            map[string]Aggregate `json:"-"`
 	DocCount                int64                `json:"doc_count"`
@@ -100,7 +96,11 @@ func (s *MultiTermsBucket) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.KeyAsString = &o
 
 		default:
@@ -508,6 +508,13 @@ func (s *MultiTermsBucket) UnmarshalJSON(data []byte) error {
 
 						case "composite":
 							o := NewCompositeAggregate()
+							if err := dec.Decode(&o); err != nil {
+								return err
+							}
+							s.Aggregations[elems[1]] = o
+
+						case "frequent_item_sets":
+							o := NewFrequentItemSetsAggregate()
 							if err := dec.Decode(&o); err != nil {
 								return err
 							}

@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Creates a new watch, or updates an existing one.
 package putwatch
@@ -51,14 +51,19 @@ type PutWatch struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
-
-	req *Request
 	raw io.Reader
+
+	req      *Request
+	deferred []func(request *Request) error
+	buf      *gobytes.Buffer
 
 	paramSet int
 
 	id string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewPutWatch type alias for index.
@@ -70,7 +75,7 @@ func NewPutWatchFunc(tp elastictransport.Interface) NewPutWatch {
 	return func(id string) *PutWatch {
 		n := New(tp)
 
-		n.Id(id)
+		n._id(id)
 
 		return n
 	}
@@ -84,7 +89,16 @@ func New(tp elastictransport.Interface) *PutWatch {
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+
+		buf: gobytes.NewBuffer(nil),
+
+		req: NewRequest(),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -114,9 +128,17 @@ func (r *PutWatch) HttpRequest(ctx context.Context) (*http.Request, error) {
 
 	var err error
 
-	if r.raw != nil {
-		r.buf.ReadFrom(r.raw)
-	} else if r.req != nil {
+	if len(r.deferred) > 0 {
+		for _, f := range r.deferred {
+			deferredErr := f(r.req)
+			if deferredErr != nil {
+				return nil, deferredErr
+			}
+		}
+	}
+
+	if r.raw == nil && r.req != nil {
+
 		data, err := json.Marshal(r.req)
 
 		if err != nil {
@@ -124,6 +146,11 @@ func (r *PutWatch) HttpRequest(ctx context.Context) (*http.Request, error) {
 		}
 
 		r.buf.Write(data)
+
+	}
+
+	if r.buf.Len() > 0 {
+		r.raw = r.buf
 	}
 
 	r.path.Scheme = "http"
@@ -136,6 +163,9 @@ func (r *PutWatch) HttpRequest(ctx context.Context) (*http.Request, error) {
 		path.WriteString("watch")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "id", r.id)
+		}
 		path.WriteString(r.id)
 
 		method = http.MethodPut
@@ -149,15 +179,15 @@ func (r *PutWatch) HttpRequest(ctx context.Context) (*http.Request, error) {
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
 
 	if req.Header.Get("Content-Type") == "" {
-		if r.buf.Len() > 0 {
+		if r.raw != nil {
 			req.Header.Set("Content-Type", "application/vnd.elasticsearch+json;compatible-with=8")
 		}
 	}
@@ -174,27 +204,66 @@ func (r *PutWatch) HttpRequest(ctx context.Context) (*http.Request, error) {
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r PutWatch) Perform(ctx context.Context) (*http.Response, error) {
+func (r PutWatch) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "watcher.put_watch")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "watcher.put_watch")
+		if reader := instrument.RecordRequestBody(ctx, "watcher.put_watch", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "watcher.put_watch")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the PutWatch query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the PutWatch query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a putwatch.Response
-func (r PutWatch) Do(ctx context.Context) (*Response, error) {
+func (r PutWatch) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "watcher.put_watch")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -202,6 +271,9 @@ func (r PutWatch) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -211,9 +283,19 @@ func (r PutWatch) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
@@ -226,17 +308,17 @@ func (r *PutWatch) Header(key, value string) *PutWatch {
 
 // Id Watch ID
 // API Name: id
-func (r *PutWatch) Id(v string) *PutWatch {
+func (r *PutWatch) _id(id string) *PutWatch {
 	r.paramSet |= idMask
-	r.id = v
+	r.id = id
 
 	return r
 }
 
 // Active Specify whether the watch is in/active by default
 // API name: active
-func (r *PutWatch) Active(b bool) *PutWatch {
-	r.values.Set("active", strconv.FormatBool(b))
+func (r *PutWatch) Active(active bool) *PutWatch {
+	r.values.Set("active", strconv.FormatBool(active))
 
 	return r
 }
@@ -244,8 +326,8 @@ func (r *PutWatch) Active(b bool) *PutWatch {
 // IfPrimaryTerm only update the watch if the last operation that has changed the watch has
 // the specified primary term
 // API name: if_primary_term
-func (r *PutWatch) IfPrimaryTerm(v string) *PutWatch {
-	r.values.Set("if_primary_term", v)
+func (r *PutWatch) IfPrimaryTerm(ifprimaryterm string) *PutWatch {
+	r.values.Set("if_primary_term", ifprimaryterm)
 
 	return r
 }
@@ -253,16 +335,71 @@ func (r *PutWatch) IfPrimaryTerm(v string) *PutWatch {
 // IfSeqNo only update the watch if the last operation that has changed the watch has
 // the specified sequence number
 // API name: if_seq_no
-func (r *PutWatch) IfSeqNo(v string) *PutWatch {
-	r.values.Set("if_seq_no", v)
+func (r *PutWatch) IfSeqNo(sequencenumber string) *PutWatch {
+	r.values.Set("if_seq_no", sequencenumber)
 
 	return r
 }
 
 // Version Explicit version number for concurrency control
 // API name: version
-func (r *PutWatch) Version(v string) *PutWatch {
-	r.values.Set("version", v)
+func (r *PutWatch) Version(versionnumber string) *PutWatch {
+	r.values.Set("version", versionnumber)
+
+	return r
+}
+
+// API name: actions
+func (r *PutWatch) Actions(actions map[string]types.WatcherAction) *PutWatch {
+
+	r.req.Actions = actions
+
+	return r
+}
+
+// API name: condition
+func (r *PutWatch) Condition(condition *types.WatcherCondition) *PutWatch {
+
+	r.req.Condition = condition
+
+	return r
+}
+
+// API name: input
+func (r *PutWatch) Input(input *types.WatcherInput) *PutWatch {
+
+	r.req.Input = input
+
+	return r
+}
+
+// API name: metadata
+func (r *PutWatch) Metadata(metadata types.Metadata) *PutWatch {
+	r.req.Metadata = metadata
+
+	return r
+}
+
+// API name: throttle_period
+func (r *PutWatch) ThrottlePeriod(throttleperiod string) *PutWatch {
+
+	r.req.ThrottlePeriod = &throttleperiod
+
+	return r
+}
+
+// API name: transform
+func (r *PutWatch) Transform(transform *types.TransformContainer) *PutWatch {
+
+	r.req.Transform = transform
+
+	return r
+}
+
+// API name: trigger
+func (r *PutWatch) Trigger(trigger *types.TriggerContainer) *PutWatch {
+
+	r.req.Trigger = trigger
 
 	return r
 }

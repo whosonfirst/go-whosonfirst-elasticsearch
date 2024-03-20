@@ -16,31 +16,39 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortorder"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortorder"
 )
 
 // GeoLineAggregation type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/aggregations/metric.ts#L81-L87
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/aggregations/metric.ts#L121-L146
 type GeoLineAggregation struct {
-	IncludeSort *bool                `json:"include_sort,omitempty"`
-	Point       GeoLinePoint         `json:"point"`
-	Size        *int                 `json:"size,omitempty"`
-	Sort        GeoLineSort          `json:"sort"`
-	SortOrder   *sortorder.SortOrder `json:"sort_order,omitempty"`
+	// IncludeSort When `true`, returns an additional array of the sort values in the feature
+	// properties.
+	IncludeSort *bool `json:"include_sort,omitempty"`
+	// Point The name of the geo_point field.
+	Point GeoLinePoint `json:"point"`
+	// Size The maximum length of the line represented in the aggregation.
+	// Valid sizes are between 1 and 10000.
+	Size *int `json:"size,omitempty"`
+	// Sort The name of the numeric field to use as the sort key for ordering the points.
+	// When the `geo_line` aggregation is nested inside a `time_series` aggregation,
+	// this field defaults to `@timestamp`, and any other value will result in
+	// error.
+	Sort GeoLineSort `json:"sort"`
+	// SortOrder The order in which the line is sorted (ascending or descending).
+	SortOrder *sortorder.SortOrder `json:"sort_order,omitempty"`
 }
 
 func (s *GeoLineAggregation) UnmarshalJSON(data []byte) error {

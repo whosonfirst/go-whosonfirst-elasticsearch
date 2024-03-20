@@ -16,35 +16,49 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // PercolateQuery type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/query_dsl/specialized.ts#L110-L120
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/query_dsl/specialized.ts#L193-L230
 type PercolateQuery struct {
-	Boost      *float32          `json:"boost,omitempty"`
-	Document   json.RawMessage   `json:"document,omitempty"`
-	Documents  []json.RawMessage `json:"documents,omitempty"`
-	Field      string            `json:"field"`
-	Id         *string           `json:"id,omitempty"`
-	Index      *string           `json:"index,omitempty"`
-	Name       *string           `json:"name,omitempty"`
-	Preference *string           `json:"preference,omitempty"`
-	QueryName_ *string           `json:"_name,omitempty"`
-	Routing    *string           `json:"routing,omitempty"`
-	Version    *int64            `json:"version,omitempty"`
+	// Boost Floating point number used to decrease or increase the relevance scores of
+	// the query.
+	// Boost values are relative to the default value of 1.0.
+	// A boost value between 0 and 1.0 decreases the relevance score.
+	// A value greater than 1.0 increases the relevance score.
+	Boost *float32 `json:"boost,omitempty"`
+	// Document The source of the document being percolated.
+	Document json.RawMessage `json:"document,omitempty"`
+	// Documents An array of sources of the documents being percolated.
+	Documents []json.RawMessage `json:"documents,omitempty"`
+	// Field Field that holds the indexed queries. The field must use the `percolator`
+	// mapping type.
+	Field string `json:"field"`
+	// Id The ID of a stored document to percolate.
+	Id *string `json:"id,omitempty"`
+	// Index The index of a stored document to percolate.
+	Index *string `json:"index,omitempty"`
+	// Name The suffix used for the `_percolator_document_slot` field when multiple
+	// `percolate` queries are specified.
+	Name *string `json:"name,omitempty"`
+	// Preference Preference used to fetch document to percolate.
+	Preference *string `json:"preference,omitempty"`
+	QueryName_ *string `json:"_name,omitempty"`
+	// Routing Routing used to fetch document to percolate.
+	Routing *string `json:"routing,omitempty"`
+	// Version The expected version of a stored document to percolate.
+	Version *int64 `json:"version,omitempty"`
 }
 
 func (s *PercolateQuery) UnmarshalJSON(data []byte) error {
@@ -108,7 +122,11 @@ func (s *PercolateQuery) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Name = &o
 
 		case "preference":
@@ -116,7 +134,11 @@ func (s *PercolateQuery) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Preference = &o
 
 		case "_name":
@@ -124,7 +146,11 @@ func (s *PercolateQuery) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.QueryName_ = &o
 
 		case "routing":

@@ -16,19 +16,79 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
+import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"io"
+	"strconv"
+)
+
 // Ensemble type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ml/put_trained_model/types.ts#L93-L99
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ml/put_trained_model/types.ts#L93-L99
 type Ensemble struct {
 	AggregateOutput      *AggregateOutput `json:"aggregate_output,omitempty"`
 	ClassificationLabels []string         `json:"classification_labels,omitempty"`
 	FeatureNames         []string         `json:"feature_names,omitempty"`
 	TargetType           *string          `json:"target_type,omitempty"`
 	TrainedModels        []TrainedModel   `json:"trained_models"`
+}
+
+func (s *Ensemble) UnmarshalJSON(data []byte) error {
+
+	dec := json.NewDecoder(bytes.NewReader(data))
+
+	for {
+		t, err := dec.Token()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return err
+		}
+
+		switch t {
+
+		case "aggregate_output":
+			if err := dec.Decode(&s.AggregateOutput); err != nil {
+				return err
+			}
+
+		case "classification_labels":
+			if err := dec.Decode(&s.ClassificationLabels); err != nil {
+				return err
+			}
+
+		case "feature_names":
+			if err := dec.Decode(&s.FeatureNames); err != nil {
+				return err
+			}
+
+		case "target_type":
+			var tmp json.RawMessage
+			if err := dec.Decode(&tmp); err != nil {
+				return err
+			}
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
+			s.TargetType = &o
+
+		case "trained_models":
+			if err := dec.Decode(&s.TrainedModels); err != nil {
+				return err
+			}
+
+		}
+	}
+	return nil
 }
 
 // NewEnsemble returns a Ensemble.

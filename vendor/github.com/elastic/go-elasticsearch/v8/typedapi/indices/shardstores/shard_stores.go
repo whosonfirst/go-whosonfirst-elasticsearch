@@ -16,13 +16,12 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Provides store information for shard copies of indices.
 package shardstores
 
 import (
-	gobytes "bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -36,6 +35,8 @@ import (
 
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/expandwildcard"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/shardstorestatus"
 )
 
 const (
@@ -52,11 +53,15 @@ type ShardStores struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	index string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewShardStores type alias for index.
@@ -74,13 +79,18 @@ func NewShardStoresFunc(tp elastictransport.Interface) NewShardStores {
 
 // Provides store information for shard copies of indices.
 //
-// https://www.elastic.co/guide/en/elasticsearch/reference/master/indices-shards-stores.html
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-shards-stores.html
 func New(tp elastictransport.Interface) *ShardStores {
 	r := &ShardStores{
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -106,6 +116,9 @@ func (r *ShardStores) HttpRequest(ctx context.Context) (*http.Request, error) {
 	case r.paramSet == indexMask:
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "index", r.index)
+		}
 		path.WriteString(r.index)
 		path.WriteString("/")
 		path.WriteString("_shard_stores")
@@ -121,9 +134,9 @@ func (r *ShardStores) HttpRequest(ctx context.Context) (*http.Request, error) {
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
@@ -140,27 +153,66 @@ func (r *ShardStores) HttpRequest(ctx context.Context) (*http.Request, error) {
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r ShardStores) Perform(ctx context.Context) (*http.Response, error) {
+func (r ShardStores) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "indices.shard_stores")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "indices.shard_stores")
+		if reader := instrument.RecordRequestBody(ctx, "indices.shard_stores", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "indices.shard_stores")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the ShardStores query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the ShardStores query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a shardstores.Response
-func (r ShardStores) Do(ctx context.Context) (*Response, error) {
+func (r ShardStores) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "indices.shard_stores")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -168,6 +220,9 @@ func (r ShardStores) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -177,15 +232,35 @@ func (r ShardStores) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r ShardStores) IsSuccess(ctx context.Context) (bool, error) {
+func (r ShardStores) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "indices.shard_stores")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -201,6 +276,14 @@ func (r ShardStores) IsSuccess(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the ShardStores query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -213,9 +296,9 @@ func (r *ShardStores) Header(key, value string) *ShardStores {
 
 // Index List of data streams, indices, and aliases used to limit the request.
 // API Name: index
-func (r *ShardStores) Index(v string) *ShardStores {
+func (r *ShardStores) Index(index string) *ShardStores {
 	r.paramSet |= indexMask
-	r.index = v
+	r.index = index
 
 	return r
 }
@@ -226,8 +309,8 @@ func (r *ShardStores) Index(v string) *ShardStores {
 // the request
 // targets other open indices.
 // API name: allow_no_indices
-func (r *ShardStores) AllowNoIndices(b bool) *ShardStores {
-	r.values.Set("allow_no_indices", strconv.FormatBool(b))
+func (r *ShardStores) AllowNoIndices(allownoindices bool) *ShardStores {
+	r.values.Set("allow_no_indices", strconv.FormatBool(allownoindices))
 
 	return r
 }
@@ -237,24 +320,32 @@ func (r *ShardStores) AllowNoIndices(b bool) *ShardStores {
 // this argument determines whether wildcard expressions match hidden data
 // streams.
 // API name: expand_wildcards
-func (r *ShardStores) ExpandWildcards(v string) *ShardStores {
-	r.values.Set("expand_wildcards", v)
+func (r *ShardStores) ExpandWildcards(expandwildcards ...expandwildcard.ExpandWildcard) *ShardStores {
+	tmp := []string{}
+	for _, item := range expandwildcards {
+		tmp = append(tmp, item.String())
+	}
+	r.values.Set("expand_wildcards", strings.Join(tmp, ","))
 
 	return r
 }
 
 // IgnoreUnavailable If true, missing or closed indices are not included in the response.
 // API name: ignore_unavailable
-func (r *ShardStores) IgnoreUnavailable(b bool) *ShardStores {
-	r.values.Set("ignore_unavailable", strconv.FormatBool(b))
+func (r *ShardStores) IgnoreUnavailable(ignoreunavailable bool) *ShardStores {
+	r.values.Set("ignore_unavailable", strconv.FormatBool(ignoreunavailable))
 
 	return r
 }
 
 // Status List of shard health statuses used to limit the request.
 // API name: status
-func (r *ShardStores) Status(v string) *ShardStores {
-	r.values.Set("status", v)
+func (r *ShardStores) Status(statuses ...shardstorestatus.ShardStoreStatus) *ShardStores {
+	tmp := []string{}
+	for _, item := range statuses {
+		tmp = append(tmp, fmt.Sprintf("%v", item))
+	}
+	r.values.Set("status", strings.Join(tmp, ","))
 
 	return r
 }

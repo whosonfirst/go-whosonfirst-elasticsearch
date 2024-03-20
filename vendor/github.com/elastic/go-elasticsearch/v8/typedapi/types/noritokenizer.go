@@ -16,25 +16,23 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/noridecompoundmode"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/noridecompoundmode"
 )
 
 // NoriTokenizer type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/tokenizers.ts#L80-L86
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/tokenizers.ts#L81-L87
 type NoriTokenizer struct {
 	DecompoundMode      *noridecompoundmode.NoriDecompoundMode `json:"decompound_mode,omitempty"`
 	DiscardPunctuation  *bool                                  `json:"discard_punctuation,omitempty"`
@@ -88,7 +86,11 @@ func (s *NoriTokenizer) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.UserDictionary = &o
 
 		case "user_dictionary_rules":
@@ -106,11 +108,26 @@ func (s *NoriTokenizer) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s NoriTokenizer) MarshalJSON() ([]byte, error) {
+	type innerNoriTokenizer NoriTokenizer
+	tmp := innerNoriTokenizer{
+		DecompoundMode:      s.DecompoundMode,
+		DiscardPunctuation:  s.DiscardPunctuation,
+		Type:                s.Type,
+		UserDictionary:      s.UserDictionary,
+		UserDictionaryRules: s.UserDictionaryRules,
+		Version:             s.Version,
+	}
+
+	tmp.Type = "nori_tokenizer"
+
+	return json.Marshal(tmp)
+}
+
 // NewNoriTokenizer returns a NoriTokenizer.
 func NewNoriTokenizer() *NoriTokenizer {
 	r := &NoriTokenizer{}
-
-	r.Type = "nori_tokenizer"
 
 	return r
 }

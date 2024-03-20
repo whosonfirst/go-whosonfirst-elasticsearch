@@ -16,48 +16,15 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
-import (
-	"bytes"
-	"errors"
-	"io"
-
-	"encoding/json"
-)
-
 // HourlySchedule type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/watcher/_types/Schedule.ts#L47-L49
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/watcher/_types/Schedule.ts#L47-L49
 type HourlySchedule struct {
 	Minute []int `json:"minute"`
-}
-
-func (s *HourlySchedule) UnmarshalJSON(data []byte) error {
-
-	dec := json.NewDecoder(bytes.NewReader(data))
-
-	for {
-		t, err := dec.Token()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			return err
-		}
-
-		switch t {
-
-		case "minute":
-			if err := dec.Decode(&s.Minute); err != nil {
-				return err
-			}
-
-		}
-	}
-	return nil
 }
 
 // NewHourlySchedule returns a HourlySchedule.

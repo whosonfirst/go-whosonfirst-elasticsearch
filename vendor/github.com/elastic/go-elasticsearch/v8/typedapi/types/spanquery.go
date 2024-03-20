@@ -16,32 +16,45 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
-	"encoding/json"
 )
 
 // SpanQuery type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/query_dsl/span.ts#L79-L91
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/query_dsl/span.ts#L131-L170
 type SpanQuery struct {
-	FieldMaskingSpan *SpanFieldMaskingQuery   `json:"field_masking_span,omitempty"`
-	SpanContaining   *SpanContainingQuery     `json:"span_containing,omitempty"`
-	SpanFirst        *SpanFirstQuery          `json:"span_first,omitempty"`
-	SpanGap          SpanGapQuery             `json:"span_gap,omitempty"`
-	SpanMulti        *SpanMultiTermQuery      `json:"span_multi,omitempty"`
-	SpanNear         *SpanNearQuery           `json:"span_near,omitempty"`
-	SpanNot          *SpanNotQuery            `json:"span_not,omitempty"`
-	SpanOr           *SpanOrQuery             `json:"span_or,omitempty"`
-	SpanTerm         map[string]SpanTermQuery `json:"span_term,omitempty"`
-	SpanWithin       *SpanWithinQuery         `json:"span_within,omitempty"`
+	// FieldMaskingSpan Allows queries like `span_near` or `span_or` across different fields.
+	FieldMaskingSpan *SpanFieldMaskingQuery `json:"field_masking_span,omitempty"`
+	// SpanContaining Accepts a list of span queries, but only returns those spans which also match
+	// a second span query.
+	SpanContaining *SpanContainingQuery `json:"span_containing,omitempty"`
+	// SpanFirst Accepts another span query whose matches must appear within the first N
+	// positions of the field.
+	SpanFirst *SpanFirstQuery `json:"span_first,omitempty"`
+	SpanGap   SpanGapQuery    `json:"span_gap,omitempty"`
+	// SpanMulti Wraps a `term`, `range`, `prefix`, `wildcard`, `regexp`, or `fuzzy` query.
+	SpanMulti *SpanMultiTermQuery `json:"span_multi,omitempty"`
+	// SpanNear Accepts multiple span queries whose matches must be within the specified
+	// distance of each other, and possibly in the same order.
+	SpanNear *SpanNearQuery `json:"span_near,omitempty"`
+	// SpanNot Wraps another span query, and excludes any documents which match that query.
+	SpanNot *SpanNotQuery `json:"span_not,omitempty"`
+	// SpanOr Combines multiple span queries and returns documents which match any of the
+	// specified queries.
+	SpanOr *SpanOrQuery `json:"span_or,omitempty"`
+	// SpanTerm The equivalent of the `term` query but for use with other span queries.
+	SpanTerm map[string]SpanTermQuery `json:"span_term,omitempty"`
+	// SpanWithin The result from a single span query is returned as long is its span falls
+	// within the spans returned by a list of other span queries.
+	SpanWithin *SpanWithinQuery `json:"span_within,omitempty"`
 }
 
 func (s *SpanQuery) UnmarshalJSON(data []byte) error {

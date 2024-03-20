@@ -16,31 +16,39 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // PipelineProcessor type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ingest/_types/Processors.ts#L306-L309
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ingest/_types/Processors.ts#L924-L935
 type PipelineProcessor struct {
-	Description           *string              `json:"description,omitempty"`
-	If                    *string              `json:"if,omitempty"`
-	IgnoreFailure         *bool                `json:"ignore_failure,omitempty"`
-	IgnoreMissingPipeline *bool                `json:"ignore_missing_pipeline,omitempty"`
-	Name                  string               `json:"name"`
-	OnFailure             []ProcessorContainer `json:"on_failure,omitempty"`
-	Tag                   *string              `json:"tag,omitempty"`
+	// Description Description of the processor.
+	// Useful for describing the purpose of the processor or its configuration.
+	Description *string `json:"description,omitempty"`
+	// If Conditionally execute the processor.
+	If *string `json:"if,omitempty"`
+	// IgnoreFailure Ignore failures for the processor.
+	IgnoreFailure *bool `json:"ignore_failure,omitempty"`
+	// IgnoreMissingPipeline Whether to ignore missing pipelines instead of failing.
+	IgnoreMissingPipeline *bool `json:"ignore_missing_pipeline,omitempty"`
+	// Name The name of the pipeline to execute.
+	// Supports template snippets.
+	Name string `json:"name"`
+	// OnFailure Handle failures for the processor.
+	OnFailure []ProcessorContainer `json:"on_failure,omitempty"`
+	// Tag Identifier for the processor.
+	// Useful for debugging and metrics.
+	Tag *string `json:"tag,omitempty"`
 }
 
 func (s *PipelineProcessor) UnmarshalJSON(data []byte) error {
@@ -63,7 +71,11 @@ func (s *PipelineProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Description = &o
 
 		case "if":
@@ -71,7 +83,11 @@ func (s *PipelineProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.If = &o
 
 		case "ignore_failure":
@@ -117,7 +133,11 @@ func (s *PipelineProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Tag = &o
 
 		}

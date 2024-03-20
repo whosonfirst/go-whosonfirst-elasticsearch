@@ -16,29 +16,36 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // BoostingQuery type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/query_dsl/compound.ts#L36-L40
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/query_dsl/compound.ts#L54-L67
 type BoostingQuery struct {
-	Boost         *float32 `json:"boost,omitempty"`
-	Negative      *Query   `json:"negative,omitempty"`
-	NegativeBoost Float64  `json:"negative_boost"`
-	Positive      *Query   `json:"positive,omitempty"`
-	QueryName_    *string  `json:"_name,omitempty"`
+	// Boost Floating point number used to decrease or increase the relevance scores of
+	// the query.
+	// Boost values are relative to the default value of 1.0.
+	// A boost value between 0 and 1.0 decreases the relevance score.
+	// A value greater than 1.0 increases the relevance score.
+	Boost *float32 `json:"boost,omitempty"`
+	// Negative Query used to decrease the relevance score of matching documents.
+	Negative *Query `json:"negative,omitempty"`
+	// NegativeBoost Floating point number between 0 and 1.0 used to decrease the relevance scores
+	// of documents matching the `negative` query.
+	NegativeBoost Float64 `json:"negative_boost"`
+	// Positive Any returned documents must match this query.
+	Positive   *Query  `json:"positive,omitempty"`
+	QueryName_ *string `json:"_name,omitempty"`
 }
 
 func (s *BoostingQuery) UnmarshalJSON(data []byte) error {
@@ -103,7 +110,11 @@ func (s *BoostingQuery) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.QueryName_ = &o
 
 		}

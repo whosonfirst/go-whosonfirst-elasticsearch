@@ -16,29 +16,33 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // IngestTotal type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/nodes/_types/Stats.ts#L149-L155
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/nodes/_types/Stats.ts#L356-L377
 type IngestTotal struct {
-	Count        *int64                      `json:"count,omitempty"`
-	Current      *int64                      `json:"current,omitempty"`
-	Failed       *int64                      `json:"failed,omitempty"`
-	Processors   []map[string]KeyedProcessor `json:"processors,omitempty"`
-	TimeInMillis *int64                      `json:"time_in_millis,omitempty"`
+	// Count Total number of documents ingested during the lifetime of this node.
+	Count *int64 `json:"count,omitempty"`
+	// Current Total number of documents currently being ingested.
+	Current *int64 `json:"current,omitempty"`
+	// Failed Total number of failed ingest operations during the lifetime of this node.
+	Failed *int64 `json:"failed,omitempty"`
+	// Processors Total number of ingest processors.
+	Processors []map[string]KeyedProcessor `json:"processors,omitempty"`
+	// TimeInMillis Total time, in milliseconds, spent preprocessing ingest documents during the
+	// lifetime of this node.
+	TimeInMillis *int64 `json:"time_in_millis,omitempty"`
 }
 
 func (s *IngestTotal) UnmarshalJSON(data []byte) error {

@@ -15,12 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 //
-// Code generated from specification version 7.13.0: DO NOT EDIT
+// Code generated from specification version 7.17.10: DO NOT EDIT
 
 package esapi
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -42,11 +43,9 @@ func newIndicesOpenFunc(t Transport) IndicesOpen {
 // IndicesOpen opens an index.
 //
 // See full documentation at https://www.elastic.co/guide/en/elasticsearch/reference/master/indices-open-close.html.
-//
 type IndicesOpen func(index []string, o ...func(*IndicesOpenRequest)) (*Response, error)
 
 // IndicesOpenRequest configures the Indices Open API request.
-//
 type IndicesOpenRequest struct {
 	Index []string
 
@@ -68,7 +67,6 @@ type IndicesOpenRequest struct {
 }
 
 // Do executes the request and returns response or error.
-//
 func (r IndicesOpenRequest) Do(ctx context.Context, transport Transport) (*Response, error) {
 	var (
 		method string
@@ -77,6 +75,10 @@ func (r IndicesOpenRequest) Do(ctx context.Context, transport Transport) (*Respo
 	)
 
 	method = "POST"
+
+	if len(r.Index) == 0 {
+		return nil, errors.New("index is required and cannot be nil or empty")
+	}
 
 	path.Grow(1 + len(strings.Join(r.Index, ",")) + 1 + len("_open"))
 	path.WriteString("/")
@@ -170,7 +172,6 @@ func (r IndicesOpenRequest) Do(ctx context.Context, transport Transport) (*Respo
 }
 
 // WithContext sets the request context.
-//
 func (f IndicesOpen) WithContext(v context.Context) func(*IndicesOpenRequest) {
 	return func(r *IndicesOpenRequest) {
 		r.ctx = v
@@ -178,7 +179,6 @@ func (f IndicesOpen) WithContext(v context.Context) func(*IndicesOpenRequest) {
 }
 
 // WithAllowNoIndices - whether to ignore if a wildcard indices expression resolves into no concrete indices. (this includes `_all` string or when no indices have been specified).
-//
 func (f IndicesOpen) WithAllowNoIndices(v bool) func(*IndicesOpenRequest) {
 	return func(r *IndicesOpenRequest) {
 		r.AllowNoIndices = &v
@@ -186,7 +186,6 @@ func (f IndicesOpen) WithAllowNoIndices(v bool) func(*IndicesOpenRequest) {
 }
 
 // WithExpandWildcards - whether to expand wildcard expression to concrete indices that are open, closed or both..
-//
 func (f IndicesOpen) WithExpandWildcards(v string) func(*IndicesOpenRequest) {
 	return func(r *IndicesOpenRequest) {
 		r.ExpandWildcards = v
@@ -194,7 +193,6 @@ func (f IndicesOpen) WithExpandWildcards(v string) func(*IndicesOpenRequest) {
 }
 
 // WithIgnoreUnavailable - whether specified concrete indices should be ignored when unavailable (missing or closed).
-//
 func (f IndicesOpen) WithIgnoreUnavailable(v bool) func(*IndicesOpenRequest) {
 	return func(r *IndicesOpenRequest) {
 		r.IgnoreUnavailable = &v
@@ -202,7 +200,6 @@ func (f IndicesOpen) WithIgnoreUnavailable(v bool) func(*IndicesOpenRequest) {
 }
 
 // WithMasterTimeout - specify timeout for connection to master.
-//
 func (f IndicesOpen) WithMasterTimeout(v time.Duration) func(*IndicesOpenRequest) {
 	return func(r *IndicesOpenRequest) {
 		r.MasterTimeout = v
@@ -210,7 +207,6 @@ func (f IndicesOpen) WithMasterTimeout(v time.Duration) func(*IndicesOpenRequest
 }
 
 // WithTimeout - explicit operation timeout.
-//
 func (f IndicesOpen) WithTimeout(v time.Duration) func(*IndicesOpenRequest) {
 	return func(r *IndicesOpenRequest) {
 		r.Timeout = v
@@ -218,7 +214,6 @@ func (f IndicesOpen) WithTimeout(v time.Duration) func(*IndicesOpenRequest) {
 }
 
 // WithWaitForActiveShards - sets the number of active shards to wait for before the operation returns..
-//
 func (f IndicesOpen) WithWaitForActiveShards(v string) func(*IndicesOpenRequest) {
 	return func(r *IndicesOpenRequest) {
 		r.WaitForActiveShards = v
@@ -226,7 +221,6 @@ func (f IndicesOpen) WithWaitForActiveShards(v string) func(*IndicesOpenRequest)
 }
 
 // WithPretty makes the response body pretty-printed.
-//
 func (f IndicesOpen) WithPretty() func(*IndicesOpenRequest) {
 	return func(r *IndicesOpenRequest) {
 		r.Pretty = true
@@ -234,7 +228,6 @@ func (f IndicesOpen) WithPretty() func(*IndicesOpenRequest) {
 }
 
 // WithHuman makes statistical values human-readable.
-//
 func (f IndicesOpen) WithHuman() func(*IndicesOpenRequest) {
 	return func(r *IndicesOpenRequest) {
 		r.Human = true
@@ -242,7 +235,6 @@ func (f IndicesOpen) WithHuman() func(*IndicesOpenRequest) {
 }
 
 // WithErrorTrace includes the stack trace for errors in the response body.
-//
 func (f IndicesOpen) WithErrorTrace() func(*IndicesOpenRequest) {
 	return func(r *IndicesOpenRequest) {
 		r.ErrorTrace = true
@@ -250,7 +242,6 @@ func (f IndicesOpen) WithErrorTrace() func(*IndicesOpenRequest) {
 }
 
 // WithFilterPath filters the properties of the response body.
-//
 func (f IndicesOpen) WithFilterPath(v ...string) func(*IndicesOpenRequest) {
 	return func(r *IndicesOpenRequest) {
 		r.FilterPath = v
@@ -258,7 +249,6 @@ func (f IndicesOpen) WithFilterPath(v ...string) func(*IndicesOpenRequest) {
 }
 
 // WithHeader adds the headers to the HTTP request.
-//
 func (f IndicesOpen) WithHeader(h map[string]string) func(*IndicesOpenRequest) {
 	return func(r *IndicesOpenRequest) {
 		if r.Header == nil {
@@ -271,7 +261,6 @@ func (f IndicesOpen) WithHeader(h map[string]string) func(*IndicesOpenRequest) {
 }
 
 // WithOpaqueID adds the X-Opaque-Id header to the HTTP request.
-//
 func (f IndicesOpen) WithOpaqueID(s string) func(*IndicesOpenRequest) {
 	return func(r *IndicesOpenRequest) {
 		if r.Header == nil {

@@ -16,28 +16,26 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"io"
+	"strconv"
+
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/phoneticencoder"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/phoneticlanguage"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/phoneticnametype"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/phoneticruletype"
-
-	"bytes"
-	"errors"
-	"io"
-
-	"strconv"
-
-	"encoding/json"
 )
 
 // PhoneticTokenFilter type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/phonetic-plugin.ts#L64-L72
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/phonetic-plugin.ts#L64-L72
 type PhoneticTokenFilter struct {
 	Encoder     phoneticencoder.PhoneticEncoder     `json:"encoder"`
 	Languageset []phoneticlanguage.PhoneticLanguage `json:"languageset"`
@@ -129,11 +127,28 @@ func (s *PhoneticTokenFilter) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s PhoneticTokenFilter) MarshalJSON() ([]byte, error) {
+	type innerPhoneticTokenFilter PhoneticTokenFilter
+	tmp := innerPhoneticTokenFilter{
+		Encoder:     s.Encoder,
+		Languageset: s.Languageset,
+		MaxCodeLen:  s.MaxCodeLen,
+		NameType:    s.NameType,
+		Replace:     s.Replace,
+		RuleType:    s.RuleType,
+		Type:        s.Type,
+		Version:     s.Version,
+	}
+
+	tmp.Type = "phonetic"
+
+	return json.Marshal(tmp)
+}
+
 // NewPhoneticTokenFilter returns a PhoneticTokenFilter.
 func NewPhoneticTokenFilter() *PhoneticTokenFilter {
 	r := &PhoneticTokenFilter{}
-
-	r.Type = "phonetic"
 
 	return r
 }

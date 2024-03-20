@@ -16,13 +16,12 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Deletes an alias.
 package deletealias
 
 import (
-	gobytes "bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -53,12 +52,16 @@ type DeleteAlias struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	index string
 	name  string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewDeleteAlias type alias for index.
@@ -70,9 +73,9 @@ func NewDeleteAliasFunc(tp elastictransport.Interface) NewDeleteAlias {
 	return func(index, name string) *DeleteAlias {
 		n := New(tp)
 
-		n.Index(index)
+		n._index(index)
 
-		n.Name(name)
+		n._name(name)
 
 		return n
 	}
@@ -80,13 +83,18 @@ func NewDeleteAliasFunc(tp elastictransport.Interface) NewDeleteAlias {
 
 // Deletes an alias.
 //
-// https://www.elastic.co/guide/en/elasticsearch/reference/master/indices-aliases.html
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-aliases.html
 func New(tp elastictransport.Interface) *DeleteAlias {
 	r := &DeleteAlias{
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -107,22 +115,34 @@ func (r *DeleteAlias) HttpRequest(ctx context.Context) (*http.Request, error) {
 	case r.paramSet == indexMask|nameMask:
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "index", r.index)
+		}
 		path.WriteString(r.index)
 		path.WriteString("/")
 		path.WriteString("_alias")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "name", r.name)
+		}
 		path.WriteString(r.name)
 
 		method = http.MethodDelete
 	case r.paramSet == indexMask|nameMask:
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "index", r.index)
+		}
 		path.WriteString(r.index)
 		path.WriteString("/")
 		path.WriteString("_aliases")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "name", r.name)
+		}
 		path.WriteString(r.name)
 
 		method = http.MethodDelete
@@ -136,9 +156,9 @@ func (r *DeleteAlias) HttpRequest(ctx context.Context) (*http.Request, error) {
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
@@ -155,27 +175,66 @@ func (r *DeleteAlias) HttpRequest(ctx context.Context) (*http.Request, error) {
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r DeleteAlias) Perform(ctx context.Context) (*http.Response, error) {
+func (r DeleteAlias) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "indices.delete_alias")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "indices.delete_alias")
+		if reader := instrument.RecordRequestBody(ctx, "indices.delete_alias", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "indices.delete_alias")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the DeleteAlias query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the DeleteAlias query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a deletealias.Response
-func (r DeleteAlias) Do(ctx context.Context) (*Response, error) {
+func (r DeleteAlias) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "indices.delete_alias")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -183,6 +242,9 @@ func (r DeleteAlias) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -192,15 +254,35 @@ func (r DeleteAlias) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r DeleteAlias) IsSuccess(ctx context.Context) (bool, error) {
+func (r DeleteAlias) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "indices.delete_alias")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -216,6 +298,14 @@ func (r DeleteAlias) IsSuccess(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the DeleteAlias query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -226,38 +316,42 @@ func (r *DeleteAlias) Header(key, value string) *DeleteAlias {
 	return r
 }
 
-// Index A comma-separated list of index names (supports wildcards); use `_all` for
-// all indices
+// Index Comma-separated list of data streams or indices used to limit the request.
+// Supports wildcards (`*`).
 // API Name: index
-func (r *DeleteAlias) Index(v string) *DeleteAlias {
+func (r *DeleteAlias) _index(index string) *DeleteAlias {
 	r.paramSet |= indexMask
-	r.index = v
+	r.index = index
 
 	return r
 }
 
-// Name A comma-separated list of aliases to delete (supports wildcards); use `_all`
-// to delete all aliases for the specified indices.
+// Name Comma-separated list of aliases to remove.
+// Supports wildcards (`*`). To remove all aliases, use `*` or `_all`.
 // API Name: name
-func (r *DeleteAlias) Name(v string) *DeleteAlias {
+func (r *DeleteAlias) _name(name string) *DeleteAlias {
 	r.paramSet |= nameMask
-	r.name = v
+	r.name = name
 
 	return r
 }
 
-// MasterTimeout Specify timeout for connection to master
+// MasterTimeout Period to wait for a connection to the master node.
+// If no response is received before the timeout expires, the request fails and
+// returns an error.
 // API name: master_timeout
-func (r *DeleteAlias) MasterTimeout(v string) *DeleteAlias {
-	r.values.Set("master_timeout", v)
+func (r *DeleteAlias) MasterTimeout(duration string) *DeleteAlias {
+	r.values.Set("master_timeout", duration)
 
 	return r
 }
 
-// Timeout Explicit timestamp for the document
+// Timeout Period to wait for a response.
+// If no response is received before the timeout expires, the request fails and
+// returns an error.
 // API name: timeout
-func (r *DeleteAlias) Timeout(v string) *DeleteAlias {
-	r.values.Set("timeout", v)
+func (r *DeleteAlias) Timeout(duration string) *DeleteAlias {
+	r.values.Set("timeout", duration)
 
 	return r
 }

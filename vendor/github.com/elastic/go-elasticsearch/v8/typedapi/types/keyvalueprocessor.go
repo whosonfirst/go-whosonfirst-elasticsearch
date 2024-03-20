@@ -16,40 +16,63 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // KeyValueProcessor type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ingest/_types/Processors.ts#L286-L298
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ingest/_types/Processors.ts#L852-L904
 type KeyValueProcessor struct {
-	Description   *string              `json:"description,omitempty"`
-	ExcludeKeys   []string             `json:"exclude_keys,omitempty"`
-	Field         string               `json:"field"`
-	FieldSplit    string               `json:"field_split"`
-	If            *string              `json:"if,omitempty"`
-	IgnoreFailure *bool                `json:"ignore_failure,omitempty"`
-	IgnoreMissing *bool                `json:"ignore_missing,omitempty"`
-	IncludeKeys   []string             `json:"include_keys,omitempty"`
-	OnFailure     []ProcessorContainer `json:"on_failure,omitempty"`
-	Prefix        *string              `json:"prefix,omitempty"`
-	StripBrackets *bool                `json:"strip_brackets,omitempty"`
-	Tag           *string              `json:"tag,omitempty"`
-	TargetField   *string              `json:"target_field,omitempty"`
-	TrimKey       *string              `json:"trim_key,omitempty"`
-	TrimValue     *string              `json:"trim_value,omitempty"`
-	ValueSplit    string               `json:"value_split"`
+	// Description Description of the processor.
+	// Useful for describing the purpose of the processor or its configuration.
+	Description *string `json:"description,omitempty"`
+	// ExcludeKeys List of keys to exclude from document.
+	ExcludeKeys []string `json:"exclude_keys,omitempty"`
+	// Field The field to be parsed.
+	// Supports template snippets.
+	Field string `json:"field"`
+	// FieldSplit Regex pattern to use for splitting key-value pairs.
+	FieldSplit string `json:"field_split"`
+	// If Conditionally execute the processor.
+	If *string `json:"if,omitempty"`
+	// IgnoreFailure Ignore failures for the processor.
+	IgnoreFailure *bool `json:"ignore_failure,omitempty"`
+	// IgnoreMissing If `true` and `field` does not exist or is `null`, the processor quietly
+	// exits without modifying the document.
+	IgnoreMissing *bool `json:"ignore_missing,omitempty"`
+	// IncludeKeys List of keys to filter and insert into document.
+	// Defaults to including all keys.
+	IncludeKeys []string `json:"include_keys,omitempty"`
+	// OnFailure Handle failures for the processor.
+	OnFailure []ProcessorContainer `json:"on_failure,omitempty"`
+	// Prefix Prefix to be added to extracted keys.
+	Prefix *string `json:"prefix,omitempty"`
+	// StripBrackets If `true`. strip brackets `()`, `<>`, `[]` as well as quotes `'` and `"` from
+	// extracted values.
+	StripBrackets *bool `json:"strip_brackets,omitempty"`
+	// Tag Identifier for the processor.
+	// Useful for debugging and metrics.
+	Tag *string `json:"tag,omitempty"`
+	// TargetField The field to insert the extracted keys into.
+	// Defaults to the root of the document.
+	// Supports template snippets.
+	TargetField *string `json:"target_field,omitempty"`
+	// TrimKey String of characters to trim from extracted keys.
+	TrimKey *string `json:"trim_key,omitempty"`
+	// TrimValue String of characters to trim from extracted values.
+	TrimValue *string `json:"trim_value,omitempty"`
+	// ValueSplit Regex pattern to use for splitting the key from the value within a key-value
+	// pair.
+	ValueSplit string `json:"value_split"`
 }
 
 func (s *KeyValueProcessor) UnmarshalJSON(data []byte) error {
@@ -72,7 +95,11 @@ func (s *KeyValueProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Description = &o
 
 		case "exclude_keys":
@@ -90,7 +117,11 @@ func (s *KeyValueProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.FieldSplit = o
 
 		case "if":
@@ -98,7 +129,11 @@ func (s *KeyValueProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.If = &o
 
 		case "ignore_failure":
@@ -144,7 +179,11 @@ func (s *KeyValueProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Prefix = &o
 
 		case "strip_brackets":
@@ -166,7 +205,11 @@ func (s *KeyValueProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Tag = &o
 
 		case "target_field":
@@ -179,7 +222,11 @@ func (s *KeyValueProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.TrimKey = &o
 
 		case "trim_value":
@@ -187,7 +234,11 @@ func (s *KeyValueProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.TrimValue = &o
 
 		case "value_split":
@@ -195,7 +246,11 @@ func (s *KeyValueProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.ValueSplit = o
 
 		}

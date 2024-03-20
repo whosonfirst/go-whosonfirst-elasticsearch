@@ -16,30 +16,33 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/valuetype"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
+	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/valuetype"
 )
 
 // WeightedAverageAggregation type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/aggregations/metric.ts#L211-L216
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/aggregations/metric.ts#L432-L446
 type WeightedAverageAggregation struct {
-	Format    *string               `json:"format,omitempty"`
-	Meta      Metadata              `json:"meta,omitempty"`
-	Name      *string               `json:"name,omitempty"`
+	// Format A numeric response formatter.
+	Format *string  `json:"format,omitempty"`
+	Meta   Metadata `json:"meta,omitempty"`
+	Name   *string  `json:"name,omitempty"`
+	// Value Configuration for the field that provides the values.
 	Value     *WeightedAverageValue `json:"value,omitempty"`
 	ValueType *valuetype.ValueType  `json:"value_type,omitempty"`
-	Weight    *WeightedAverageValue `json:"weight,omitempty"`
+	// Weight Configuration for the field or script that provides the weights.
+	Weight *WeightedAverageValue `json:"weight,omitempty"`
 }
 
 func (s *WeightedAverageAggregation) UnmarshalJSON(data []byte) error {
@@ -62,7 +65,11 @@ func (s *WeightedAverageAggregation) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Format = &o
 
 		case "meta":
@@ -75,7 +82,11 @@ func (s *WeightedAverageAggregation) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Name = &o
 
 		case "value":

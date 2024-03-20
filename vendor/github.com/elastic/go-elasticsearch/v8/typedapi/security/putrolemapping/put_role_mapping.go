@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Creates and updates role mappings.
 package putrolemapping
@@ -34,7 +34,6 @@ import (
 
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
-
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/refresh"
 )
 
@@ -52,14 +51,19 @@ type PutRoleMapping struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
-
-	req *Request
 	raw io.Reader
+
+	req      *Request
+	deferred []func(request *Request) error
+	buf      *gobytes.Buffer
 
 	paramSet int
 
 	name string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewPutRoleMapping type alias for index.
@@ -71,7 +75,7 @@ func NewPutRoleMappingFunc(tp elastictransport.Interface) NewPutRoleMapping {
 	return func(name string) *PutRoleMapping {
 		n := New(tp)
 
-		n.Name(name)
+		n._name(name)
 
 		return n
 	}
@@ -85,7 +89,16 @@ func New(tp elastictransport.Interface) *PutRoleMapping {
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+
+		buf: gobytes.NewBuffer(nil),
+
+		req: NewRequest(),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -115,9 +128,17 @@ func (r *PutRoleMapping) HttpRequest(ctx context.Context) (*http.Request, error)
 
 	var err error
 
-	if r.raw != nil {
-		r.buf.ReadFrom(r.raw)
-	} else if r.req != nil {
+	if len(r.deferred) > 0 {
+		for _, f := range r.deferred {
+			deferredErr := f(r.req)
+			if deferredErr != nil {
+				return nil, deferredErr
+			}
+		}
+	}
+
+	if r.raw == nil && r.req != nil {
+
 		data, err := json.Marshal(r.req)
 
 		if err != nil {
@@ -125,6 +146,11 @@ func (r *PutRoleMapping) HttpRequest(ctx context.Context) (*http.Request, error)
 		}
 
 		r.buf.Write(data)
+
+	}
+
+	if r.buf.Len() > 0 {
+		r.raw = r.buf
 	}
 
 	r.path.Scheme = "http"
@@ -137,6 +163,9 @@ func (r *PutRoleMapping) HttpRequest(ctx context.Context) (*http.Request, error)
 		path.WriteString("role_mapping")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "name", r.name)
+		}
 		path.WriteString(r.name)
 
 		method = http.MethodPut
@@ -150,15 +179,15 @@ func (r *PutRoleMapping) HttpRequest(ctx context.Context) (*http.Request, error)
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
 
 	if req.Header.Get("Content-Type") == "" {
-		if r.buf.Len() > 0 {
+		if r.raw != nil {
 			req.Header.Set("Content-Type", "application/vnd.elasticsearch+json;compatible-with=8")
 		}
 	}
@@ -175,27 +204,66 @@ func (r *PutRoleMapping) HttpRequest(ctx context.Context) (*http.Request, error)
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r PutRoleMapping) Perform(ctx context.Context) (*http.Response, error) {
+func (r PutRoleMapping) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "security.put_role_mapping")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "security.put_role_mapping")
+		if reader := instrument.RecordRequestBody(ctx, "security.put_role_mapping", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "security.put_role_mapping")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the PutRoleMapping query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the PutRoleMapping query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a putrolemapping.Response
-func (r PutRoleMapping) Do(ctx context.Context) (*Response, error) {
+func (r PutRoleMapping) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "security.put_role_mapping")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -203,6 +271,9 @@ func (r PutRoleMapping) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -212,9 +283,19 @@ func (r PutRoleMapping) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
@@ -227,9 +308,9 @@ func (r *PutRoleMapping) Header(key, value string) *PutRoleMapping {
 
 // Name Role-mapping name
 // API Name: name
-func (r *PutRoleMapping) Name(v string) *PutRoleMapping {
+func (r *PutRoleMapping) _name(name string) *PutRoleMapping {
 	r.paramSet |= nameMask
-	r.name = v
+	r.name = name
 
 	return r
 }
@@ -238,8 +319,51 @@ func (r *PutRoleMapping) Name(v string) *PutRoleMapping {
 // operation visible to search, if `wait_for` then wait for a refresh to make
 // this operation visible to search, if `false` then do nothing with refreshes.
 // API name: refresh
-func (r *PutRoleMapping) Refresh(enum refresh.Refresh) *PutRoleMapping {
-	r.values.Set("refresh", enum.String())
+func (r *PutRoleMapping) Refresh(refresh refresh.Refresh) *PutRoleMapping {
+	r.values.Set("refresh", refresh.String())
+
+	return r
+}
+
+// API name: enabled
+func (r *PutRoleMapping) Enabled(enabled bool) *PutRoleMapping {
+	r.req.Enabled = &enabled
+
+	return r
+}
+
+// API name: metadata
+func (r *PutRoleMapping) Metadata(metadata types.Metadata) *PutRoleMapping {
+	r.req.Metadata = metadata
+
+	return r
+}
+
+// API name: role_templates
+func (r *PutRoleMapping) RoleTemplates(roletemplates ...types.RoleTemplate) *PutRoleMapping {
+	r.req.RoleTemplates = roletemplates
+
+	return r
+}
+
+// API name: roles
+func (r *PutRoleMapping) Roles(roles ...string) *PutRoleMapping {
+	r.req.Roles = roles
+
+	return r
+}
+
+// API name: rules
+func (r *PutRoleMapping) Rules(rules *types.RoleMappingRule) *PutRoleMapping {
+
+	r.req.Rules = rules
+
+	return r
+}
+
+// API name: run_as
+func (r *PutRoleMapping) RunAs(runas ...string) *PutRoleMapping {
+	r.req.RunAs = runas
 
 	return r
 }

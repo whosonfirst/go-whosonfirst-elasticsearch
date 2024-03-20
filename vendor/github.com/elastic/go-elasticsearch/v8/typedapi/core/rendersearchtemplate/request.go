@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package rendersearchtemplate
 
@@ -27,11 +27,18 @@ import (
 
 // Request holds the request body struct for the package rendersearchtemplate
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_global/render_search_template/RenderSearchTemplateRequest.ts#L25-L39
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_global/render_search_template/RenderSearchTemplateRequest.ts#L25-L55
 type Request struct {
-	File   *string                    `json:"file,omitempty"`
+	File *string `json:"file,omitempty"`
+	// Params Key-value pairs used to replace Mustache variables in the template.
+	// The key is the variable name.
+	// The value is the variable value.
 	Params map[string]json.RawMessage `json:"params,omitempty"`
-	Source *string                    `json:"source,omitempty"`
+	// Source An inline search template.
+	// Supports the same parameters as the search API's request body.
+	// These parameters also support Mustache variables.
+	// If no `id` or `<templated-id>` is specified, this parameter is required.
+	Source *string `json:"source,omitempty"`
 }
 
 // NewRequest returns a Request

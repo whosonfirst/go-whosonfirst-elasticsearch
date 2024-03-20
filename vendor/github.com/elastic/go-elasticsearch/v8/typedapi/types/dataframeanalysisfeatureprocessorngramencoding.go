@@ -16,23 +16,21 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // DataframeAnalysisFeatureProcessorNGramEncoding type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ml/_types/DataframeAnalytics.ts#L274-L286
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ml/_types/DataframeAnalytics.ts#L274-L286
 type DataframeAnalysisFeatureProcessorNGramEncoding struct {
 	Custom *bool `json:"custom,omitempty"`
 	// FeaturePrefix The feature name prefix. Defaults to ngram_<start>_<length>.
@@ -84,7 +82,11 @@ func (s *DataframeAnalysisFeatureProcessorNGramEncoding) UnmarshalJSON(data []by
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.FeaturePrefix = &o
 
 		case "field":

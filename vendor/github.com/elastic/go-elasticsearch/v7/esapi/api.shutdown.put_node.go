@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 //
-// Code generated from specification version 7.13.0: DO NOT EDIT
+// Code generated from specification version 7.17.10: DO NOT EDIT
 
 package esapi
 
@@ -38,16 +38,12 @@ func newShutdownPutNodeFunc(t Transport) ShutdownPutNode {
 
 // ----- API Definition -------------------------------------------------------
 
-// ShutdownPutNode adds a node to be shut down
-//
-// This API is experimental.
+// ShutdownPutNode adds a node to be shut down. Designed for indirect use by ECE/ESS and ECK. Direct use is not supported.
 //
 // See full documentation at https://www.elastic.co/guide/en/elasticsearch/reference/current.
-//
 type ShutdownPutNode func(body io.Reader, node_id string, o ...func(*ShutdownPutNodeRequest)) (*Response, error)
 
 // ShutdownPutNodeRequest configures the Shutdown Put Node API request.
-//
 type ShutdownPutNodeRequest struct {
 	Body io.Reader
 
@@ -64,7 +60,6 @@ type ShutdownPutNodeRequest struct {
 }
 
 // Do executes the request and returns response or error.
-//
 func (r ShutdownPutNodeRequest) Do(ctx context.Context, transport Transport) (*Response, error) {
 	var (
 		method string
@@ -113,10 +108,6 @@ func (r ShutdownPutNodeRequest) Do(ctx context.Context, transport Transport) (*R
 		req.URL.RawQuery = q.Encode()
 	}
 
-	if r.Body != nil {
-		req.Header[headerContentType] = headerContentTypeJSON
-	}
-
 	if len(r.Header) > 0 {
 		if len(req.Header) == 0 {
 			req.Header = r.Header
@@ -127,6 +118,10 @@ func (r ShutdownPutNodeRequest) Do(ctx context.Context, transport Transport) (*R
 				}
 			}
 		}
+	}
+
+	if r.Body != nil && req.Header.Get(headerContentType) == "" {
+		req.Header[headerContentType] = headerContentTypeJSON
 	}
 
 	if ctx != nil {
@@ -148,7 +143,6 @@ func (r ShutdownPutNodeRequest) Do(ctx context.Context, transport Transport) (*R
 }
 
 // WithContext sets the request context.
-//
 func (f ShutdownPutNode) WithContext(v context.Context) func(*ShutdownPutNodeRequest) {
 	return func(r *ShutdownPutNodeRequest) {
 		r.ctx = v
@@ -156,7 +150,6 @@ func (f ShutdownPutNode) WithContext(v context.Context) func(*ShutdownPutNodeReq
 }
 
 // WithPretty makes the response body pretty-printed.
-//
 func (f ShutdownPutNode) WithPretty() func(*ShutdownPutNodeRequest) {
 	return func(r *ShutdownPutNodeRequest) {
 		r.Pretty = true
@@ -164,7 +157,6 @@ func (f ShutdownPutNode) WithPretty() func(*ShutdownPutNodeRequest) {
 }
 
 // WithHuman makes statistical values human-readable.
-//
 func (f ShutdownPutNode) WithHuman() func(*ShutdownPutNodeRequest) {
 	return func(r *ShutdownPutNodeRequest) {
 		r.Human = true
@@ -172,7 +164,6 @@ func (f ShutdownPutNode) WithHuman() func(*ShutdownPutNodeRequest) {
 }
 
 // WithErrorTrace includes the stack trace for errors in the response body.
-//
 func (f ShutdownPutNode) WithErrorTrace() func(*ShutdownPutNodeRequest) {
 	return func(r *ShutdownPutNodeRequest) {
 		r.ErrorTrace = true
@@ -180,7 +171,6 @@ func (f ShutdownPutNode) WithErrorTrace() func(*ShutdownPutNodeRequest) {
 }
 
 // WithFilterPath filters the properties of the response body.
-//
 func (f ShutdownPutNode) WithFilterPath(v ...string) func(*ShutdownPutNodeRequest) {
 	return func(r *ShutdownPutNodeRequest) {
 		r.FilterPath = v
@@ -188,7 +178,6 @@ func (f ShutdownPutNode) WithFilterPath(v ...string) func(*ShutdownPutNodeReques
 }
 
 // WithHeader adds the headers to the HTTP request.
-//
 func (f ShutdownPutNode) WithHeader(h map[string]string) func(*ShutdownPutNodeRequest) {
 	return func(r *ShutdownPutNodeRequest) {
 		if r.Header == nil {
@@ -201,7 +190,6 @@ func (f ShutdownPutNode) WithHeader(h map[string]string) func(*ShutdownPutNodeRe
 }
 
 // WithOpaqueID adds the X-Opaque-Id header to the HTTP request.
-//
 func (f ShutdownPutNode) WithOpaqueID(s string) func(*ShutdownPutNodeRequest) {
 	return func(r *ShutdownPutNodeRequest) {
 		if r.Header == nil {

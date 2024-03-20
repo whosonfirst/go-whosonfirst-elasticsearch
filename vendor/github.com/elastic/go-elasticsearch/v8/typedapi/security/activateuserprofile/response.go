@@ -16,25 +16,34 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package activateuserprofile
 
 import (
+	"encoding/json"
+
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
 )
 
 // Response holds the response body struct for the package activateuserprofile
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/security/activate_user_profile/Response.ts#L22-L24
-
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/security/activate_user_profile/Response.ts#L22-L24
 type Response struct {
+	Data             map[string]json.RawMessage   `json:"data"`
 	Doc_             types.UserProfileHitMetadata `json:"_doc"`
+	Enabled          *bool                        `json:"enabled,omitempty"`
+	Labels           map[string]json.RawMessage   `json:"labels"`
 	LastSynchronized int64                        `json:"last_synchronized"`
+	Uid              string                       `json:"uid"`
+	User             types.UserProfileUser        `json:"user"`
 }
 
 // NewResponse returns a Response
 func NewResponse() *Response {
-	r := &Response{}
+	r := &Response{
+		Data:   make(map[string]json.RawMessage, 0),
+		Labels: make(map[string]json.RawMessage, 0),
+	}
 	return r
 }

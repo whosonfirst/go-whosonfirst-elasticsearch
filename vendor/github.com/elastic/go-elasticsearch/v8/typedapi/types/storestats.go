@@ -16,30 +16,41 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // StoreStats type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/Stats.ts#L233-L240
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/Stats.ts#L368-L395
 type StoreStats struct {
-	Reserved                ByteSize `json:"reserved,omitempty"`
-	ReservedInBytes         int64    `json:"reserved_in_bytes"`
-	Size                    ByteSize `json:"size,omitempty"`
-	SizeInBytes             int64    `json:"size_in_bytes"`
-	TotalDataSetSize        ByteSize `json:"total_data_set_size,omitempty"`
-	TotalDataSetSizeInBytes *int64   `json:"total_data_set_size_in_bytes,omitempty"`
+	// Reserved A prediction of how much larger the shard stores will eventually grow due to
+	// ongoing peer recoveries, restoring snapshots, and similar activities.
+	Reserved ByteSize `json:"reserved,omitempty"`
+	// ReservedInBytes A prediction, in bytes, of how much larger the shard stores will eventually
+	// grow due to ongoing peer recoveries, restoring snapshots, and similar
+	// activities.
+	ReservedInBytes int64 `json:"reserved_in_bytes"`
+	// Size Total size of all shards assigned to selected nodes.
+	Size ByteSize `json:"size,omitempty"`
+	// SizeInBytes Total size, in bytes, of all shards assigned to selected nodes.
+	SizeInBytes int64 `json:"size_in_bytes"`
+	// TotalDataSetSize Total data set size of all shards assigned to selected nodes.
+	// This includes the size of shards not stored fully on the nodes, such as the
+	// cache for partially mounted indices.
+	TotalDataSetSize ByteSize `json:"total_data_set_size,omitempty"`
+	// TotalDataSetSizeInBytes Total data set size, in bytes, of all shards assigned to selected nodes.
+	// This includes the size of shards not stored fully on the nodes, such as the
+	// cache for partially mounted indices.
+	TotalDataSetSizeInBytes *int64 `json:"total_data_set_size_in_bytes,omitempty"`
 }
 
 func (s *StoreStats) UnmarshalJSON(data []byte) error {

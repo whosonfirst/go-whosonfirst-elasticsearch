@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
@@ -25,15 +25,19 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"strconv"
 )
 
 // AggregationRange type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/aggregations/bucket.ts#L298-L302
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/aggregations/bucket.ts#L672-L685
 type AggregationRange struct {
-	From string  `json:"from,omitempty"`
-	Key  *string `json:"key,omitempty"`
-	To   string  `json:"to,omitempty"`
+	// From Start of the range (inclusive).
+	From string `json:"from,omitempty"`
+	// Key Custom key to return the range with.
+	Key *string `json:"key,omitempty"`
+	// To End of the range (exclusive).
+	To string `json:"to,omitempty"`
 }
 
 func (s *AggregationRange) UnmarshalJSON(data []byte) error {
@@ -56,7 +60,11 @@ func (s *AggregationRange) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.From = o
 
 		case "key":
@@ -64,7 +72,11 @@ func (s *AggregationRange) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Key = &o
 
 		case "to":
@@ -72,7 +84,11 @@ func (s *AggregationRange) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.To = o
 
 		}

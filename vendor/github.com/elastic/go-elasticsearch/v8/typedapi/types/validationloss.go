@@ -16,19 +16,64 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
+import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"io"
+	"strconv"
+)
+
 // ValidationLoss type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ml/_types/DataframeAnalytics.ts#L428-L433
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ml/_types/DataframeAnalytics.ts#L570-L575
 type ValidationLoss struct {
 	// FoldValues Validation loss values for every added decision tree during the forest
 	// growing procedure.
 	FoldValues []string `json:"fold_values"`
 	// LossType The type of the loss metric. For example, binomial_logistic.
 	LossType string `json:"loss_type"`
+}
+
+func (s *ValidationLoss) UnmarshalJSON(data []byte) error {
+
+	dec := json.NewDecoder(bytes.NewReader(data))
+
+	for {
+		t, err := dec.Token()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return err
+		}
+
+		switch t {
+
+		case "fold_values":
+			if err := dec.Decode(&s.FoldValues); err != nil {
+				return err
+			}
+
+		case "loss_type":
+			var tmp json.RawMessage
+			if err := dec.Decode(&tmp); err != nil {
+				return err
+			}
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
+			s.LossType = o
+
+		}
+	}
+	return nil
 }
 
 // NewValidationLoss returns a ValidationLoss.

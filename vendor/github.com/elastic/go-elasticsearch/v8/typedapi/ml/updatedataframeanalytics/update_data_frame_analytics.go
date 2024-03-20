@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Updates certain properties of a data frame analytics job.
 package updatedataframeanalytics
@@ -50,14 +50,19 @@ type UpdateDataFrameAnalytics struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
-
-	req *Request
 	raw io.Reader
+
+	req      *Request
+	deferred []func(request *Request) error
+	buf      *gobytes.Buffer
 
 	paramSet int
 
 	id string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewUpdateDataFrameAnalytics type alias for index.
@@ -69,7 +74,7 @@ func NewUpdateDataFrameAnalyticsFunc(tp elastictransport.Interface) NewUpdateDat
 	return func(id string) *UpdateDataFrameAnalytics {
 		n := New(tp)
 
-		n.Id(id)
+		n._id(id)
 
 		return n
 	}
@@ -83,7 +88,16 @@ func New(tp elastictransport.Interface) *UpdateDataFrameAnalytics {
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+
+		buf: gobytes.NewBuffer(nil),
+
+		req: NewRequest(),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -113,9 +127,17 @@ func (r *UpdateDataFrameAnalytics) HttpRequest(ctx context.Context) (*http.Reque
 
 	var err error
 
-	if r.raw != nil {
-		r.buf.ReadFrom(r.raw)
-	} else if r.req != nil {
+	if len(r.deferred) > 0 {
+		for _, f := range r.deferred {
+			deferredErr := f(r.req)
+			if deferredErr != nil {
+				return nil, deferredErr
+			}
+		}
+	}
+
+	if r.raw == nil && r.req != nil {
+
 		data, err := json.Marshal(r.req)
 
 		if err != nil {
@@ -123,6 +145,11 @@ func (r *UpdateDataFrameAnalytics) HttpRequest(ctx context.Context) (*http.Reque
 		}
 
 		r.buf.Write(data)
+
+	}
+
+	if r.buf.Len() > 0 {
+		r.raw = r.buf
 	}
 
 	r.path.Scheme = "http"
@@ -137,6 +164,9 @@ func (r *UpdateDataFrameAnalytics) HttpRequest(ctx context.Context) (*http.Reque
 		path.WriteString("analytics")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "id", r.id)
+		}
 		path.WriteString(r.id)
 		path.WriteString("/")
 		path.WriteString("_update")
@@ -152,15 +182,15 @@ func (r *UpdateDataFrameAnalytics) HttpRequest(ctx context.Context) (*http.Reque
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
 
 	if req.Header.Get("Content-Type") == "" {
-		if r.buf.Len() > 0 {
+		if r.raw != nil {
 			req.Header.Set("Content-Type", "application/vnd.elasticsearch+json;compatible-with=8")
 		}
 	}
@@ -177,27 +207,66 @@ func (r *UpdateDataFrameAnalytics) HttpRequest(ctx context.Context) (*http.Reque
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r UpdateDataFrameAnalytics) Perform(ctx context.Context) (*http.Response, error) {
+func (r UpdateDataFrameAnalytics) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "ml.update_data_frame_analytics")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "ml.update_data_frame_analytics")
+		if reader := instrument.RecordRequestBody(ctx, "ml.update_data_frame_analytics", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "ml.update_data_frame_analytics")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the UpdateDataFrameAnalytics query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the UpdateDataFrameAnalytics query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a updatedataframeanalytics.Response
-func (r UpdateDataFrameAnalytics) Do(ctx context.Context) (*Response, error) {
+func (r UpdateDataFrameAnalytics) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "ml.update_data_frame_analytics")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -205,6 +274,9 @@ func (r UpdateDataFrameAnalytics) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -214,9 +286,19 @@ func (r UpdateDataFrameAnalytics) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
@@ -231,9 +313,51 @@ func (r *UpdateDataFrameAnalytics) Header(key, value string) *UpdateDataFrameAna
 // lowercase alphanumeric characters (a-z and 0-9), hyphens, and
 // underscores. It must start and end with alphanumeric characters.
 // API Name: id
-func (r *UpdateDataFrameAnalytics) Id(v string) *UpdateDataFrameAnalytics {
+func (r *UpdateDataFrameAnalytics) _id(id string) *UpdateDataFrameAnalytics {
 	r.paramSet |= idMask
-	r.id = v
+	r.id = id
+
+	return r
+}
+
+// AllowLazyStart Specifies whether this job can start when there is insufficient machine
+// learning node capacity for it to be immediately assigned to a node.
+// API name: allow_lazy_start
+func (r *UpdateDataFrameAnalytics) AllowLazyStart(allowlazystart bool) *UpdateDataFrameAnalytics {
+	r.req.AllowLazyStart = &allowlazystart
+
+	return r
+}
+
+// Description A description of the job.
+// API name: description
+func (r *UpdateDataFrameAnalytics) Description(description string) *UpdateDataFrameAnalytics {
+
+	r.req.Description = &description
+
+	return r
+}
+
+// MaxNumThreads The maximum number of threads to be used by the analysis. Using more
+// threads may decrease the time necessary to complete the analysis at the
+// cost of using more CPU. Note that the process may use additional threads
+// for operational functionality other than the analysis itself.
+// API name: max_num_threads
+func (r *UpdateDataFrameAnalytics) MaxNumThreads(maxnumthreads int) *UpdateDataFrameAnalytics {
+	r.req.MaxNumThreads = &maxnumthreads
+
+	return r
+}
+
+// ModelMemoryLimit The approximate maximum amount of memory resources that are permitted for
+// analytical processing. If your `elasticsearch.yml` file contains an
+// `xpack.ml.max_model_memory_limit` setting, an error occurs when you try
+// to create data frame analytics jobs that have `model_memory_limit` values
+// greater than that setting.
+// API name: model_memory_limit
+func (r *UpdateDataFrameAnalytics) ModelMemoryLimit(modelmemorylimit string) *UpdateDataFrameAnalytics {
+
+	r.req.ModelMemoryLimit = &modelmemorylimit
 
 	return r
 }

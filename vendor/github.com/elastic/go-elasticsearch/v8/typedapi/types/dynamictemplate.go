@@ -16,23 +16,23 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/matchtype"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
+	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/matchtype"
 )
 
 // DynamicTemplate type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/mapping/dynamic-template.ts#L22-L30
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/mapping/dynamic-template.ts#L22-L30
 type DynamicTemplate struct {
 	Mapping          Property             `json:"mapping,omitempty"`
 	Match            *string              `json:"match,omitempty"`
@@ -67,7 +67,9 @@ func (s *DynamicTemplate) UnmarshalJSON(data []byte) error {
 			localDec := json.NewDecoder(source)
 			localDec.Decode(&kind)
 			source.Seek(0, io.SeekStart)
-
+			if _, ok := kind["type"]; !ok {
+				kind["type"] = "object"
+			}
 			switch kind["type"] {
 
 			case "binary":
@@ -168,6 +170,12 @@ func (s *DynamicTemplate) UnmarshalJSON(data []byte) error {
 				s.Mapping = *o
 			case "dense_vector":
 				o := NewDenseVectorProperty()
+				if err := localDec.Decode(&o); err != nil {
+					return err
+				}
+				s.Mapping = *o
+			case "sparse_vector":
+				o := NewSparseVectorProperty()
 				if err := localDec.Decode(&o); err != nil {
 					return err
 				}
@@ -357,7 +365,11 @@ func (s *DynamicTemplate) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Match = &o
 
 		case "match_mapping_type":
@@ -365,7 +377,11 @@ func (s *DynamicTemplate) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.MatchMappingType = &o
 
 		case "match_pattern":
@@ -378,7 +394,11 @@ func (s *DynamicTemplate) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.PathMatch = &o
 
 		case "path_unmatch":
@@ -386,7 +406,11 @@ func (s *DynamicTemplate) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.PathUnmatch = &o
 
 		case "unmatch":
@@ -394,7 +418,11 @@ func (s *DynamicTemplate) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Unmatch = &o
 
 		}

@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package infertrainedmodel
 
@@ -26,8 +26,7 @@ import (
 
 // Response holds the response body struct for the package infertrainedmodel
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ml/infer_trained_model/MlInferTrainedModelResponse.ts#L22-L26
-
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ml/infer_trained_model/MlInferTrainedModelResponse.ts#L22-L26
 type Response struct {
 	InferenceResults []types.InferenceResponseResult `json:"inference_results"`
 }

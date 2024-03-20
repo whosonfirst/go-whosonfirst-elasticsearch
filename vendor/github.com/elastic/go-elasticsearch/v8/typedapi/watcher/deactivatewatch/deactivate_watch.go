@@ -16,13 +16,12 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Deactivates a currently active watch.
 package deactivatewatch
 
 import (
-	gobytes "bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -51,11 +50,15 @@ type DeactivateWatch struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	watchid string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewDeactivateWatch type alias for index.
@@ -67,7 +70,7 @@ func NewDeactivateWatchFunc(tp elastictransport.Interface) NewDeactivateWatch {
 	return func(watchid string) *DeactivateWatch {
 		n := New(tp)
 
-		n.WatchId(watchid)
+		n._watchid(watchid)
 
 		return n
 	}
@@ -81,7 +84,12 @@ func New(tp elastictransport.Interface) *DeactivateWatch {
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -106,6 +114,9 @@ func (r *DeactivateWatch) HttpRequest(ctx context.Context) (*http.Request, error
 		path.WriteString("watch")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "watchid", r.watchid)
+		}
 		path.WriteString(r.watchid)
 		path.WriteString("/")
 		path.WriteString("_deactivate")
@@ -121,9 +132,9 @@ func (r *DeactivateWatch) HttpRequest(ctx context.Context) (*http.Request, error
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
@@ -140,27 +151,66 @@ func (r *DeactivateWatch) HttpRequest(ctx context.Context) (*http.Request, error
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r DeactivateWatch) Perform(ctx context.Context) (*http.Response, error) {
+func (r DeactivateWatch) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "watcher.deactivate_watch")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "watcher.deactivate_watch")
+		if reader := instrument.RecordRequestBody(ctx, "watcher.deactivate_watch", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "watcher.deactivate_watch")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the DeactivateWatch query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the DeactivateWatch query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a deactivatewatch.Response
-func (r DeactivateWatch) Do(ctx context.Context) (*Response, error) {
+func (r DeactivateWatch) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "watcher.deactivate_watch")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -168,6 +218,9 @@ func (r DeactivateWatch) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -177,15 +230,35 @@ func (r DeactivateWatch) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r DeactivateWatch) IsSuccess(ctx context.Context) (bool, error) {
+func (r DeactivateWatch) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "watcher.deactivate_watch")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -201,6 +274,14 @@ func (r DeactivateWatch) IsSuccess(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the DeactivateWatch query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -213,9 +294,9 @@ func (r *DeactivateWatch) Header(key, value string) *DeactivateWatch {
 
 // WatchId Watch ID
 // API Name: watchid
-func (r *DeactivateWatch) WatchId(v string) *DeactivateWatch {
+func (r *DeactivateWatch) _watchid(watchid string) *DeactivateWatch {
 	r.paramSet |= watchidMask
-	r.watchid = v
+	r.watchid = watchid
 
 	return r
 }

@@ -16,37 +16,51 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // FuzzyQuery type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/query_dsl/term.ts#L40-L51
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/query_dsl/term.ts#L43-L78
 type FuzzyQuery struct {
-	Boost          *float32  `json:"boost,omitempty"`
-	Fuzziness      Fuzziness `json:"fuzziness,omitempty"`
-	MaxExpansions  *int      `json:"max_expansions,omitempty"`
-	PrefixLength   *int      `json:"prefix_length,omitempty"`
-	QueryName_     *string   `json:"_name,omitempty"`
-	Rewrite        *string   `json:"rewrite,omitempty"`
-	Transpositions *bool     `json:"transpositions,omitempty"`
-	Value          string    `json:"value"`
+	// Boost Floating point number used to decrease or increase the relevance scores of
+	// the query.
+	// Boost values are relative to the default value of 1.0.
+	// A boost value between 0 and 1.0 decreases the relevance score.
+	// A value greater than 1.0 increases the relevance score.
+	Boost *float32 `json:"boost,omitempty"`
+	// Fuzziness Maximum edit distance allowed for matching.
+	Fuzziness Fuzziness `json:"fuzziness,omitempty"`
+	// MaxExpansions Maximum number of variations created.
+	MaxExpansions *int `json:"max_expansions,omitempty"`
+	// PrefixLength Number of beginning characters left unchanged when creating expansions.
+	PrefixLength *int    `json:"prefix_length,omitempty"`
+	QueryName_   *string `json:"_name,omitempty"`
+	// Rewrite Number of beginning characters left unchanged when creating expansions.
+	Rewrite *string `json:"rewrite,omitempty"`
+	// Transpositions Indicates whether edits include transpositions of two adjacent characters
+	// (for example `ab` to `ba`).
+	Transpositions *bool `json:"transpositions,omitempty"`
+	// Value Term you wish to find in the provided field.
+	Value string `json:"value"`
 }
 
 func (s *FuzzyQuery) UnmarshalJSON(data []byte) error {
 
 	if !bytes.HasPrefix(data, []byte(`{`)) {
+		if !bytes.HasPrefix(data, []byte(`"`)) {
+			data = append([]byte{'"'}, data...)
+			data = append(data, []byte{'"'}...)
+		}
 		err := json.NewDecoder(bytes.NewReader(data)).Decode(&s.Value)
 		return err
 	}
@@ -122,7 +136,11 @@ func (s *FuzzyQuery) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.QueryName_ = &o
 
 		case "rewrite":
@@ -149,7 +167,11 @@ func (s *FuzzyQuery) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Value = o
 
 		}

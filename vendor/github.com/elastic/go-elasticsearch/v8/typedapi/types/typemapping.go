@@ -16,25 +16,23 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/dynamicmapping"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/dynamicmapping"
 )
 
 // TypeMapping type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/mapping/TypeMapping.ts#L34-L53
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/mapping/TypeMapping.ts#L34-L56
 type TypeMapping struct {
 	AllField             *AllField                      `json:"all_field,omitempty"`
 	DataStreamTimestamp_ *DataStreamTimestamp           `json:"_data_stream_timestamp,omitempty"`
@@ -163,7 +161,9 @@ func (s *TypeMapping) UnmarshalJSON(data []byte) error {
 				localDec := json.NewDecoder(buf)
 				localDec.Decode(&kind)
 				buf.Seek(0, io.SeekStart)
-
+				if _, ok := kind["type"]; !ok {
+					kind["type"] = "object"
+				}
 				switch kind["type"] {
 				case "binary":
 					oo := NewBinaryProperty()
@@ -263,6 +263,12 @@ func (s *TypeMapping) UnmarshalJSON(data []byte) error {
 					s.Properties[key] = oo
 				case "dense_vector":
 					oo := NewDenseVectorProperty()
+					if err := localDec.Decode(&oo); err != nil {
+						return err
+					}
+					s.Properties[key] = oo
+				case "sparse_vector":
+					oo := NewSparseVectorProperty()
 					if err := localDec.Decode(&oo); err != nil {
 						return err
 					}
@@ -442,9 +448,11 @@ func (s *TypeMapping) UnmarshalJSON(data []byte) error {
 					}
 					s.Properties[key] = oo
 				default:
-					if err := localDec.Decode(&s.Properties); err != nil {
+					oo := new(Property)
+					if err := localDec.Decode(&oo); err != nil {
 						return err
 					}
+					s.Properties[key] = oo
 				}
 			}
 

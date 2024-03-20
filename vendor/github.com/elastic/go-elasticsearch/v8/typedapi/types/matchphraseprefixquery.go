@@ -16,38 +16,52 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/zerotermsquery"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/zerotermsquery"
 )
 
 // MatchPhrasePrefixQuery type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/query_dsl/fulltext.ts#L182-L189
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/query_dsl/fulltext.ts#L428-L454
 type MatchPhrasePrefixQuery struct {
-	Analyzer       *string                        `json:"analyzer,omitempty"`
-	Boost          *float32                       `json:"boost,omitempty"`
-	MaxExpansions  *int                           `json:"max_expansions,omitempty"`
-	Query          string                         `json:"query"`
-	QueryName_     *string                        `json:"_name,omitempty"`
-	Slop           *int                           `json:"slop,omitempty"`
+	// Analyzer Analyzer used to convert text in the query value into tokens.
+	Analyzer *string `json:"analyzer,omitempty"`
+	// Boost Floating point number used to decrease or increase the relevance scores of
+	// the query.
+	// Boost values are relative to the default value of 1.0.
+	// A boost value between 0 and 1.0 decreases the relevance score.
+	// A value greater than 1.0 increases the relevance score.
+	Boost *float32 `json:"boost,omitempty"`
+	// MaxExpansions Maximum number of terms to which the last provided term of the query value
+	// will expand.
+	MaxExpansions *int `json:"max_expansions,omitempty"`
+	// Query Text you wish to find in the provided field.
+	Query      string  `json:"query"`
+	QueryName_ *string `json:"_name,omitempty"`
+	// Slop Maximum number of positions allowed between matching tokens.
+	Slop *int `json:"slop,omitempty"`
+	// ZeroTermsQuery Indicates whether no documents are returned if the analyzer removes all
+	// tokens, such as when using a `stop` filter.
 	ZeroTermsQuery *zerotermsquery.ZeroTermsQuery `json:"zero_terms_query,omitempty"`
 }
 
 func (s *MatchPhrasePrefixQuery) UnmarshalJSON(data []byte) error {
 
 	if !bytes.HasPrefix(data, []byte(`{`)) {
+		if !bytes.HasPrefix(data, []byte(`"`)) {
+			data = append([]byte{'"'}, data...)
+			data = append(data, []byte{'"'}...)
+		}
 		err := json.NewDecoder(bytes.NewReader(data)).Decode(&s.Query)
 		return err
 	}
@@ -70,7 +84,11 @@ func (s *MatchPhrasePrefixQuery) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Analyzer = &o
 
 		case "boost":
@@ -110,7 +128,11 @@ func (s *MatchPhrasePrefixQuery) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Query = o
 
 		case "_name":
@@ -118,7 +140,11 @@ func (s *MatchPhrasePrefixQuery) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.QueryName_ = &o
 
 		case "slop":

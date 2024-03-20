@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Instantiates a data frame analytics job.
 package putdataframeanalytics
@@ -50,14 +50,19 @@ type PutDataFrameAnalytics struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
-
-	req *Request
 	raw io.Reader
+
+	req      *Request
+	deferred []func(request *Request) error
+	buf      *gobytes.Buffer
 
 	paramSet int
 
 	id string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewPutDataFrameAnalytics type alias for index.
@@ -69,7 +74,7 @@ func NewPutDataFrameAnalyticsFunc(tp elastictransport.Interface) NewPutDataFrame
 	return func(id string) *PutDataFrameAnalytics {
 		n := New(tp)
 
-		n.Id(id)
+		n._id(id)
 
 		return n
 	}
@@ -77,13 +82,22 @@ func NewPutDataFrameAnalyticsFunc(tp elastictransport.Interface) NewPutDataFrame
 
 // Instantiates a data frame analytics job.
 //
-// https://www.elastic.co/guide/en/elasticsearch/reference/{branch}/put-dfanalytics.html
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/put-dfanalytics.html
 func New(tp elastictransport.Interface) *PutDataFrameAnalytics {
 	r := &PutDataFrameAnalytics{
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+
+		buf: gobytes.NewBuffer(nil),
+
+		req: NewRequest(),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -113,9 +127,17 @@ func (r *PutDataFrameAnalytics) HttpRequest(ctx context.Context) (*http.Request,
 
 	var err error
 
-	if r.raw != nil {
-		r.buf.ReadFrom(r.raw)
-	} else if r.req != nil {
+	if len(r.deferred) > 0 {
+		for _, f := range r.deferred {
+			deferredErr := f(r.req)
+			if deferredErr != nil {
+				return nil, deferredErr
+			}
+		}
+	}
+
+	if r.raw == nil && r.req != nil {
+
 		data, err := json.Marshal(r.req)
 
 		if err != nil {
@@ -123,6 +145,11 @@ func (r *PutDataFrameAnalytics) HttpRequest(ctx context.Context) (*http.Request,
 		}
 
 		r.buf.Write(data)
+
+	}
+
+	if r.buf.Len() > 0 {
+		r.raw = r.buf
 	}
 
 	r.path.Scheme = "http"
@@ -137,6 +164,9 @@ func (r *PutDataFrameAnalytics) HttpRequest(ctx context.Context) (*http.Request,
 		path.WriteString("analytics")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "id", r.id)
+		}
 		path.WriteString(r.id)
 
 		method = http.MethodPut
@@ -150,15 +180,15 @@ func (r *PutDataFrameAnalytics) HttpRequest(ctx context.Context) (*http.Request,
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
 
 	if req.Header.Get("Content-Type") == "" {
-		if r.buf.Len() > 0 {
+		if r.raw != nil {
 			req.Header.Set("Content-Type", "application/vnd.elasticsearch+json;compatible-with=8")
 		}
 	}
@@ -175,27 +205,66 @@ func (r *PutDataFrameAnalytics) HttpRequest(ctx context.Context) (*http.Request,
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r PutDataFrameAnalytics) Perform(ctx context.Context) (*http.Response, error) {
+func (r PutDataFrameAnalytics) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "ml.put_data_frame_analytics")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "ml.put_data_frame_analytics")
+		if reader := instrument.RecordRequestBody(ctx, "ml.put_data_frame_analytics", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "ml.put_data_frame_analytics")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the PutDataFrameAnalytics query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the PutDataFrameAnalytics query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a putdataframeanalytics.Response
-func (r PutDataFrameAnalytics) Do(ctx context.Context) (*Response, error) {
+func (r PutDataFrameAnalytics) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "ml.put_data_frame_analytics")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -203,6 +272,9 @@ func (r PutDataFrameAnalytics) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -212,9 +284,19 @@ func (r PutDataFrameAnalytics) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
@@ -229,9 +311,136 @@ func (r *PutDataFrameAnalytics) Header(key, value string) *PutDataFrameAnalytics
 // lowercase alphanumeric characters (a-z and 0-9), hyphens, and
 // underscores. It must start and end with alphanumeric characters.
 // API Name: id
-func (r *PutDataFrameAnalytics) Id(v string) *PutDataFrameAnalytics {
+func (r *PutDataFrameAnalytics) _id(id string) *PutDataFrameAnalytics {
 	r.paramSet |= idMask
-	r.id = v
+	r.id = id
+
+	return r
+}
+
+// AllowLazyStart Specifies whether this job can start when there is insufficient machine
+// learning node capacity for it to be immediately assigned to a node. If
+// set to `false` and a machine learning node with capacity to run the job
+// cannot be immediately found, the API returns an error. If set to `true`,
+// the API does not return an error; the job waits in the `starting` state
+// until sufficient machine learning node capacity is available. This
+// behavior is also affected by the cluster-wide
+// `xpack.ml.max_lazy_ml_nodes` setting.
+// API name: allow_lazy_start
+func (r *PutDataFrameAnalytics) AllowLazyStart(allowlazystart bool) *PutDataFrameAnalytics {
+	r.req.AllowLazyStart = &allowlazystart
+
+	return r
+}
+
+// Analysis The analysis configuration, which contains the information necessary to
+// perform one of the following types of analysis: classification, outlier
+// detection, or regression.
+// API name: analysis
+func (r *PutDataFrameAnalytics) Analysis(analysis *types.DataframeAnalysisContainer) *PutDataFrameAnalytics {
+
+	r.req.Analysis = *analysis
+
+	return r
+}
+
+// AnalyzedFields Specifies `includes` and/or `excludes` patterns to select which fields
+// will be included in the analysis. The patterns specified in `excludes`
+// are applied last, therefore `excludes` takes precedence. In other words,
+// if the same field is specified in both `includes` and `excludes`, then
+// the field will not be included in the analysis. If `analyzed_fields` is
+// not set, only the relevant fields will be included. For example, all the
+// numeric fields for outlier detection.
+// The supported fields vary for each type of analysis. Outlier detection
+// requires numeric or `boolean` data to analyze. The algorithms don’t
+// support missing values therefore fields that have data types other than
+// numeric or boolean are ignored. Documents where included fields contain
+// missing values, null values, or an array are also ignored. Therefore the
+// `dest` index may contain documents that don’t have an outlier score.
+// Regression supports fields that are numeric, `boolean`, `text`,
+// `keyword`, and `ip` data types. It is also tolerant of missing values.
+// Fields that are supported are included in the analysis, other fields are
+// ignored. Documents where included fields contain an array with two or
+// more values are also ignored. Documents in the `dest` index that don’t
+// contain a results field are not included in the regression analysis.
+// Classification supports fields that are numeric, `boolean`, `text`,
+// `keyword`, and `ip` data types. It is also tolerant of missing values.
+// Fields that are supported are included in the analysis, other fields are
+// ignored. Documents where included fields contain an array with two or
+// more values are also ignored. Documents in the `dest` index that don’t
+// contain a results field are not included in the classification analysis.
+// Classification analysis can be improved by mapping ordinal variable
+// values to a single number. For example, in case of age ranges, you can
+// model the values as `0-14 = 0`, `15-24 = 1`, `25-34 = 2`, and so on.
+// API name: analyzed_fields
+func (r *PutDataFrameAnalytics) AnalyzedFields(analyzedfields *types.DataframeAnalysisAnalyzedFields) *PutDataFrameAnalytics {
+
+	r.req.AnalyzedFields = analyzedfields
+
+	return r
+}
+
+// Description A description of the job.
+// API name: description
+func (r *PutDataFrameAnalytics) Description(description string) *PutDataFrameAnalytics {
+
+	r.req.Description = &description
+
+	return r
+}
+
+// Dest The destination configuration.
+// API name: dest
+func (r *PutDataFrameAnalytics) Dest(dest *types.DataframeAnalyticsDestination) *PutDataFrameAnalytics {
+
+	r.req.Dest = *dest
+
+	return r
+}
+
+// API name: headers
+func (r *PutDataFrameAnalytics) Headers(httpheaders types.HttpHeaders) *PutDataFrameAnalytics {
+	r.req.Headers = httpheaders
+
+	return r
+}
+
+// MaxNumThreads The maximum number of threads to be used by the analysis. Using more
+// threads may decrease the time necessary to complete the analysis at the
+// cost of using more CPU. Note that the process may use additional threads
+// for operational functionality other than the analysis itself.
+// API name: max_num_threads
+func (r *PutDataFrameAnalytics) MaxNumThreads(maxnumthreads int) *PutDataFrameAnalytics {
+	r.req.MaxNumThreads = &maxnumthreads
+
+	return r
+}
+
+// ModelMemoryLimit The approximate maximum amount of memory resources that are permitted for
+// analytical processing. If your `elasticsearch.yml` file contains an
+// `xpack.ml.max_model_memory_limit` setting, an error occurs when you try
+// to create data frame analytics jobs that have `model_memory_limit` values
+// greater than that setting.
+// API name: model_memory_limit
+func (r *PutDataFrameAnalytics) ModelMemoryLimit(modelmemorylimit string) *PutDataFrameAnalytics {
+
+	r.req.ModelMemoryLimit = &modelmemorylimit
+
+	return r
+}
+
+// Source The configuration of how to source the analysis data.
+// API name: source
+func (r *PutDataFrameAnalytics) Source(source *types.DataframeAnalyticsSource) *PutDataFrameAnalytics {
+
+	r.req.Source = *source
+
+	return r
+}
+
+// API name: version
+func (r *PutDataFrameAnalytics) Version(versionstring string) *PutDataFrameAnalytics {
+	r.req.Version = &versionstring
 
 	return r
 }

@@ -16,33 +16,41 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/scriptlanguage"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
+	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/scriptlanguage"
 )
 
 // InlineScript type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/Scripting.ts#L45-L50
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/Scripting.ts#L67-L79
 type InlineScript struct {
+	// Lang Specifies the language the script is written in.
 	Lang    *scriptlanguage.ScriptLanguage `json:"lang,omitempty"`
 	Options map[string]string              `json:"options,omitempty"`
-	Params  map[string]json.RawMessage     `json:"params,omitempty"`
-	Source  string                         `json:"source"`
+	// Params Specifies any named parameters that are passed into the script as variables.
+	// Use parameters instead of hard-coded values to decrease compile time.
+	Params map[string]json.RawMessage `json:"params,omitempty"`
+	// Source The script source.
+	Source string `json:"source"`
 }
 
 func (s *InlineScript) UnmarshalJSON(data []byte) error {
 
 	if !bytes.HasPrefix(data, []byte(`{`)) {
+		if !bytes.HasPrefix(data, []byte(`"`)) {
+			data = append([]byte{'"'}, data...)
+			data = append(data, []byte{'"'}...)
+		}
 		err := json.NewDecoder(bytes.NewReader(data)).Decode(&s.Source)
 		return err
 	}
@@ -86,7 +94,11 @@ func (s *InlineScript) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Source = o
 
 		}

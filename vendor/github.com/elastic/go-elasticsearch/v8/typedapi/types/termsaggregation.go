@@ -16,47 +16,66 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"io"
+	"strconv"
+
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/missingorder"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortorder"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/termsaggregationcollectmode"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/termsaggregationexecutionhint"
-
-	"bytes"
-	"errors"
-	"io"
-
-	"strconv"
-
-	"encoding/json"
 )
 
 // TermsAggregation type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/aggregations/bucket.ts#L380-L397
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/aggregations/bucket.ts#L910-L970
 type TermsAggregation struct {
-	CollectMode           *termsaggregationcollectmode.TermsAggregationCollectMode     `json:"collect_mode,omitempty"`
-	Exclude               []string                                                     `json:"exclude,omitempty"`
-	ExecutionHint         *termsaggregationexecutionhint.TermsAggregationExecutionHint `json:"execution_hint,omitempty"`
-	Field                 *string                                                      `json:"field,omitempty"`
-	Format                *string                                                      `json:"format,omitempty"`
-	Include               TermsInclude                                                 `json:"include,omitempty"`
-	Meta                  Metadata                                                     `json:"meta,omitempty"`
-	MinDocCount           *int                                                         `json:"min_doc_count,omitempty"`
-	Missing               Missing                                                      `json:"missing,omitempty"`
-	MissingBucket         *bool                                                        `json:"missing_bucket,omitempty"`
-	MissingOrder          *missingorder.MissingOrder                                   `json:"missing_order,omitempty"`
-	Name                  *string                                                      `json:"name,omitempty"`
-	Order                 AggregateOrder                                               `json:"order,omitempty"`
-	Script                Script                                                       `json:"script,omitempty"`
-	ShardSize             *int                                                         `json:"shard_size,omitempty"`
-	ShowTermDocCountError *bool                                                        `json:"show_term_doc_count_error,omitempty"`
-	Size                  *int                                                         `json:"size,omitempty"`
-	ValueType             *string                                                      `json:"value_type,omitempty"`
+	// CollectMode Determines how child aggregations should be calculated: breadth-first or
+	// depth-first.
+	CollectMode *termsaggregationcollectmode.TermsAggregationCollectMode `json:"collect_mode,omitempty"`
+	// Exclude Values to exclude.
+	// Accepts regular expressions and partitions.
+	Exclude []string `json:"exclude,omitempty"`
+	// ExecutionHint Determines whether the aggregation will use field values directly or global
+	// ordinals.
+	ExecutionHint *termsaggregationexecutionhint.TermsAggregationExecutionHint `json:"execution_hint,omitempty"`
+	// Field The field from which to return terms.
+	Field  *string `json:"field,omitempty"`
+	Format *string `json:"format,omitempty"`
+	// Include Values to include.
+	// Accepts regular expressions and partitions.
+	Include TermsInclude `json:"include,omitempty"`
+	Meta    Metadata     `json:"meta,omitempty"`
+	// MinDocCount Only return values that are found in more than `min_doc_count` hits.
+	MinDocCount *int `json:"min_doc_count,omitempty"`
+	// Missing The value to apply to documents that do not have a value.
+	// By default, documents without a value are ignored.
+	Missing       Missing                    `json:"missing,omitempty"`
+	MissingBucket *bool                      `json:"missing_bucket,omitempty"`
+	MissingOrder  *missingorder.MissingOrder `json:"missing_order,omitempty"`
+	Name          *string                    `json:"name,omitempty"`
+	// Order Specifies the sort order of the buckets.
+	// Defaults to sorting by descending document count.
+	Order  AggregateOrder `json:"order,omitempty"`
+	Script Script         `json:"script,omitempty"`
+	// ShardSize The number of candidate terms produced by each shard.
+	// By default, `shard_size` will be automatically estimated based on the number
+	// of shards and the `size` parameter.
+	ShardSize *int `json:"shard_size,omitempty"`
+	// ShowTermDocCountError Set to `true` to return the `doc_count_error_upper_bound`, which is an upper
+	// bound to the error on the `doc_count` returned by each shard.
+	ShowTermDocCountError *bool `json:"show_term_doc_count_error,omitempty"`
+	// Size The number of buckets returned out of the overall terms list.
+	Size *int `json:"size,omitempty"`
+	// ValueType Coerced unmapped fields into the specified type.
+	ValueType *string `json:"value_type,omitempty"`
 }
 
 func (s *TermsAggregation) UnmarshalJSON(data []byte) error {
@@ -110,7 +129,11 @@ func (s *TermsAggregation) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Format = &o
 
 		case "include":
@@ -168,7 +191,11 @@ func (s *TermsAggregation) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Name = &o
 
 		case "order":
@@ -193,8 +220,39 @@ func (s *TermsAggregation) UnmarshalJSON(data []byte) error {
 			}
 
 		case "script":
-			if err := dec.Decode(&s.Script); err != nil {
+			message := json.RawMessage{}
+			if err := dec.Decode(&message); err != nil {
 				return err
+			}
+			keyDec := json.NewDecoder(bytes.NewReader(message))
+			for {
+				t, err := keyDec.Token()
+				if err != nil {
+					if errors.Is(err, io.EOF) {
+						break
+					}
+					return err
+				}
+
+				switch t {
+
+				case "lang", "options", "source":
+					o := NewInlineScript()
+					localDec := json.NewDecoder(bytes.NewReader(message))
+					if err := localDec.Decode(&o); err != nil {
+						return err
+					}
+					s.Script = o
+
+				case "id":
+					o := NewStoredScriptId()
+					localDec := json.NewDecoder(bytes.NewReader(message))
+					if err := localDec.Decode(&o); err != nil {
+						return err
+					}
+					s.Script = o
+
+				}
 			}
 
 		case "shard_size":
@@ -248,7 +306,11 @@ func (s *TermsAggregation) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.ValueType = &o
 
 		}

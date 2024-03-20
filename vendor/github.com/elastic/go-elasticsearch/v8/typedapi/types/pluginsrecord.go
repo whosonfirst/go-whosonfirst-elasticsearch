@@ -16,33 +16,33 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
-	"encoding/json"
+	"strconv"
 )
 
 // PluginsRecord type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/cat/plugins/types.ts#L22-L52
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/cat/plugins/types.ts#L22-L52
 type PluginsRecord struct {
-	// Component component
+	// Component The component name.
 	Component *string `json:"component,omitempty"`
-	// Description plugin details
+	// Description The plugin details.
 	Description *string `json:"description,omitempty"`
-	// Id unique node id
+	// Id The unique node identifier.
 	Id *string `json:"id,omitempty"`
-	// Name node name
+	// Name The node name.
 	Name *string `json:"name,omitempty"`
-	// Type plugin type
+	// Type The plugin type.
 	Type *string `json:"type,omitempty"`
-	// Version component version
+	// Version The component version.
 	Version *string `json:"version,omitempty"`
 }
 
@@ -66,7 +66,11 @@ func (s *PluginsRecord) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Component = &o
 
 		case "description", "d":
@@ -74,7 +78,11 @@ func (s *PluginsRecord) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Description = &o
 
 		case "id":
@@ -92,7 +100,11 @@ func (s *PluginsRecord) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Type = &o
 
 		case "version", "v":

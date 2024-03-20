@@ -16,75 +16,27 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
-import (
-	"bytes"
-	"errors"
-	"io"
-
-	"encoding/json"
-)
-
 // DataframeOutlierDetectionSummary type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ml/evaluate_data_frame/types.ts#L24-L29
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ml/evaluate_data_frame/types.ts#L24-L42
 type DataframeOutlierDetectionSummary struct {
-	AucRoc          *DataframeEvaluationSummaryAucRoc   `json:"auc_roc,omitempty"`
+	// AucRoc The AUC ROC (area under the curve of the receiver operating characteristic)
+	// score and optionally the curve.
+	AucRoc *DataframeEvaluationSummaryAucRoc `json:"auc_roc,omitempty"`
+	// ConfusionMatrix Set the different thresholds of the outlier score at where the metrics (`tp`
+	// - true positive, `fp` - false positive, `tn` - true negative, `fn` - false
+	// negative) are calculated.
 	ConfusionMatrix map[string]ConfusionMatrixThreshold `json:"confusion_matrix,omitempty"`
-	Precision       map[string]Float64                  `json:"precision,omitempty"`
-	Recall          map[string]Float64                  `json:"recall,omitempty"`
-}
-
-func (s *DataframeOutlierDetectionSummary) UnmarshalJSON(data []byte) error {
-
-	dec := json.NewDecoder(bytes.NewReader(data))
-
-	for {
-		t, err := dec.Token()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			return err
-		}
-
-		switch t {
-
-		case "auc_roc":
-			if err := dec.Decode(&s.AucRoc); err != nil {
-				return err
-			}
-
-		case "confusion_matrix":
-			if s.ConfusionMatrix == nil {
-				s.ConfusionMatrix = make(map[string]ConfusionMatrixThreshold, 0)
-			}
-			if err := dec.Decode(&s.ConfusionMatrix); err != nil {
-				return err
-			}
-
-		case "precision":
-			if s.Precision == nil {
-				s.Precision = make(map[string]Float64, 0)
-			}
-			if err := dec.Decode(&s.Precision); err != nil {
-				return err
-			}
-
-		case "recall":
-			if s.Recall == nil {
-				s.Recall = make(map[string]Float64, 0)
-			}
-			if err := dec.Decode(&s.Recall); err != nil {
-				return err
-			}
-
-		}
-	}
-	return nil
+	// Precision Set the different thresholds of the outlier score at where the metric is
+	// calculated.
+	Precision map[string]Float64 `json:"precision,omitempty"`
+	// Recall Set the different thresholds of the outlier score at where the metric is
+	// calculated.
+	Recall map[string]Float64 `json:"recall,omitempty"`
 }
 
 // NewDataframeOutlierDetectionSummary returns a DataframeOutlierDetectionSummary.

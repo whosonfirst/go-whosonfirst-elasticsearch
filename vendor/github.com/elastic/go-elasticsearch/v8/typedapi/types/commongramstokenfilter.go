@@ -16,23 +16,21 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // CommonGramsTokenFilter type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/token_filters.ts#L173-L179
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/token_filters.ts#L173-L179
 type CommonGramsTokenFilter struct {
 	CommonWords     []string `json:"common_words,omitempty"`
 	CommonWordsPath *string  `json:"common_words_path,omitempty"`
@@ -67,7 +65,11 @@ func (s *CommonGramsTokenFilter) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.CommonWordsPath = &o
 
 		case "ignore_case":
@@ -113,11 +115,26 @@ func (s *CommonGramsTokenFilter) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s CommonGramsTokenFilter) MarshalJSON() ([]byte, error) {
+	type innerCommonGramsTokenFilter CommonGramsTokenFilter
+	tmp := innerCommonGramsTokenFilter{
+		CommonWords:     s.CommonWords,
+		CommonWordsPath: s.CommonWordsPath,
+		IgnoreCase:      s.IgnoreCase,
+		QueryMode:       s.QueryMode,
+		Type:            s.Type,
+		Version:         s.Version,
+	}
+
+	tmp.Type = "common_grams"
+
+	return json.Marshal(tmp)
+}
+
 // NewCommonGramsTokenFilter returns a CommonGramsTokenFilter.
 func NewCommonGramsTokenFilter() *CommonGramsTokenFilter {
 	r := &CommonGramsTokenFilter{}
-
-	r.Type = "common_grams"
 
 	return r
 }

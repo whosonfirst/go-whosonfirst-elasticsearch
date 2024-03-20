@@ -16,25 +16,23 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/shardstoreallocation"
-
-	"fmt"
-
 	"bytes"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/shardstoreallocation"
 )
 
 // ShardStore type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/indices/shard_stores/types.ts#L30-L34
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/indices/shard_stores/types.ts#L30-L34
 type ShardStore struct {
 	Allocation     shardstoreallocation.ShardStoreAllocation `json:"allocation"`
 	AllocationId   *string                                   `json:"allocation_id,omitempty"`

@@ -16,28 +16,30 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // FieldCollapse type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_global/search/_types/FieldCollapse.ts#L24-L29
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_global/search/_types/FieldCollapse.ts#L24-L38
 type FieldCollapse struct {
-	Collapse                   *FieldCollapse `json:"collapse,omitempty"`
-	Field                      string         `json:"field"`
-	InnerHits                  []InnerHits    `json:"inner_hits,omitempty"`
-	MaxConcurrentGroupSearches *int           `json:"max_concurrent_group_searches,omitempty"`
+	Collapse *FieldCollapse `json:"collapse,omitempty"`
+	// Field The field to collapse the result set on
+	Field string `json:"field"`
+	// InnerHits The number of inner hits and their sort order
+	InnerHits []InnerHits `json:"inner_hits,omitempty"`
+	// MaxConcurrentGroupSearches The number of concurrent requests allowed to retrieve the inner_hits per
+	// group
+	MaxConcurrentGroupSearches *int `json:"max_concurrent_group_searches,omitempty"`
 }
 
 func (s *FieldCollapse) UnmarshalJSON(data []byte) error {

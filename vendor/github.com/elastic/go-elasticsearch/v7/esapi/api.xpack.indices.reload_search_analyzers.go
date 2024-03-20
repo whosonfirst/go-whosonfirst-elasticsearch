@@ -15,12 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 //
-// Code generated from specification version 7.13.0: DO NOT EDIT
+// Code generated from specification version 7.17.10: DO NOT EDIT
 
 package esapi
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -41,11 +42,9 @@ func newIndicesReloadSearchAnalyzersFunc(t Transport) IndicesReloadSearchAnalyze
 // IndicesReloadSearchAnalyzers - Reloads an index's search analyzers and their resources.
 //
 // See full documentation at https://www.elastic.co/guide/en/elasticsearch/reference/master/indices-reload-analyzers.html.
-//
 type IndicesReloadSearchAnalyzers func(index []string, o ...func(*IndicesReloadSearchAnalyzersRequest)) (*Response, error)
 
 // IndicesReloadSearchAnalyzersRequest configures the Indices Reload Search Analyzers API request.
-//
 type IndicesReloadSearchAnalyzersRequest struct {
 	Index []string
 
@@ -64,7 +63,6 @@ type IndicesReloadSearchAnalyzersRequest struct {
 }
 
 // Do executes the request and returns response or error.
-//
 func (r IndicesReloadSearchAnalyzersRequest) Do(ctx context.Context, transport Transport) (*Response, error) {
 	var (
 		method string
@@ -73,6 +71,10 @@ func (r IndicesReloadSearchAnalyzersRequest) Do(ctx context.Context, transport T
 	)
 
 	method = "POST"
+
+	if len(r.Index) == 0 {
+		return nil, errors.New("index is required and cannot be nil or empty")
+	}
 
 	path.Grow(1 + len(strings.Join(r.Index, ",")) + 1 + len("_reload_search_analyzers"))
 	path.WriteString("/")
@@ -154,7 +156,6 @@ func (r IndicesReloadSearchAnalyzersRequest) Do(ctx context.Context, transport T
 }
 
 // WithContext sets the request context.
-//
 func (f IndicesReloadSearchAnalyzers) WithContext(v context.Context) func(*IndicesReloadSearchAnalyzersRequest) {
 	return func(r *IndicesReloadSearchAnalyzersRequest) {
 		r.ctx = v
@@ -162,7 +163,6 @@ func (f IndicesReloadSearchAnalyzers) WithContext(v context.Context) func(*Indic
 }
 
 // WithAllowNoIndices - whether to ignore if a wildcard indices expression resolves into no concrete indices. (this includes `_all` string or when no indices have been specified).
-//
 func (f IndicesReloadSearchAnalyzers) WithAllowNoIndices(v bool) func(*IndicesReloadSearchAnalyzersRequest) {
 	return func(r *IndicesReloadSearchAnalyzersRequest) {
 		r.AllowNoIndices = &v
@@ -170,7 +170,6 @@ func (f IndicesReloadSearchAnalyzers) WithAllowNoIndices(v bool) func(*IndicesRe
 }
 
 // WithExpandWildcards - whether to expand wildcard expression to concrete indices that are open, closed or both..
-//
 func (f IndicesReloadSearchAnalyzers) WithExpandWildcards(v string) func(*IndicesReloadSearchAnalyzersRequest) {
 	return func(r *IndicesReloadSearchAnalyzersRequest) {
 		r.ExpandWildcards = v
@@ -178,7 +177,6 @@ func (f IndicesReloadSearchAnalyzers) WithExpandWildcards(v string) func(*Indice
 }
 
 // WithIgnoreUnavailable - whether specified concrete indices should be ignored when unavailable (missing or closed).
-//
 func (f IndicesReloadSearchAnalyzers) WithIgnoreUnavailable(v bool) func(*IndicesReloadSearchAnalyzersRequest) {
 	return func(r *IndicesReloadSearchAnalyzersRequest) {
 		r.IgnoreUnavailable = &v
@@ -186,7 +184,6 @@ func (f IndicesReloadSearchAnalyzers) WithIgnoreUnavailable(v bool) func(*Indice
 }
 
 // WithPretty makes the response body pretty-printed.
-//
 func (f IndicesReloadSearchAnalyzers) WithPretty() func(*IndicesReloadSearchAnalyzersRequest) {
 	return func(r *IndicesReloadSearchAnalyzersRequest) {
 		r.Pretty = true
@@ -194,7 +191,6 @@ func (f IndicesReloadSearchAnalyzers) WithPretty() func(*IndicesReloadSearchAnal
 }
 
 // WithHuman makes statistical values human-readable.
-//
 func (f IndicesReloadSearchAnalyzers) WithHuman() func(*IndicesReloadSearchAnalyzersRequest) {
 	return func(r *IndicesReloadSearchAnalyzersRequest) {
 		r.Human = true
@@ -202,7 +198,6 @@ func (f IndicesReloadSearchAnalyzers) WithHuman() func(*IndicesReloadSearchAnaly
 }
 
 // WithErrorTrace includes the stack trace for errors in the response body.
-//
 func (f IndicesReloadSearchAnalyzers) WithErrorTrace() func(*IndicesReloadSearchAnalyzersRequest) {
 	return func(r *IndicesReloadSearchAnalyzersRequest) {
 		r.ErrorTrace = true
@@ -210,7 +205,6 @@ func (f IndicesReloadSearchAnalyzers) WithErrorTrace() func(*IndicesReloadSearch
 }
 
 // WithFilterPath filters the properties of the response body.
-//
 func (f IndicesReloadSearchAnalyzers) WithFilterPath(v ...string) func(*IndicesReloadSearchAnalyzersRequest) {
 	return func(r *IndicesReloadSearchAnalyzersRequest) {
 		r.FilterPath = v
@@ -218,7 +212,6 @@ func (f IndicesReloadSearchAnalyzers) WithFilterPath(v ...string) func(*IndicesR
 }
 
 // WithHeader adds the headers to the HTTP request.
-//
 func (f IndicesReloadSearchAnalyzers) WithHeader(h map[string]string) func(*IndicesReloadSearchAnalyzersRequest) {
 	return func(r *IndicesReloadSearchAnalyzersRequest) {
 		if r.Header == nil {
@@ -231,7 +224,6 @@ func (f IndicesReloadSearchAnalyzers) WithHeader(h map[string]string) func(*Indi
 }
 
 // WithOpaqueID adds the X-Opaque-Id header to the HTTP request.
-//
 func (f IndicesReloadSearchAnalyzers) WithOpaqueID(s string) func(*IndicesReloadSearchAnalyzersRequest) {
 	return func(r *IndicesReloadSearchAnalyzersRequest) {
 		if r.Header == nil {

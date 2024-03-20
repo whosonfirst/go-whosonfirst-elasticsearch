@@ -16,27 +16,29 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // PhraseSuggestCollate type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_global/search/_types/suggester.ts#L184-L188
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_global/search/_types/suggester.ts#L330-L343
 type PhraseSuggestCollate struct {
+	// Params Parameters to use if the query is templated.
 	Params map[string]json.RawMessage `json:"params,omitempty"`
-	Prune  *bool                      `json:"prune,omitempty"`
-	Query  PhraseSuggestCollateQuery  `json:"query"`
+	// Prune Returns all suggestions with an extra `collate_match` option indicating
+	// whether the generated phrase matched any document.
+	Prune *bool `json:"prune,omitempty"`
+	// Query A collate query that is run once for every suggestion.
+	Query PhraseSuggestCollateQuery `json:"query"`
 }
 
 func (s *PhraseSuggestCollate) UnmarshalJSON(data []byte) error {

@@ -16,14 +16,13 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Removes the archived repositories metering information present in the
 // cluster.
 package clearrepositoriesmeteringarchive
 
 import (
-	gobytes "bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -54,12 +53,16 @@ type ClearRepositoriesMeteringArchive struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	nodeid            string
 	maxarchiveversion string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewClearRepositoriesMeteringArchive type alias for index.
@@ -71,9 +74,9 @@ func NewClearRepositoriesMeteringArchiveFunc(tp elastictransport.Interface) NewC
 	return func(nodeid, maxarchiveversion string) *ClearRepositoriesMeteringArchive {
 		n := New(tp)
 
-		n.NodeId(nodeid)
+		n._nodeid(nodeid)
 
-		n.MaxArchiveVersion(maxarchiveversion)
+		n._maxarchiveversion(maxarchiveversion)
 
 		return n
 	}
@@ -88,7 +91,12 @@ func New(tp elastictransport.Interface) *ClearRepositoriesMeteringArchive {
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -111,11 +119,17 @@ func (r *ClearRepositoriesMeteringArchive) HttpRequest(ctx context.Context) (*ht
 		path.WriteString("_nodes")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "nodeid", r.nodeid)
+		}
 		path.WriteString(r.nodeid)
 		path.WriteString("/")
 		path.WriteString("_repositories_metering")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "maxarchiveversion", r.maxarchiveversion)
+		}
 		path.WriteString(r.maxarchiveversion)
 
 		method = http.MethodDelete
@@ -129,9 +143,9 @@ func (r *ClearRepositoriesMeteringArchive) HttpRequest(ctx context.Context) (*ht
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
@@ -148,27 +162,66 @@ func (r *ClearRepositoriesMeteringArchive) HttpRequest(ctx context.Context) (*ht
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r ClearRepositoriesMeteringArchive) Perform(ctx context.Context) (*http.Response, error) {
+func (r ClearRepositoriesMeteringArchive) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "nodes.clear_repositories_metering_archive")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "nodes.clear_repositories_metering_archive")
+		if reader := instrument.RecordRequestBody(ctx, "nodes.clear_repositories_metering_archive", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "nodes.clear_repositories_metering_archive")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the ClearRepositoriesMeteringArchive query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the ClearRepositoriesMeteringArchive query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a clearrepositoriesmeteringarchive.Response
-func (r ClearRepositoriesMeteringArchive) Do(ctx context.Context) (*Response, error) {
+func (r ClearRepositoriesMeteringArchive) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "nodes.clear_repositories_metering_archive")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -176,6 +229,9 @@ func (r ClearRepositoriesMeteringArchive) Do(ctx context.Context) (*Response, er
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -185,15 +241,35 @@ func (r ClearRepositoriesMeteringArchive) Do(ctx context.Context) (*Response, er
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r ClearRepositoriesMeteringArchive) IsSuccess(ctx context.Context) (bool, error) {
+func (r ClearRepositoriesMeteringArchive) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "nodes.clear_repositories_metering_archive")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -207,6 +283,14 @@ func (r ClearRepositoriesMeteringArchive) IsSuccess(ctx context.Context) (bool, 
 
 	if res.StatusCode >= 200 && res.StatusCode < 300 {
 		return true, nil
+	}
+
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the ClearRepositoriesMeteringArchive query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
 	}
 
 	return false, nil
@@ -223,9 +307,9 @@ func (r *ClearRepositoriesMeteringArchive) Header(key, value string) *ClearRepos
 // All the nodes selective options are explained
 // [here](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster.html#cluster-nodes).
 // API Name: nodeid
-func (r *ClearRepositoriesMeteringArchive) NodeId(v string) *ClearRepositoriesMeteringArchive {
+func (r *ClearRepositoriesMeteringArchive) _nodeid(nodeid string) *ClearRepositoriesMeteringArchive {
 	r.paramSet |= nodeidMask
-	r.nodeid = v
+	r.nodeid = nodeid
 
 	return r
 }
@@ -234,9 +318,9 @@ func (r *ClearRepositoriesMeteringArchive) NodeId(v string) *ClearRepositoriesMe
 // [archive_version](https://www.elastic.co/guide/en/elasticsearch/reference/current/get-repositories-metering-api.html#get-repositories-metering-api-response-body)
 // to be cleared from the archive.
 // API Name: maxarchiveversion
-func (r *ClearRepositoriesMeteringArchive) MaxArchiveVersion(v string) *ClearRepositoriesMeteringArchive {
+func (r *ClearRepositoriesMeteringArchive) _maxarchiveversion(maxarchiveversion string) *ClearRepositoriesMeteringArchive {
 	r.paramSet |= maxarchiveversionMask
-	r.maxarchiveversion = v
+	r.maxarchiveversion = maxarchiveversion
 
 	return r
 }

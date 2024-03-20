@@ -16,27 +16,34 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // ConstantScoreQuery type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/query_dsl/compound.ts#L42-L44
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/query_dsl/compound.ts#L69-L76
 type ConstantScoreQuery struct {
-	Boost      *float32 `json:"boost,omitempty"`
-	Filter     *Query   `json:"filter,omitempty"`
-	QueryName_ *string  `json:"_name,omitempty"`
+	// Boost Floating point number used to decrease or increase the relevance scores of
+	// the query.
+	// Boost values are relative to the default value of 1.0.
+	// A boost value between 0 and 1.0 decreases the relevance score.
+	// A value greater than 1.0 increases the relevance score.
+	Boost *float32 `json:"boost,omitempty"`
+	// Filter Filter query you wish to run. Any returned documents must match this query.
+	// Filter queries do not calculate relevance scores.
+	// To speed up performance, Elasticsearch automatically caches frequently used
+	// filter queries.
+	Filter     *Query  `json:"filter,omitempty"`
+	QueryName_ *string `json:"_name,omitempty"`
 }
 
 func (s *ConstantScoreQuery) UnmarshalJSON(data []byte) error {
@@ -80,7 +87,11 @@ func (s *ConstantScoreQuery) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.QueryName_ = &o
 
 		}

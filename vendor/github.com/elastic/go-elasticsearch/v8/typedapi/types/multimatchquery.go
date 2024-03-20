@@ -16,47 +16,75 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"io"
+	"strconv"
+
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/operator"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/textquerytype"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/zerotermsquery"
-
-	"bytes"
-	"errors"
-	"io"
-
-	"strconv"
-
-	"encoding/json"
 )
 
 // MultiMatchQuery type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/query_dsl/fulltext.ts#L191-L217
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/query_dsl/fulltext.ts#L456-L539
 type MultiMatchQuery struct {
-	Analyzer                        *string                        `json:"analyzer,omitempty"`
-	AutoGenerateSynonymsPhraseQuery *bool                          `json:"auto_generate_synonyms_phrase_query,omitempty"`
-	Boost                           *float32                       `json:"boost,omitempty"`
-	CutoffFrequency                 *Float64                       `json:"cutoff_frequency,omitempty"`
-	Fields                          []string                       `json:"fields,omitempty"`
-	Fuzziness                       Fuzziness                      `json:"fuzziness,omitempty"`
-	FuzzyRewrite                    *string                        `json:"fuzzy_rewrite,omitempty"`
-	FuzzyTranspositions             *bool                          `json:"fuzzy_transpositions,omitempty"`
-	Lenient                         *bool                          `json:"lenient,omitempty"`
-	MaxExpansions                   *int                           `json:"max_expansions,omitempty"`
-	MinimumShouldMatch              MinimumShouldMatch             `json:"minimum_should_match,omitempty"`
-	Operator                        *operator.Operator             `json:"operator,omitempty"`
-	PrefixLength                    *int                           `json:"prefix_length,omitempty"`
-	Query                           string                         `json:"query"`
-	QueryName_                      *string                        `json:"_name,omitempty"`
-	Slop                            *int                           `json:"slop,omitempty"`
-	TieBreaker                      *Float64                       `json:"tie_breaker,omitempty"`
-	Type                            *textquerytype.TextQueryType   `json:"type,omitempty"`
-	ZeroTermsQuery                  *zerotermsquery.ZeroTermsQuery `json:"zero_terms_query,omitempty"`
+	// Analyzer Analyzer used to convert the text in the query value into tokens.
+	Analyzer *string `json:"analyzer,omitempty"`
+	// AutoGenerateSynonymsPhraseQuery If `true`, match phrase queries are automatically created for multi-term
+	// synonyms.
+	AutoGenerateSynonymsPhraseQuery *bool `json:"auto_generate_synonyms_phrase_query,omitempty"`
+	// Boost Floating point number used to decrease or increase the relevance scores of
+	// the query.
+	// Boost values are relative to the default value of 1.0.
+	// A boost value between 0 and 1.0 decreases the relevance score.
+	// A value greater than 1.0 increases the relevance score.
+	Boost           *float32 `json:"boost,omitempty"`
+	CutoffFrequency *Float64 `json:"cutoff_frequency,omitempty"`
+	// Fields The fields to be queried.
+	// Defaults to the `index.query.default_field` index settings, which in turn
+	// defaults to `*`.
+	Fields []string `json:"fields,omitempty"`
+	// Fuzziness Maximum edit distance allowed for matching.
+	Fuzziness Fuzziness `json:"fuzziness,omitempty"`
+	// FuzzyRewrite Method used to rewrite the query.
+	FuzzyRewrite *string `json:"fuzzy_rewrite,omitempty"`
+	// FuzzyTranspositions If `true`, edits for fuzzy matching include transpositions of two adjacent
+	// characters (for example, `ab` to `ba`).
+	// Can be applied to the term subqueries constructed for all terms but the final
+	// term.
+	FuzzyTranspositions *bool `json:"fuzzy_transpositions,omitempty"`
+	// Lenient If `true`, format-based errors, such as providing a text query value for a
+	// numeric field, are ignored.
+	Lenient *bool `json:"lenient,omitempty"`
+	// MaxExpansions Maximum number of terms to which the query will expand.
+	MaxExpansions *int `json:"max_expansions,omitempty"`
+	// MinimumShouldMatch Minimum number of clauses that must match for a document to be returned.
+	MinimumShouldMatch MinimumShouldMatch `json:"minimum_should_match,omitempty"`
+	// Operator Boolean logic used to interpret text in the query value.
+	Operator *operator.Operator `json:"operator,omitempty"`
+	// PrefixLength Number of beginning characters left unchanged for fuzzy matching.
+	PrefixLength *int `json:"prefix_length,omitempty"`
+	// Query Text, number, boolean value or date you wish to find in the provided field.
+	Query      string  `json:"query"`
+	QueryName_ *string `json:"_name,omitempty"`
+	// Slop Maximum number of positions allowed between matching tokens.
+	Slop *int `json:"slop,omitempty"`
+	// TieBreaker Determines how scores for each per-term blended query and scores across
+	// groups are combined.
+	TieBreaker *Float64 `json:"tie_breaker,omitempty"`
+	// Type How `the` multi_match query is executed internally.
+	Type *textquerytype.TextQueryType `json:"type,omitempty"`
+	// ZeroTermsQuery Indicates whether no documents are returned if the `analyzer` removes all
+	// tokens, such as when using a `stop` filter.
+	ZeroTermsQuery *zerotermsquery.ZeroTermsQuery `json:"zero_terms_query,omitempty"`
 }
 
 func (s *MultiMatchQuery) UnmarshalJSON(data []byte) error {
@@ -79,7 +107,11 @@ func (s *MultiMatchQuery) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Analyzer = &o
 
 		case "auto_generate_synonyms_phrase_query":
@@ -229,7 +261,11 @@ func (s *MultiMatchQuery) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Query = o
 
 		case "_name":
@@ -237,7 +273,11 @@ func (s *MultiMatchQuery) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.QueryName_ = &o
 
 		case "slop":

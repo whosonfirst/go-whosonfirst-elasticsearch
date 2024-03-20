@@ -15,13 +15,14 @@
 // specific language governing permissions and limitations
 // under the License.
 //
-// Code generated from specification version 8.7.1: DO NOT EDIT
+// Code generated from specification version 8.12.0: DO NOT EDIT
 
 package esapi
 
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -31,6 +32,11 @@ func newIndicesGetDataStreamFunc(t Transport) IndicesGetDataStream {
 		for _, f := range o {
 			f(&r)
 		}
+
+		if transport, ok := t.(Instrumented); ok {
+			r.instrument = transport.InstrumentationEnabled()
+		}
+
 		return r.Do(r.ctx, t)
 	}
 }
@@ -47,6 +53,7 @@ type IndicesGetDataStreamRequest struct {
 	Name []string
 
 	ExpandWildcards string
+	IncludeDefaults *bool
 
 	Pretty     bool
 	Human      bool
@@ -56,15 +63,26 @@ type IndicesGetDataStreamRequest struct {
 	Header http.Header
 
 	ctx context.Context
+
+	instrument Instrumentation
 }
 
 // Do executes the request and returns response or error.
-func (r IndicesGetDataStreamRequest) Do(ctx context.Context, transport Transport) (*Response, error) {
+func (r IndicesGetDataStreamRequest) Do(providedCtx context.Context, transport Transport) (*Response, error) {
 	var (
 		method string
 		path   strings.Builder
 		params map[string]string
+		ctx    context.Context
 	)
+
+	if instrument, ok := r.instrument.(Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "indices.get_data_stream")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	method = "GET"
 
@@ -75,12 +93,19 @@ func (r IndicesGetDataStreamRequest) Do(ctx context.Context, transport Transport
 	if len(r.Name) > 0 {
 		path.WriteString("/")
 		path.WriteString(strings.Join(r.Name, ","))
+		if instrument, ok := r.instrument.(Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "name", strings.Join(r.Name, ","))
+		}
 	}
 
 	params = make(map[string]string)
 
 	if r.ExpandWildcards != "" {
 		params["expand_wildcards"] = r.ExpandWildcards
+	}
+
+	if r.IncludeDefaults != nil {
+		params["include_defaults"] = strconv.FormatBool(*r.IncludeDefaults)
 	}
 
 	if r.Pretty {
@@ -101,6 +126,9 @@ func (r IndicesGetDataStreamRequest) Do(ctx context.Context, transport Transport
 
 	req, err := newRequest(method, path.String(), nil)
 	if err != nil {
+		if instrument, ok := r.instrument.(Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
@@ -128,8 +156,17 @@ func (r IndicesGetDataStreamRequest) Do(ctx context.Context, transport Transport
 		req = req.WithContext(ctx)
 	}
 
+	if instrument, ok := r.instrument.(Instrumentation); ok {
+		instrument.BeforeRequest(req, "indices.get_data_stream")
+	}
 	res, err := transport.Perform(req)
+	if instrument, ok := r.instrument.(Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "indices.get_data_stream")
+	}
 	if err != nil {
+		if instrument, ok := r.instrument.(Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
@@ -160,6 +197,13 @@ func (f IndicesGetDataStream) WithName(v ...string) func(*IndicesGetDataStreamRe
 func (f IndicesGetDataStream) WithExpandWildcards(v string) func(*IndicesGetDataStreamRequest) {
 	return func(r *IndicesGetDataStreamRequest) {
 		r.ExpandWildcards = v
+	}
+}
+
+// WithIncludeDefaults - return all relevant default configurations for the data stream (default: false).
+func (f IndicesGetDataStream) WithIncludeDefaults(v bool) func(*IndicesGetDataStreamRequest) {
+	return func(r *IndicesGetDataStreamRequest) {
+		r.IncludeDefaults = &v
 	}
 }
 

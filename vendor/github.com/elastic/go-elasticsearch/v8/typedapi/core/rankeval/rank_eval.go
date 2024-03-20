@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Allows to evaluate the quality of ranked search results over a set of typical
 // search queries
@@ -36,6 +36,7 @@ import (
 
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/expandwildcard"
 )
 
 const (
@@ -52,14 +53,19 @@ type RankEval struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
-
-	req *Request
 	raw io.Reader
+
+	req      *Request
+	deferred []func(request *Request) error
+	buf      *gobytes.Buffer
 
 	paramSet int
 
 	index string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewRankEval type alias for index.
@@ -78,13 +84,22 @@ func NewRankEvalFunc(tp elastictransport.Interface) NewRankEval {
 // Allows to evaluate the quality of ranked search results over a set of typical
 // search queries
 //
-// https://www.elastic.co/guide/en/elasticsearch/reference/master/search-rank-eval.html
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/search-rank-eval.html
 func New(tp elastictransport.Interface) *RankEval {
 	r := &RankEval{
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+
+		buf: gobytes.NewBuffer(nil),
+
+		req: NewRequest(),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -114,9 +129,17 @@ func (r *RankEval) HttpRequest(ctx context.Context) (*http.Request, error) {
 
 	var err error
 
-	if r.raw != nil {
-		r.buf.ReadFrom(r.raw)
-	} else if r.req != nil {
+	if len(r.deferred) > 0 {
+		for _, f := range r.deferred {
+			deferredErr := f(r.req)
+			if deferredErr != nil {
+				return nil, deferredErr
+			}
+		}
+	}
+
+	if r.raw == nil && r.req != nil {
+
 		data, err := json.Marshal(r.req)
 
 		if err != nil {
@@ -124,6 +147,11 @@ func (r *RankEval) HttpRequest(ctx context.Context) (*http.Request, error) {
 		}
 
 		r.buf.Write(data)
+
+	}
+
+	if r.buf.Len() > 0 {
+		r.raw = r.buf
 	}
 
 	r.path.Scheme = "http"
@@ -137,6 +165,9 @@ func (r *RankEval) HttpRequest(ctx context.Context) (*http.Request, error) {
 	case r.paramSet == indexMask:
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "index", r.index)
+		}
 		path.WriteString(r.index)
 		path.WriteString("/")
 		path.WriteString("_rank_eval")
@@ -152,15 +183,15 @@ func (r *RankEval) HttpRequest(ctx context.Context) (*http.Request, error) {
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
 
 	if req.Header.Get("Content-Type") == "" {
-		if r.buf.Len() > 0 {
+		if r.raw != nil {
 			req.Header.Set("Content-Type", "application/vnd.elasticsearch+json;compatible-with=8")
 		}
 	}
@@ -177,27 +208,66 @@ func (r *RankEval) HttpRequest(ctx context.Context) (*http.Request, error) {
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r RankEval) Perform(ctx context.Context) (*http.Response, error) {
+func (r RankEval) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "rank_eval")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "rank_eval")
+		if reader := instrument.RecordRequestBody(ctx, "rank_eval", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "rank_eval")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the RankEval query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the RankEval query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a rankeval.Response
-func (r RankEval) Do(ctx context.Context) (*Response, error) {
+func (r RankEval) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "rank_eval")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -205,6 +275,9 @@ func (r RankEval) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -214,9 +287,19 @@ func (r RankEval) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
@@ -232,9 +315,9 @@ func (r *RankEval) Header(key, value string) *RankEval {
 // To target all data streams and indices in a cluster, omit this parameter or
 // use `_all` or `*`.
 // API Name: index
-func (r *RankEval) Index(v string) *RankEval {
+func (r *RankEval) Index(index string) *RankEval {
 	r.paramSet |= indexMask
-	r.index = v
+	r.index = index
 
 	return r
 }
@@ -245,8 +328,8 @@ func (r *RankEval) Index(v string) *RankEval {
 // request targeting `foo*,bar*` returns an error if an index starts with `foo`
 // but no index starts with `bar`.
 // API name: allow_no_indices
-func (r *RankEval) AllowNoIndices(b bool) *RankEval {
-	r.values.Set("allow_no_indices", strconv.FormatBool(b))
+func (r *RankEval) AllowNoIndices(allownoindices bool) *RankEval {
+	r.values.Set("allow_no_indices", strconv.FormatBool(allownoindices))
 
 	return r
 }
@@ -254,24 +337,45 @@ func (r *RankEval) AllowNoIndices(b bool) *RankEval {
 // ExpandWildcards Whether to expand wildcard expression to concrete indices that are open,
 // closed or both.
 // API name: expand_wildcards
-func (r *RankEval) ExpandWildcards(v string) *RankEval {
-	r.values.Set("expand_wildcards", v)
+func (r *RankEval) ExpandWildcards(expandwildcards ...expandwildcard.ExpandWildcard) *RankEval {
+	tmp := []string{}
+	for _, item := range expandwildcards {
+		tmp = append(tmp, item.String())
+	}
+	r.values.Set("expand_wildcards", strings.Join(tmp, ","))
 
 	return r
 }
 
 // IgnoreUnavailable If `true`, missing or closed indices are not included in the response.
 // API name: ignore_unavailable
-func (r *RankEval) IgnoreUnavailable(b bool) *RankEval {
-	r.values.Set("ignore_unavailable", strconv.FormatBool(b))
+func (r *RankEval) IgnoreUnavailable(ignoreunavailable bool) *RankEval {
+	r.values.Set("ignore_unavailable", strconv.FormatBool(ignoreunavailable))
 
 	return r
 }
 
 // SearchType Search operation type
 // API name: search_type
-func (r *RankEval) SearchType(v string) *RankEval {
-	r.values.Set("search_type", v)
+func (r *RankEval) SearchType(searchtype string) *RankEval {
+	r.values.Set("search_type", searchtype)
+
+	return r
+}
+
+// Metric Definition of the evaluation metric to calculate.
+// API name: metric
+func (r *RankEval) Metric(metric *types.RankEvalMetric) *RankEval {
+
+	r.req.Metric = metric
+
+	return r
+}
+
+// Requests A set of typical search requests, together with their provided ratings.
+// API name: requests
+func (r *RankEval) Requests(requests ...types.RankEvalRequestItem) *RankEval {
+	r.req.Requests = requests
 
 	return r
 }

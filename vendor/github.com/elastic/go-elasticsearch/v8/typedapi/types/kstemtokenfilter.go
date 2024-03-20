@@ -16,21 +16,20 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
-	"encoding/json"
 )
 
 // KStemTokenFilter type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/token_filters.ts#L239-L241
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/token_filters.ts#L239-L241
 type KStemTokenFilter struct {
 	Type    string  `json:"type,omitempty"`
 	Version *string `json:"version,omitempty"`
@@ -66,11 +65,22 @@ func (s *KStemTokenFilter) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s KStemTokenFilter) MarshalJSON() ([]byte, error) {
+	type innerKStemTokenFilter KStemTokenFilter
+	tmp := innerKStemTokenFilter{
+		Type:    s.Type,
+		Version: s.Version,
+	}
+
+	tmp.Type = "kstem"
+
+	return json.Marshal(tmp)
+}
+
 // NewKStemTokenFilter returns a KStemTokenFilter.
 func NewKStemTokenFilter() *KStemTokenFilter {
 	r := &KStemTokenFilter{}
-
-	r.Type = "kstem"
 
 	return r
 }

@@ -16,27 +16,25 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // PatternTokenizer type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/tokenizers.ts#L97-L102
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/tokenizers.ts#L98-L103
 type PatternTokenizer struct {
-	Flags   string  `json:"flags"`
-	Group   int     `json:"group"`
-	Pattern string  `json:"pattern"`
+	Flags   *string `json:"flags,omitempty"`
+	Group   *int    `json:"group,omitempty"`
+	Pattern *string `json:"pattern,omitempty"`
 	Type    string  `json:"type,omitempty"`
 	Version *string `json:"version,omitempty"`
 }
@@ -61,8 +59,12 @@ func (s *PatternTokenizer) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
-			s.Flags = o
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
+			s.Flags = &o
 
 		case "group":
 
@@ -74,10 +76,10 @@ func (s *PatternTokenizer) UnmarshalJSON(data []byte) error {
 				if err != nil {
 					return err
 				}
-				s.Group = value
+				s.Group = &value
 			case float64:
 				f := int(v)
-				s.Group = f
+				s.Group = &f
 			}
 
 		case "pattern":
@@ -85,8 +87,12 @@ func (s *PatternTokenizer) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
-			s.Pattern = o
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
+			s.Pattern = &o
 
 		case "type":
 			if err := dec.Decode(&s.Type); err != nil {
@@ -103,11 +109,25 @@ func (s *PatternTokenizer) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s PatternTokenizer) MarshalJSON() ([]byte, error) {
+	type innerPatternTokenizer PatternTokenizer
+	tmp := innerPatternTokenizer{
+		Flags:   s.Flags,
+		Group:   s.Group,
+		Pattern: s.Pattern,
+		Type:    s.Type,
+		Version: s.Version,
+	}
+
+	tmp.Type = "pattern"
+
+	return json.Marshal(tmp)
+}
+
 // NewPatternTokenizer returns a PatternTokenizer.
 func NewPatternTokenizer() *PatternTokenizer {
 	r := &PatternTokenizer{}
-
-	r.Type = "pattern"
 
 	return r
 }

@@ -16,36 +16,52 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // CsvProcessor type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ingest/_types/Processors.ts#L154-L162
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ingest/_types/Processors.ts#L463-L496
 type CsvProcessor struct {
-	Description   *string              `json:"description,omitempty"`
-	EmptyValue    json.RawMessage      `json:"empty_value,omitempty"`
-	Field         string               `json:"field"`
-	If            *string              `json:"if,omitempty"`
-	IgnoreFailure *bool                `json:"ignore_failure,omitempty"`
-	IgnoreMissing *bool                `json:"ignore_missing,omitempty"`
-	OnFailure     []ProcessorContainer `json:"on_failure,omitempty"`
-	Quote         *string              `json:"quote,omitempty"`
-	Separator     *string              `json:"separator,omitempty"`
-	Tag           *string              `json:"tag,omitempty"`
-	TargetFields  []string             `json:"target_fields"`
-	Trim          *bool                `json:"trim,omitempty"`
+	// Description Description of the processor.
+	// Useful for describing the purpose of the processor or its configuration.
+	Description *string `json:"description,omitempty"`
+	// EmptyValue Value used to fill empty fields.
+	// Empty fields are skipped if this is not provided.
+	// An empty field is one with no value (2 consecutive separators) or empty
+	// quotes (`""`).
+	EmptyValue json.RawMessage `json:"empty_value,omitempty"`
+	// Field The field to extract data from.
+	Field string `json:"field"`
+	// If Conditionally execute the processor.
+	If *string `json:"if,omitempty"`
+	// IgnoreFailure Ignore failures for the processor.
+	IgnoreFailure *bool `json:"ignore_failure,omitempty"`
+	// IgnoreMissing If `true` and `field` does not exist, the processor quietly exits without
+	// modifying the document.
+	IgnoreMissing *bool `json:"ignore_missing,omitempty"`
+	// OnFailure Handle failures for the processor.
+	OnFailure []ProcessorContainer `json:"on_failure,omitempty"`
+	// Quote Quote used in CSV, has to be single character string.
+	Quote *string `json:"quote,omitempty"`
+	// Separator Separator used in CSV, has to be single character string.
+	Separator *string `json:"separator,omitempty"`
+	// Tag Identifier for the processor.
+	// Useful for debugging and metrics.
+	Tag *string `json:"tag,omitempty"`
+	// TargetFields The array of fields to assign extracted values to.
+	TargetFields []string `json:"target_fields"`
+	// Trim Trim whitespaces in unquoted fields.
+	Trim *bool `json:"trim,omitempty"`
 }
 
 func (s *CsvProcessor) UnmarshalJSON(data []byte) error {
@@ -68,7 +84,11 @@ func (s *CsvProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Description = &o
 
 		case "empty_value":
@@ -86,7 +106,11 @@ func (s *CsvProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.If = &o
 
 		case "ignore_failure":
@@ -127,7 +151,11 @@ func (s *CsvProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Quote = &o
 
 		case "separator":
@@ -135,7 +163,11 @@ func (s *CsvProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Separator = &o
 
 		case "tag":
@@ -143,7 +175,11 @@ func (s *CsvProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Tag = &o
 
 		case "target_fields":

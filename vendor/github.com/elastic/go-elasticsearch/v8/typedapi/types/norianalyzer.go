@@ -16,23 +16,23 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/noridecompoundmode"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
+	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/noridecompoundmode"
 )
 
 // NoriAnalyzer type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/analyzers.ts#L66-L72
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/analyzers.ts#L66-L72
 type NoriAnalyzer struct {
 	DecompoundMode *noridecompoundmode.NoriDecompoundMode `json:"decompound_mode,omitempty"`
 	Stoptags       []string                               `json:"stoptags,omitempty"`
@@ -76,7 +76,11 @@ func (s *NoriAnalyzer) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.UserDictionary = &o
 
 		case "version":
@@ -89,11 +93,25 @@ func (s *NoriAnalyzer) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s NoriAnalyzer) MarshalJSON() ([]byte, error) {
+	type innerNoriAnalyzer NoriAnalyzer
+	tmp := innerNoriAnalyzer{
+		DecompoundMode: s.DecompoundMode,
+		Stoptags:       s.Stoptags,
+		Type:           s.Type,
+		UserDictionary: s.UserDictionary,
+		Version:        s.Version,
+	}
+
+	tmp.Type = "nori"
+
+	return json.Marshal(tmp)
+}
+
 // NewNoriAnalyzer returns a NoriAnalyzer.
 func NewNoriAnalyzer() *NoriAnalyzer {
 	r := &NoriAnalyzer{}
-
-	r.Type = "nori"
 
 	return r
 }

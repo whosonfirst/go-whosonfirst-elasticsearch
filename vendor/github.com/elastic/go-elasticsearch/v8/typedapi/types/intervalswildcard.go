@@ -16,24 +16,31 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
-	"encoding/json"
+	"strconv"
 )
 
 // IntervalsWildcard type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/query_dsl/fulltext.ts#L127-L131
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/query_dsl/fulltext.ts#L265-L280
 type IntervalsWildcard struct {
+	// Analyzer Analyzer used to analyze the `pattern`.
+	// Defaults to the top-level field's analyzer.
 	Analyzer *string `json:"analyzer,omitempty"`
-	Pattern  string  `json:"pattern"`
+	// Pattern Wildcard pattern used to find matching terms.
+	Pattern string `json:"pattern"`
+	// UseField If specified, match intervals from this field rather than the top-level
+	// field.
+	// The `pattern` is normalized using the search analyzer from this field, unless
+	// `analyzer` is specified separately.
 	UseField *string `json:"use_field,omitempty"`
 }
 
@@ -57,7 +64,11 @@ func (s *IntervalsWildcard) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Analyzer = &o
 
 		case "pattern":
@@ -65,7 +76,11 @@ func (s *IntervalsWildcard) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Pattern = o
 
 		case "use_field":

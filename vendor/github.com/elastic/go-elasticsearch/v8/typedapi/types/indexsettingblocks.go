@@ -16,29 +16,26 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
-	"strconv"
-
-	"encoding/json"
 )
 
 // IndexSettingBlocks type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/indices/_types/IndexSettings.ts#L245-L251
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/indices/_types/IndexSettings.ts#L244-L250
 type IndexSettingBlocks struct {
 	Metadata            Stringifiedboolean `json:"metadata,omitempty"`
-	Read                *bool              `json:"read,omitempty"`
-	ReadOnly            *bool              `json:"read_only,omitempty"`
-	ReadOnlyAllowDelete *bool              `json:"read_only_allow_delete,omitempty"`
-	Write               string             `json:"write,omitempty"`
+	Read                Stringifiedboolean `json:"read,omitempty"`
+	ReadOnly            Stringifiedboolean `json:"read_only,omitempty"`
+	ReadOnlyAllowDelete Stringifiedboolean `json:"read_only_allow_delete,omitempty"`
+	Write               Stringifiedboolean `json:"write,omitempty"`
 }
 
 func (s *IndexSettingBlocks) UnmarshalJSON(data []byte) error {
@@ -62,54 +59,24 @@ func (s *IndexSettingBlocks) UnmarshalJSON(data []byte) error {
 			}
 
 		case "read":
-			var tmp interface{}
-			dec.Decode(&tmp)
-			switch v := tmp.(type) {
-			case string:
-				value, err := strconv.ParseBool(v)
-				if err != nil {
-					return err
-				}
-				s.Read = &value
-			case bool:
-				s.Read = &v
+			if err := dec.Decode(&s.Read); err != nil {
+				return err
 			}
 
 		case "read_only":
-			var tmp interface{}
-			dec.Decode(&tmp)
-			switch v := tmp.(type) {
-			case string:
-				value, err := strconv.ParseBool(v)
-				if err != nil {
-					return err
-				}
-				s.ReadOnly = &value
-			case bool:
-				s.ReadOnly = &v
+			if err := dec.Decode(&s.ReadOnly); err != nil {
+				return err
 			}
 
 		case "read_only_allow_delete":
-			var tmp interface{}
-			dec.Decode(&tmp)
-			switch v := tmp.(type) {
-			case string:
-				value, err := strconv.ParseBool(v)
-				if err != nil {
-					return err
-				}
-				s.ReadOnlyAllowDelete = &value
-			case bool:
-				s.ReadOnlyAllowDelete = &v
+			if err := dec.Decode(&s.ReadOnlyAllowDelete); err != nil {
+				return err
 			}
 
 		case "write":
-			var tmp json.RawMessage
-			if err := dec.Decode(&tmp); err != nil {
+			if err := dec.Decode(&s.Write); err != nil {
 				return err
 			}
-			o := string(tmp)
-			s.Write = o
 
 		}
 	}

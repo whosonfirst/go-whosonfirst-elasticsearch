@@ -16,31 +16,29 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // PathHierarchyTokenizer type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/tokenizers.ts#L88-L95
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/tokenizers.ts#L89-L96
 type PathHierarchyTokenizer struct {
-	BufferSize  int     `json:"buffer_size"`
-	Delimiter   string  `json:"delimiter"`
-	Replacement string  `json:"replacement"`
-	Reverse     bool    `json:"reverse"`
-	Skip        int     `json:"skip"`
-	Type        string  `json:"type,omitempty"`
-	Version     *string `json:"version,omitempty"`
+	BufferSize  Stringifiedinteger `json:"buffer_size,omitempty"`
+	Delimiter   *string            `json:"delimiter,omitempty"`
+	Replacement *string            `json:"replacement,omitempty"`
+	Reverse     Stringifiedboolean `json:"reverse,omitempty"`
+	Skip        Stringifiedinteger `json:"skip,omitempty"`
+	Type        string             `json:"type,omitempty"`
+	Version     *string            `json:"version,omitempty"`
 }
 
 func (s *PathHierarchyTokenizer) UnmarshalJSON(data []byte) error {
@@ -59,19 +57,8 @@ func (s *PathHierarchyTokenizer) UnmarshalJSON(data []byte) error {
 		switch t {
 
 		case "buffer_size":
-
-			var tmp interface{}
-			dec.Decode(&tmp)
-			switch v := tmp.(type) {
-			case string:
-				value, err := strconv.Atoi(v)
-				if err != nil {
-					return err
-				}
-				s.BufferSize = value
-			case float64:
-				f := int(v)
-				s.BufferSize = f
+			if err := dec.Decode(&s.BufferSize); err != nil {
+				return err
 			}
 
 		case "delimiter":
@@ -79,45 +66,33 @@ func (s *PathHierarchyTokenizer) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
-			s.Delimiter = o
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
+			s.Delimiter = &o
 
 		case "replacement":
 			var tmp json.RawMessage
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
-			s.Replacement = o
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
+			s.Replacement = &o
 
 		case "reverse":
-			var tmp interface{}
-			dec.Decode(&tmp)
-			switch v := tmp.(type) {
-			case string:
-				value, err := strconv.ParseBool(v)
-				if err != nil {
-					return err
-				}
-				s.Reverse = value
-			case bool:
-				s.Reverse = v
+			if err := dec.Decode(&s.Reverse); err != nil {
+				return err
 			}
 
 		case "skip":
-
-			var tmp interface{}
-			dec.Decode(&tmp)
-			switch v := tmp.(type) {
-			case string:
-				value, err := strconv.Atoi(v)
-				if err != nil {
-					return err
-				}
-				s.Skip = value
-			case float64:
-				f := int(v)
-				s.Skip = f
+			if err := dec.Decode(&s.Skip); err != nil {
+				return err
 			}
 
 		case "type":
@@ -135,11 +110,27 @@ func (s *PathHierarchyTokenizer) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s PathHierarchyTokenizer) MarshalJSON() ([]byte, error) {
+	type innerPathHierarchyTokenizer PathHierarchyTokenizer
+	tmp := innerPathHierarchyTokenizer{
+		BufferSize:  s.BufferSize,
+		Delimiter:   s.Delimiter,
+		Replacement: s.Replacement,
+		Reverse:     s.Reverse,
+		Skip:        s.Skip,
+		Type:        s.Type,
+		Version:     s.Version,
+	}
+
+	tmp.Type = "path_hierarchy"
+
+	return json.Marshal(tmp)
+}
+
 // NewPathHierarchyTokenizer returns a PathHierarchyTokenizer.
 func NewPathHierarchyTokenizer() *PathHierarchyTokenizer {
 	r := &PathHierarchyTokenizer{}
-
-	r.Type = "path_hierarchy"
 
 	return r
 }

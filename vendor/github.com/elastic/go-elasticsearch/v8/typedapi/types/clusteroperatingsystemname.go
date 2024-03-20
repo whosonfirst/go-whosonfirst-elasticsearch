@@ -16,26 +16,26 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // ClusterOperatingSystemName type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/cluster/stats/types.ts#L244-L247
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/cluster/stats/types.ts#L444-L453
 type ClusterOperatingSystemName struct {
-	Count int    `json:"count"`
-	Name  string `json:"name"`
+	// Count Number of selected nodes using the operating system.
+	Count int `json:"count"`
+	// Name Name of an operating system used by one or more selected nodes.
+	Name string `json:"name"`
 }
 
 func (s *ClusterOperatingSystemName) UnmarshalJSON(data []byte) error {

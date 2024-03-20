@@ -16,33 +16,39 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // RareTermsAggregation type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/aggregations/bucket.ts#L304-L312
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/aggregations/bucket.ts#L687-L717
 type RareTermsAggregation struct {
-	Exclude     []string     `json:"exclude,omitempty"`
-	Field       *string      `json:"field,omitempty"`
-	Include     TermsInclude `json:"include,omitempty"`
-	MaxDocCount *int64       `json:"max_doc_count,omitempty"`
-	Meta        Metadata     `json:"meta,omitempty"`
-	Missing     Missing      `json:"missing,omitempty"`
-	Name        *string      `json:"name,omitempty"`
-	Precision   *Float64     `json:"precision,omitempty"`
-	ValueType   *string      `json:"value_type,omitempty"`
+	// Exclude Terms that should be excluded from the aggregation.
+	Exclude []string `json:"exclude,omitempty"`
+	// Field The field from which to return rare terms.
+	Field *string `json:"field,omitempty"`
+	// Include Terms that should be included in the aggregation.
+	Include TermsInclude `json:"include,omitempty"`
+	// MaxDocCount The maximum number of documents a term should appear in.
+	MaxDocCount *int64   `json:"max_doc_count,omitempty"`
+	Meta        Metadata `json:"meta,omitempty"`
+	// Missing The value to apply to documents that do not have a value.
+	// By default, documents without a value are ignored.
+	Missing Missing `json:"missing,omitempty"`
+	Name    *string `json:"name,omitempty"`
+	// Precision The precision of the internal CuckooFilters.
+	// Smaller precision leads to better approximation, but higher memory usage.
+	Precision *Float64 `json:"precision,omitempty"`
+	ValueType *string  `json:"value_type,omitempty"`
 }
 
 func (s *RareTermsAggregation) UnmarshalJSON(data []byte) error {
@@ -116,7 +122,11 @@ func (s *RareTermsAggregation) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Name = &o
 
 		case "precision":
@@ -140,7 +150,11 @@ func (s *RareTermsAggregation) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.ValueType = &o
 
 		}

@@ -16,29 +16,43 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
+	"encoding/json"
+
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/icunormalizationmode"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/icunormalizationtype"
 )
 
 // IcuAnalyzer type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/icu-plugin.ts#L67-L71
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/icu-plugin.ts#L67-L71
 type IcuAnalyzer struct {
 	Method icunormalizationtype.IcuNormalizationType `json:"method"`
 	Mode   icunormalizationmode.IcuNormalizationMode `json:"mode"`
 	Type   string                                    `json:"type,omitempty"`
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s IcuAnalyzer) MarshalJSON() ([]byte, error) {
+	type innerIcuAnalyzer IcuAnalyzer
+	tmp := innerIcuAnalyzer{
+		Method: s.Method,
+		Mode:   s.Mode,
+		Type:   s.Type,
+	}
+
+	tmp.Type = "icu_analyzer"
+
+	return json.Marshal(tmp)
+}
+
 // NewIcuAnalyzer returns a IcuAnalyzer.
 func NewIcuAnalyzer() *IcuAnalyzer {
 	r := &IcuAnalyzer{}
-
-	r.Type = "icu_analyzer"
 
 	return r
 }

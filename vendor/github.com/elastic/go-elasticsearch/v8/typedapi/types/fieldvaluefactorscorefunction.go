@@ -16,29 +16,33 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/fieldvaluefactormodifier"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/fieldvaluefactormodifier"
 )
 
 // FieldValueFactorScoreFunction type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/query_dsl/compound.ts#L70-L75
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/query_dsl/compound.ts#L132-L151
 type FieldValueFactorScoreFunction struct {
-	Factor   *Float64                                           `json:"factor,omitempty"`
-	Field    string                                             `json:"field"`
-	Missing  *Float64                                           `json:"missing,omitempty"`
+	// Factor Optional factor to multiply the field value with.
+	Factor *Float64 `json:"factor,omitempty"`
+	// Field Field to be extracted from the document.
+	Field string `json:"field"`
+	// Missing Value used if the document doesn’t have that field.
+	// The modifier and factor are still applied to it as though it were read from
+	// the document.
+	Missing *Float64 `json:"missing,omitempty"`
+	// Modifier Modifier to apply to the field value.
 	Modifier *fieldvaluefactormodifier.FieldValueFactorModifier `json:"modifier,omitempty"`
 }
 

@@ -16,13 +16,12 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Returns basic statistics about performance of cluster nodes.
 package nodes
 
 import (
-	gobytes "bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -31,11 +30,11 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
-
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/bytes"
 )
 
@@ -49,9 +48,13 @@ type Nodes struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewNodes type alias for index.
@@ -69,13 +72,18 @@ func NewNodesFunc(tp elastictransport.Interface) NewNodes {
 
 // Returns basic statistics about performance of cluster nodes.
 //
-// https://www.elastic.co/guide/en/elasticsearch/reference/{branch}/cat-nodes.html
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/cat-nodes.html
 func New(tp elastictransport.Interface) *Nodes {
 	r := &Nodes{
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -110,9 +118,9 @@ func (r *Nodes) HttpRequest(ctx context.Context) (*http.Request, error) {
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
@@ -129,27 +137,66 @@ func (r *Nodes) HttpRequest(ctx context.Context) (*http.Request, error) {
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r Nodes) Perform(ctx context.Context) (*http.Response, error) {
+func (r Nodes) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "cat.nodes")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "cat.nodes")
+		if reader := instrument.RecordRequestBody(ctx, "cat.nodes", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "cat.nodes")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the Nodes query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the Nodes query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a nodes.Response
-func (r Nodes) Do(ctx context.Context) (Response, error) {
+func (r Nodes) Do(providedCtx context.Context) (Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "cat.nodes")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -157,6 +204,9 @@ func (r Nodes) Do(ctx context.Context) (Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(&response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -166,15 +216,35 @@ func (r Nodes) Do(ctx context.Context) (Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r Nodes) IsSuccess(ctx context.Context) (bool, error) {
+func (r Nodes) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "cat.nodes")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -190,6 +260,14 @@ func (r Nodes) IsSuccess(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the Nodes query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -200,18 +278,27 @@ func (r *Nodes) Header(key, value string) *Nodes {
 	return r
 }
 
-// Bytes The unit in which to display byte values
+// Bytes The unit used to display byte values.
 // API name: bytes
-func (r *Nodes) Bytes(enum bytes.Bytes) *Nodes {
-	r.values.Set("bytes", enum.String())
+func (r *Nodes) Bytes(bytes bytes.Bytes) *Nodes {
+	r.values.Set("bytes", bytes.String())
 
 	return r
 }
 
-// FullId Return the full node ID instead of the shortened version (default: false)
+// FullId If `true`, return the full node ID. If `false`, return the shortened node ID.
 // API name: full_id
-func (r *Nodes) FullId(v string) *Nodes {
-	r.values.Set("full_id", v)
+func (r *Nodes) FullId(fullid string) *Nodes {
+	r.values.Set("full_id", fullid)
+
+	return r
+}
+
+// IncludeUnloadedSegments If true, the response includes information from segments that are not loaded
+// into memory.
+// API name: include_unloaded_segments
+func (r *Nodes) IncludeUnloadedSegments(includeunloadedsegments bool) *Nodes {
+	r.values.Set("include_unloaded_segments", strconv.FormatBool(includeunloadedsegments))
 
 	return r
 }

@@ -16,26 +16,32 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // ClusterProcessOpenFileDescriptors type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/cluster/stats/types.ts#L263-L267
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/cluster/stats/types.ts#L485-L501
 type ClusterProcessOpenFileDescriptors struct {
+	// Avg Average number of concurrently open file descriptors.
+	// Returns `-1` if not supported.
 	Avg int64 `json:"avg"`
+	// Max Maximum number of concurrently open file descriptors allowed across all
+	// selected nodes.
+	// Returns `-1` if not supported.
 	Max int64 `json:"max"`
+	// Min Minimum number of concurrently open file descriptors across all selected
+	// nodes.
+	// Returns -1 if not supported.
 	Min int64 `json:"min"`
 }
 

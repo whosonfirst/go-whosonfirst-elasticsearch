@@ -16,28 +16,30 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // ScriptCache type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/nodes/_types/Stats.ts#L413-L418
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/nodes/_types/Stats.ts#L1031-L1045
 type ScriptCache struct {
-	CacheEvictions            *int64  `json:"cache_evictions,omitempty"`
-	CompilationLimitTriggered *int64  `json:"compilation_limit_triggered,omitempty"`
-	Compilations              *int64  `json:"compilations,omitempty"`
-	Context                   *string `json:"context,omitempty"`
+	// CacheEvictions Total number of times the script cache has evicted old data.
+	CacheEvictions *int64 `json:"cache_evictions,omitempty"`
+	// CompilationLimitTriggered Total number of times the script compilation circuit breaker has limited
+	// inline script compilations.
+	CompilationLimitTriggered *int64 `json:"compilation_limit_triggered,omitempty"`
+	// Compilations Total number of inline script compilations performed by the node.
+	Compilations *int64  `json:"compilations,omitempty"`
+	Context      *string `json:"context,omitempty"`
 }
 
 func (s *ScriptCache) UnmarshalJSON(data []byte) error {
@@ -105,7 +107,11 @@ func (s *ScriptCache) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Context = &o
 
 		}

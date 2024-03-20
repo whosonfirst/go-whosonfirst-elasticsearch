@@ -16,14 +16,14 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Package include
 package include
 
 import "strings"
 
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ml/_types/Include.ts#L20-L42
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ml/_types/Include.ts#L20-L47
 type Include struct {
 	Name string
 }
@@ -36,6 +36,8 @@ var (
 	Hyperparameters = Include{"hyperparameters"}
 
 	Totalfeatureimportance = Include{"total_feature_importance"}
+
+	Definitionstatus = Include{"definition_status"}
 )
 
 func (i Include) MarshalText() (text []byte, err error) {
@@ -53,6 +55,8 @@ func (i *Include) UnmarshalText(text []byte) error {
 		*i = Hyperparameters
 	case "total_feature_importance":
 		*i = Totalfeatureimportance
+	case "definition_status":
+		*i = Definitionstatus
 	default:
 		*i = Include{string(text)}
 	}

@@ -16,29 +16,36 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // RemoveAction type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/indices/update_aliases/types.ts#L46-L53
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/indices/update_aliases/types.ts#L97-L122
 type RemoveAction struct {
-	Alias     *string  `json:"alias,omitempty"`
-	Aliases   []string `json:"aliases,omitempty"`
-	Index     *string  `json:"index,omitempty"`
-	Indices   []string `json:"indices,omitempty"`
-	MustExist *bool    `json:"must_exist,omitempty"`
+	// Alias Alias for the action.
+	// Index alias names support date math.
+	Alias *string `json:"alias,omitempty"`
+	// Aliases Aliases for the action.
+	// Index alias names support date math.
+	Aliases []string `json:"aliases,omitempty"`
+	// Index Data stream or index for the action.
+	// Supports wildcards (`*`).
+	Index *string `json:"index,omitempty"`
+	// Indices Data streams or indices for the action.
+	// Supports wildcards (`*`).
+	Indices []string `json:"indices,omitempty"`
+	// MustExist If `true`, the alias must exist to perform the action.
+	MustExist *bool `json:"must_exist,omitempty"`
 }
 
 func (s *RemoveAction) UnmarshalJSON(data []byte) error {

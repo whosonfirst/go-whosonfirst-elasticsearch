@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Adds and updates Logstash Pipelines used for Central Management
 package putpipeline
@@ -50,14 +50,19 @@ type PutPipeline struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
-
-	req *types.LogstashPipeline
 	raw io.Reader
+
+	req      *Request
+	deferred []func(request *Request) error
+	buf      *gobytes.Buffer
 
 	paramSet int
 
 	id string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewPutPipeline type alias for index.
@@ -69,7 +74,7 @@ func NewPutPipelineFunc(tp elastictransport.Interface) NewPutPipeline {
 	return func(id string) *PutPipeline {
 		n := New(tp)
 
-		n.Id(id)
+		n._id(id)
 
 		return n
 	}
@@ -83,7 +88,14 @@ func New(tp elastictransport.Interface) *PutPipeline {
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+
+		buf: gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -98,7 +110,7 @@ func (r *PutPipeline) Raw(raw io.Reader) *PutPipeline {
 }
 
 // Request allows to set the request property with the appropriate payload.
-func (r *PutPipeline) Request(req *types.LogstashPipeline) *PutPipeline {
+func (r *PutPipeline) Request(req *Request) *PutPipeline {
 	r.req = req
 
 	return r
@@ -113,9 +125,17 @@ func (r *PutPipeline) HttpRequest(ctx context.Context) (*http.Request, error) {
 
 	var err error
 
-	if r.raw != nil {
-		r.buf.ReadFrom(r.raw)
-	} else if r.req != nil {
+	if len(r.deferred) > 0 {
+		for _, f := range r.deferred {
+			deferredErr := f(r.req)
+			if deferredErr != nil {
+				return nil, deferredErr
+			}
+		}
+	}
+
+	if r.raw == nil && r.req != nil {
+
 		data, err := json.Marshal(r.req)
 
 		if err != nil {
@@ -123,6 +143,11 @@ func (r *PutPipeline) HttpRequest(ctx context.Context) (*http.Request, error) {
 		}
 
 		r.buf.Write(data)
+
+	}
+
+	if r.buf.Len() > 0 {
+		r.raw = r.buf
 	}
 
 	r.path.Scheme = "http"
@@ -135,6 +160,9 @@ func (r *PutPipeline) HttpRequest(ctx context.Context) (*http.Request, error) {
 		path.WriteString("pipeline")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "id", r.id)
+		}
 		path.WriteString(r.id)
 
 		method = http.MethodPut
@@ -148,15 +176,15 @@ func (r *PutPipeline) HttpRequest(ctx context.Context) (*http.Request, error) {
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
 
 	if req.Header.Get("Content-Type") == "" {
-		if r.buf.Len() > 0 {
+		if r.raw != nil {
 			req.Header.Set("Content-Type", "application/vnd.elasticsearch+json;compatible-with=8")
 		}
 	}
@@ -173,15 +201,42 @@ func (r *PutPipeline) HttpRequest(ctx context.Context) (*http.Request, error) {
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r PutPipeline) Perform(ctx context.Context) (*http.Response, error) {
+func (r PutPipeline) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "logstash.put_pipeline")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "logstash.put_pipeline")
+		if reader := instrument.RecordRequestBody(ctx, "logstash.put_pipeline", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "logstash.put_pipeline")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the PutPipeline query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the PutPipeline query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
@@ -194,11 +249,69 @@ func (r *PutPipeline) Header(key, value string) *PutPipeline {
 	return r
 }
 
-// Id The ID of the Pipeline
+// Id Identifier for the pipeline.
 // API Name: id
-func (r *PutPipeline) Id(v string) *PutPipeline {
+func (r *PutPipeline) _id(id string) *PutPipeline {
 	r.paramSet |= idMask
-	r.id = v
+	r.id = id
+
+	return r
+}
+
+// Description Description of the pipeline.
+// This description is not used by Elasticsearch or Logstash.
+// API name: description
+func (r *PutPipeline) Description(description string) *PutPipeline {
+
+	r.req.Description = description
+
+	return r
+}
+
+// LastModified Date the pipeline was last updated.
+// Must be in the `yyyy-MM-dd'T'HH:mm:ss.SSSZZ` strict_date_time format.
+// API name: last_modified
+func (r *PutPipeline) LastModified(datetime types.DateTime) *PutPipeline {
+	r.req.LastModified = datetime
+
+	return r
+}
+
+// Pipeline Configuration for the pipeline.
+// API name: pipeline
+func (r *PutPipeline) Pipeline(pipeline string) *PutPipeline {
+
+	r.req.Pipeline = pipeline
+
+	return r
+}
+
+// PipelineMetadata Optional metadata about the pipeline.
+// May have any contents.
+// This metadata is not generated or used by Elasticsearch or Logstash.
+// API name: pipeline_metadata
+func (r *PutPipeline) PipelineMetadata(pipelinemetadata *types.PipelineMetadata) *PutPipeline {
+
+	r.req.PipelineMetadata = *pipelinemetadata
+
+	return r
+}
+
+// PipelineSettings Settings for the pipeline.
+// Supports only flat keys in dot notation.
+// API name: pipeline_settings
+func (r *PutPipeline) PipelineSettings(pipelinesettings *types.PipelineSettings) *PutPipeline {
+
+	r.req.PipelineSettings = *pipelinesettings
+
+	return r
+}
+
+// Username User who last updated the pipeline.
+// API name: username
+func (r *PutPipeline) Username(username string) *PutPipeline {
+
+	r.req.Username = username
 
 	return r
 }

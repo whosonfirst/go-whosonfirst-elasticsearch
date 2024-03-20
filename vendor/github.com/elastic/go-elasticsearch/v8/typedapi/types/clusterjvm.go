@@ -16,28 +16,30 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // ClusterJvm type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/cluster/stats/types.ts#L156-L161
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/cluster/stats/types.ts#L275-L292
 type ClusterJvm struct {
-	MaxUptimeInMillis int64               `json:"max_uptime_in_millis"`
-	Mem               ClusterJvmMemory    `json:"mem"`
-	Threads           int64               `json:"threads"`
-	Versions          []ClusterJvmVersion `json:"versions"`
+	// MaxUptimeInMillis Uptime duration, in milliseconds, since JVM last started.
+	MaxUptimeInMillis int64 `json:"max_uptime_in_millis"`
+	// Mem Contains statistics about memory used by selected nodes.
+	Mem ClusterJvmMemory `json:"mem"`
+	// Threads Number of active threads in use by JVM across all selected nodes.
+	Threads int64 `json:"threads"`
+	// Versions Contains statistics about the JVM versions used by selected nodes.
+	Versions []ClusterJvmVersion `json:"versions"`
 }
 
 func (s *ClusterJvm) UnmarshalJSON(data []byte) error {

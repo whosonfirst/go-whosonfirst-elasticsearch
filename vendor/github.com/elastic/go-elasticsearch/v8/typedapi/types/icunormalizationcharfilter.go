@@ -16,24 +16,23 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/icunormalizationmode"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/icunormalizationtype"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/icunormalizationmode"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/icunormalizationtype"
 )
 
 // IcuNormalizationCharFilter type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/icu-plugin.ts#L40-L44
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/icu-plugin.ts#L40-L44
 type IcuNormalizationCharFilter struct {
 	Mode    *icunormalizationmode.IcuNormalizationMode `json:"mode,omitempty"`
 	Name    *icunormalizationtype.IcuNormalizationType `json:"name,omitempty"`
@@ -81,11 +80,24 @@ func (s *IcuNormalizationCharFilter) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s IcuNormalizationCharFilter) MarshalJSON() ([]byte, error) {
+	type innerIcuNormalizationCharFilter IcuNormalizationCharFilter
+	tmp := innerIcuNormalizationCharFilter{
+		Mode:    s.Mode,
+		Name:    s.Name,
+		Type:    s.Type,
+		Version: s.Version,
+	}
+
+	tmp.Type = "icu_normalizer"
+
+	return json.Marshal(tmp)
+}
+
 // NewIcuNormalizationCharFilter returns a IcuNormalizationCharFilter.
 func NewIcuNormalizationCharFilter() *IcuNormalizationCharFilter {
 	r := &IcuNormalizationCharFilter{}
-
-	r.Type = "icu_normalizer"
 
 	return r
 }

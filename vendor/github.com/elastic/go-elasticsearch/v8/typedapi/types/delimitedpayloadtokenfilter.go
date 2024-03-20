@@ -16,23 +16,23 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/delimitedpayloadencoding"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
+	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/delimitedpayloadencoding"
 )
 
 // DelimitedPayloadTokenFilter type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/token_filters.ts#L68-L72
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/token_filters.ts#L68-L72
 type DelimitedPayloadTokenFilter struct {
 	Delimiter *string                                            `json:"delimiter,omitempty"`
 	Encoding  *delimitedpayloadencoding.DelimitedPayloadEncoding `json:"encoding,omitempty"`
@@ -60,7 +60,11 @@ func (s *DelimitedPayloadTokenFilter) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Delimiter = &o
 
 		case "encoding":
@@ -83,11 +87,24 @@ func (s *DelimitedPayloadTokenFilter) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s DelimitedPayloadTokenFilter) MarshalJSON() ([]byte, error) {
+	type innerDelimitedPayloadTokenFilter DelimitedPayloadTokenFilter
+	tmp := innerDelimitedPayloadTokenFilter{
+		Delimiter: s.Delimiter,
+		Encoding:  s.Encoding,
+		Type:      s.Type,
+		Version:   s.Version,
+	}
+
+	tmp.Type = "delimited_payload"
+
+	return json.Marshal(tmp)
+}
+
 // NewDelimitedPayloadTokenFilter returns a DelimitedPayloadTokenFilter.
 func NewDelimitedPayloadTokenFilter() *DelimitedPayloadTokenFilter {
 	r := &DelimitedPayloadTokenFilter{}
-
-	r.Type = "delimited_payload"
 
 	return r
 }

@@ -16,21 +16,22 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package healthreport
 
 import (
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/indicatorhealthstatus"
 )
 
 // Response holds the response body struct for the package healthreport
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_global/health_report/Response.ts#L22-L27
-
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_global/health_report/Response.ts#L22-L28
 type Response struct {
-	ClusterName string           `json:"cluster_name"`
-	Indicators  types.Indicators `json:"indicators"`
+	ClusterName string                                       `json:"cluster_name"`
+	Indicators  types.Indicators                             `json:"indicators"`
+	Status      *indicatorhealthstatus.IndicatorHealthStatus `json:"status,omitempty"`
 }
 
 // NewResponse returns a Response

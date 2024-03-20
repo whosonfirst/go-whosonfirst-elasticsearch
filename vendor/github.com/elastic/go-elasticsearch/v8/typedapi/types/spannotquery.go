@@ -16,31 +16,43 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // SpanNotQuery type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/query_dsl/span.ts#L55-L63
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/query_dsl/span.ts#L80-L104
 type SpanNotQuery struct {
-	Boost      *float32   `json:"boost,omitempty"`
-	Dist       *int       `json:"dist,omitempty"`
-	Exclude    *SpanQuery `json:"exclude,omitempty"`
-	Include    *SpanQuery `json:"include,omitempty"`
-	Post       *int       `json:"post,omitempty"`
-	Pre        *int       `json:"pre,omitempty"`
-	QueryName_ *string    `json:"_name,omitempty"`
+	// Boost Floating point number used to decrease or increase the relevance scores of
+	// the query.
+	// Boost values are relative to the default value of 1.0.
+	// A boost value between 0 and 1.0 decreases the relevance score.
+	// A value greater than 1.0 increases the relevance score.
+	Boost *float32 `json:"boost,omitempty"`
+	// Dist The number of tokens from within the include span that can’t have overlap
+	// with the exclude span.
+	// Equivalent to setting both `pre` and `post`.
+	Dist *int `json:"dist,omitempty"`
+	// Exclude Span query whose matches must not overlap those returned.
+	Exclude *SpanQuery `json:"exclude,omitempty"`
+	// Include Span query whose matches are filtered.
+	Include *SpanQuery `json:"include,omitempty"`
+	// Post The number of tokens after the include span that can’t have overlap with the
+	// exclude span.
+	Post *int `json:"post,omitempty"`
+	// Pre The number of tokens before the include span that can’t have overlap with the
+	// exclude span.
+	Pre        *int    `json:"pre,omitempty"`
+	QueryName_ *string `json:"_name,omitempty"`
 }
 
 func (s *SpanNotQuery) UnmarshalJSON(data []byte) error {
@@ -137,7 +149,11 @@ func (s *SpanNotQuery) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.QueryName_ = &o
 
 		}

@@ -16,31 +16,41 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // PipelineSettings type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/logstash/_types/Pipeline.ts#L28-L36
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/logstash/_types/Pipeline.ts#L28-L59
 type PipelineSettings struct {
-	PipelineBatchDelay    int    `json:"pipeline.batch.delay"`
-	PipelineBatchSize     int    `json:"pipeline.batch.size"`
-	PipelineWorkers       int    `json:"pipeline.workers"`
-	QueueCheckpointWrites int    `json:"queue.checkpoint.writes"`
-	QueueMaxBytesNumber   int    `json:"queue.max_bytes.number"`
-	QueueMaxBytesUnits    string `json:"queue.max_bytes.units"`
-	QueueType             string `json:"queue.type"`
+	// PipelineBatchDelay When creating pipeline event batches, how long in milliseconds to wait for
+	// each event before dispatching an undersized batch to pipeline workers.
+	PipelineBatchDelay int `json:"pipeline.batch.delay"`
+	// PipelineBatchSize The maximum number of events an individual worker thread will collect from
+	// inputs before attempting to execute its filters and outputs.
+	PipelineBatchSize int `json:"pipeline.batch.size"`
+	// PipelineWorkers The number of workers that will, in parallel, execute the filter and output
+	// stages of the pipeline.
+	PipelineWorkers int `json:"pipeline.workers"`
+	// QueueCheckpointWrites The maximum number of written events before forcing a checkpoint when
+	// persistent queues are enabled (`queue.type: persisted`).
+	QueueCheckpointWrites int `json:"queue.checkpoint.writes"`
+	// QueueMaxBytesNumber The total capacity of the queue (`queue.type: persisted`) in number of bytes.
+	QueueMaxBytesNumber int `json:"queue.max_bytes.number"`
+	// QueueMaxBytesUnits The total capacity of the queue (`queue.type: persisted`) in terms of units
+	// of bytes.
+	QueueMaxBytesUnits string `json:"queue.max_bytes.units"`
+	// QueueType The internal queuing model to use for event buffering.
+	QueueType string `json:"queue.type"`
 }
 
 func (s *PipelineSettings) UnmarshalJSON(data []byte) error {
@@ -143,7 +153,11 @@ func (s *PipelineSettings) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.QueueMaxBytesUnits = o
 
 		case "queue.type":
@@ -151,7 +165,11 @@ func (s *PipelineSettings) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.QueueType = o
 
 		}

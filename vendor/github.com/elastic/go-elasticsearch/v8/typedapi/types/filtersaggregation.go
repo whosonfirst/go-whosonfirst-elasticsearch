@@ -16,30 +16,34 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // FiltersAggregation type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/aggregations/bucket.ts#L169-L174
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/aggregations/bucket.ts#L358-L378
 type FiltersAggregation struct {
-	Filters        *BucketsQuery `json:"filters,omitempty"`
-	Keyed          *bool         `json:"keyed,omitempty"`
-	Meta           Metadata      `json:"meta,omitempty"`
-	Name           *string       `json:"name,omitempty"`
-	OtherBucket    *bool         `json:"other_bucket,omitempty"`
-	OtherBucketKey *string       `json:"other_bucket_key,omitempty"`
+	// Filters Collection of queries from which to build buckets.
+	Filters BucketsQuery `json:"filters,omitempty"`
+	// Keyed By default, the named filters aggregation returns the buckets as an object.
+	// Set to `false` to return the buckets as an array of objects.
+	Keyed *bool    `json:"keyed,omitempty"`
+	Meta  Metadata `json:"meta,omitempty"`
+	Name  *string  `json:"name,omitempty"`
+	// OtherBucket Set to `true` to add a bucket to the response which will contain all
+	// documents that do not match any of the given filters.
+	OtherBucket *bool `json:"other_bucket,omitempty"`
+	// OtherBucketKey The key with which the other bucket is returned.
+	OtherBucketKey *string `json:"other_bucket_key,omitempty"`
 }
 
 func (s *FiltersAggregation) UnmarshalJSON(data []byte) error {
@@ -58,8 +62,24 @@ func (s *FiltersAggregation) UnmarshalJSON(data []byte) error {
 		switch t {
 
 		case "filters":
-			if err := dec.Decode(&s.Filters); err != nil {
-				return err
+
+			rawMsg := json.RawMessage{}
+			dec.Decode(&rawMsg)
+			source := bytes.NewReader(rawMsg)
+			localDec := json.NewDecoder(source)
+			switch rawMsg[0] {
+			case '{':
+				o := make(map[string]Query, 0)
+				if err := localDec.Decode(&o); err != nil {
+					return err
+				}
+				s.Filters = o
+			case '[':
+				o := []Query{}
+				if err := localDec.Decode(&o); err != nil {
+					return err
+				}
+				s.Filters = o
 			}
 
 		case "keyed":
@@ -86,7 +106,11 @@ func (s *FiltersAggregation) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Name = &o
 
 		case "other_bucket":
@@ -108,7 +132,11 @@ func (s *FiltersAggregation) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.OtherBucketKey = &o
 
 		}

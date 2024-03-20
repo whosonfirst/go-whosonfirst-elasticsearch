@@ -16,13 +16,12 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Creates a data stream
 package createdatastream
 
 import (
-	gobytes "bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -51,11 +50,15 @@ type CreateDataStream struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	name string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewCreateDataStream type alias for index.
@@ -67,7 +70,7 @@ func NewCreateDataStreamFunc(tp elastictransport.Interface) NewCreateDataStream 
 	return func(name string) *CreateDataStream {
 		n := New(tp)
 
-		n.Name(name)
+		n._name(name)
 
 		return n
 	}
@@ -75,13 +78,18 @@ func NewCreateDataStreamFunc(tp elastictransport.Interface) NewCreateDataStream 
 
 // Creates a data stream
 //
-// https://www.elastic.co/guide/en/elasticsearch/reference/master/data-streams.html
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/data-streams.html
 func New(tp elastictransport.Interface) *CreateDataStream {
 	r := &CreateDataStream{
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -104,6 +112,9 @@ func (r *CreateDataStream) HttpRequest(ctx context.Context) (*http.Request, erro
 		path.WriteString("_data_stream")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "name", r.name)
+		}
 		path.WriteString(r.name)
 
 		method = http.MethodPut
@@ -117,9 +128,9 @@ func (r *CreateDataStream) HttpRequest(ctx context.Context) (*http.Request, erro
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
@@ -136,27 +147,66 @@ func (r *CreateDataStream) HttpRequest(ctx context.Context) (*http.Request, erro
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r CreateDataStream) Perform(ctx context.Context) (*http.Response, error) {
+func (r CreateDataStream) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "indices.create_data_stream")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "indices.create_data_stream")
+		if reader := instrument.RecordRequestBody(ctx, "indices.create_data_stream", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "indices.create_data_stream")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the CreateDataStream query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the CreateDataStream query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a createdatastream.Response
-func (r CreateDataStream) Do(ctx context.Context) (*Response, error) {
+func (r CreateDataStream) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "indices.create_data_stream")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -164,6 +214,9 @@ func (r CreateDataStream) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -173,15 +226,35 @@ func (r CreateDataStream) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r CreateDataStream) IsSuccess(ctx context.Context) (bool, error) {
+func (r CreateDataStream) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "indices.create_data_stream")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -197,6 +270,14 @@ func (r CreateDataStream) IsSuccess(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the CreateDataStream query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -207,11 +288,18 @@ func (r *CreateDataStream) Header(key, value string) *CreateDataStream {
 	return r
 }
 
-// Name The name of the data stream
+// Name Name of the data stream, which must meet the following criteria:
+// Lowercase only;
+// Cannot include `\`, `/`, `*`, `?`, `"`, `<`, `>`, `|`, `,`, `#`, `:`, or a
+// space character;
+// Cannot start with `-`, `_`, `+`, or `.ds-`;
+// Cannot be `.` or `..`;
+// Cannot be longer than 255 bytes. Multi-byte characters count towards this
+// limit faster.
 // API Name: name
-func (r *CreateDataStream) Name(v string) *CreateDataStream {
+func (r *CreateDataStream) _name(name string) *CreateDataStream {
 	r.paramSet |= nameMask
-	r.name = v
+	r.name = name
 
 	return r
 }

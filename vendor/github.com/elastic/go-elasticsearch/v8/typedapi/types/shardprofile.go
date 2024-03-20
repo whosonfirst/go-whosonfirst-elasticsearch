@@ -16,18 +16,73 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
+import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"io"
+	"strconv"
+)
+
 // ShardProfile type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_global/search/_types/profile.ts#L132-L137
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_global/search/_types/profile.ts#L132-L137
 type ShardProfile struct {
 	Aggregations []AggregationProfile `json:"aggregations"`
 	Fetch        *FetchProfile        `json:"fetch,omitempty"`
 	Id           string               `json:"id"`
 	Searches     []SearchProfile      `json:"searches"`
+}
+
+func (s *ShardProfile) UnmarshalJSON(data []byte) error {
+
+	dec := json.NewDecoder(bytes.NewReader(data))
+
+	for {
+		t, err := dec.Token()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return err
+		}
+
+		switch t {
+
+		case "aggregations":
+			if err := dec.Decode(&s.Aggregations); err != nil {
+				return err
+			}
+
+		case "fetch":
+			if err := dec.Decode(&s.Fetch); err != nil {
+				return err
+			}
+
+		case "id":
+			var tmp json.RawMessage
+			if err := dec.Decode(&tmp); err != nil {
+				return err
+			}
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
+			s.Id = o
+
+		case "searches":
+			if err := dec.Decode(&s.Searches); err != nil {
+				return err
+			}
+
+		}
+	}
+	return nil
 }
 
 // NewShardProfile returns a ShardProfile.

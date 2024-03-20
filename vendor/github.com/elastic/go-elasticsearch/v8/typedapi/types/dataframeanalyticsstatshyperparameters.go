@@ -16,29 +16,32 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // DataframeAnalyticsStatsHyperparameters type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ml/_types/DataframeAnalytics.ts#L380-L387
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ml/_types/DataframeAnalytics.ts#L383-L402
 type DataframeAnalyticsStatsHyperparameters struct {
+	// Hyperparameters An object containing the parameters of the classification analysis job.
 	Hyperparameters Hyperparameters `json:"hyperparameters"`
 	// Iteration The number of iterations on the analysis.
-	Iteration      int            `json:"iteration"`
-	Timestamp      int64          `json:"timestamp"`
-	TimingStats    TimingStats    `json:"timing_stats"`
+	Iteration int `json:"iteration"`
+	// Timestamp The timestamp when the statistics were reported in milliseconds since the
+	// epoch.
+	Timestamp int64 `json:"timestamp"`
+	// TimingStats An object containing time statistics about the data frame analytics job.
+	TimingStats TimingStats `json:"timing_stats"`
+	// ValidationLoss An object containing information about validation loss.
 	ValidationLoss ValidationLoss `json:"validation_loss"`
 }
 

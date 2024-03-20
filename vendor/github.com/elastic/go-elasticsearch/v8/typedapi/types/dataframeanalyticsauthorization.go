@@ -16,13 +16,21 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
+import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"io"
+	"strconv"
+)
+
 // DataframeAnalyticsAuthorization type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ml/_types/Authorization.ts#L45-L57
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ml/_types/Authorization.ts#L45-L57
 type DataframeAnalyticsAuthorization struct {
 	// ApiKey If an API key was used for the most recent update to the job, its name and
 	// identifier are listed in the response.
@@ -33,6 +41,48 @@ type DataframeAnalyticsAuthorization struct {
 	// ServiceAccount If a service account was used for the most recent update to the job, the
 	// account name is listed in the response.
 	ServiceAccount *string `json:"service_account,omitempty"`
+}
+
+func (s *DataframeAnalyticsAuthorization) UnmarshalJSON(data []byte) error {
+
+	dec := json.NewDecoder(bytes.NewReader(data))
+
+	for {
+		t, err := dec.Token()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return err
+		}
+
+		switch t {
+
+		case "api_key":
+			if err := dec.Decode(&s.ApiKey); err != nil {
+				return err
+			}
+
+		case "roles":
+			if err := dec.Decode(&s.Roles); err != nil {
+				return err
+			}
+
+		case "service_account":
+			var tmp json.RawMessage
+			if err := dec.Decode(&tmp); err != nil {
+				return err
+			}
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
+			s.ServiceAccount = &o
+
+		}
+	}
+	return nil
 }
 
 // NewDataframeAnalyticsAuthorization returns a DataframeAnalyticsAuthorization.

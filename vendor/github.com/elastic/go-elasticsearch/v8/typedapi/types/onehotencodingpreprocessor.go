@@ -16,16 +16,64 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
+import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"io"
+	"strconv"
+)
+
 // OneHotEncodingPreprocessor type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ml/put_trained_model/types.ts#L44-L47
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ml/put_trained_model/types.ts#L44-L47
 type OneHotEncodingPreprocessor struct {
 	Field  string            `json:"field"`
 	HotMap map[string]string `json:"hot_map"`
+}
+
+func (s *OneHotEncodingPreprocessor) UnmarshalJSON(data []byte) error {
+
+	dec := json.NewDecoder(bytes.NewReader(data))
+
+	for {
+		t, err := dec.Token()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return err
+		}
+
+		switch t {
+
+		case "field":
+			var tmp json.RawMessage
+			if err := dec.Decode(&tmp); err != nil {
+				return err
+			}
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
+			s.Field = o
+
+		case "hot_map":
+			if s.HotMap == nil {
+				s.HotMap = make(map[string]string, 0)
+			}
+			if err := dec.Decode(&s.HotMap); err != nil {
+				return err
+			}
+
+		}
+	}
+	return nil
 }
 
 // NewOneHotEncodingPreprocessor returns a OneHotEncodingPreprocessor.

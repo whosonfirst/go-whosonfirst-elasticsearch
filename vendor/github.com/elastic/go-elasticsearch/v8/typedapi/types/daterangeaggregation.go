@@ -16,32 +16,38 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // DateRangeAggregation type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/aggregations/bucket.ts#L131-L138
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/aggregations/bucket.ts#L268-L294
 type DateRangeAggregation struct {
-	Field    *string               `json:"field,omitempty"`
-	Format   *string               `json:"format,omitempty"`
-	Keyed    *bool                 `json:"keyed,omitempty"`
-	Meta     Metadata              `json:"meta,omitempty"`
-	Missing  Missing               `json:"missing,omitempty"`
-	Name     *string               `json:"name,omitempty"`
-	Ranges   []DateRangeExpression `json:"ranges,omitempty"`
-	TimeZone *string               `json:"time_zone,omitempty"`
+	// Field The date field whose values are use to build ranges.
+	Field *string `json:"field,omitempty"`
+	// Format The date format used to format `from` and `to` in the response.
+	Format *string `json:"format,omitempty"`
+	// Keyed Set to `true` to associate a unique string key with each bucket and returns
+	// the ranges as a hash rather than an array.
+	Keyed *bool    `json:"keyed,omitempty"`
+	Meta  Metadata `json:"meta,omitempty"`
+	// Missing The value to apply to documents that do not have a value.
+	// By default, documents without a value are ignored.
+	Missing Missing `json:"missing,omitempty"`
+	Name    *string `json:"name,omitempty"`
+	// Ranges Array of date ranges.
+	Ranges []DateRangeExpression `json:"ranges,omitempty"`
+	// TimeZone Time zone used to convert dates from another time zone to UTC.
+	TimeZone *string `json:"time_zone,omitempty"`
 }
 
 func (s *DateRangeAggregation) UnmarshalJSON(data []byte) error {
@@ -69,7 +75,11 @@ func (s *DateRangeAggregation) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Format = &o
 
 		case "keyed":
@@ -101,7 +111,11 @@ func (s *DateRangeAggregation) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Name = &o
 
 		case "ranges":

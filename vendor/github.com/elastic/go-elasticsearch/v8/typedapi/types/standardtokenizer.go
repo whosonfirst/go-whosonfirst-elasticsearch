@@ -16,23 +16,21 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // StandardTokenizer type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/tokenizers.ts#L104-L107
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/tokenizers.ts#L105-L108
 type StandardTokenizer struct {
 	MaxTokenLength *int    `json:"max_token_length,omitempty"`
 	Type           string  `json:"type,omitempty"`
@@ -85,11 +83,23 @@ func (s *StandardTokenizer) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s StandardTokenizer) MarshalJSON() ([]byte, error) {
+	type innerStandardTokenizer StandardTokenizer
+	tmp := innerStandardTokenizer{
+		MaxTokenLength: s.MaxTokenLength,
+		Type:           s.Type,
+		Version:        s.Version,
+	}
+
+	tmp.Type = "standard"
+
+	return json.Marshal(tmp)
+}
+
 // NewStandardTokenizer returns a StandardTokenizer.
 func NewStandardTokenizer() *StandardTokenizer {
 	r := &StandardTokenizer{}
-
-	r.Type = "standard"
 
 	return r
 }

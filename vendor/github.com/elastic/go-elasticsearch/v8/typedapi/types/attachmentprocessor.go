@@ -16,36 +16,55 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // AttachmentProcessor type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ingest/_types/Processors.ts#L96-L104
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ingest/_types/Processors.ts#L297-L333
 type AttachmentProcessor struct {
-	Description       *string              `json:"description,omitempty"`
-	Field             string               `json:"field"`
-	If                *string              `json:"if,omitempty"`
-	IgnoreFailure     *bool                `json:"ignore_failure,omitempty"`
-	IgnoreMissing     *bool                `json:"ignore_missing,omitempty"`
-	IndexedChars      *int64               `json:"indexed_chars,omitempty"`
-	IndexedCharsField *string              `json:"indexed_chars_field,omitempty"`
-	OnFailure         []ProcessorContainer `json:"on_failure,omitempty"`
-	Properties        []string             `json:"properties,omitempty"`
-	ResourceName      *string              `json:"resource_name,omitempty"`
-	Tag               *string              `json:"tag,omitempty"`
-	TargetField       *string              `json:"target_field,omitempty"`
+	// Description Description of the processor.
+	// Useful for describing the purpose of the processor or its configuration.
+	Description *string `json:"description,omitempty"`
+	// Field The field to get the base64 encoded field from.
+	Field string `json:"field"`
+	// If Conditionally execute the processor.
+	If *string `json:"if,omitempty"`
+	// IgnoreFailure Ignore failures for the processor.
+	IgnoreFailure *bool `json:"ignore_failure,omitempty"`
+	// IgnoreMissing If `true` and field does not exist, the processor quietly exits without
+	// modifying the document.
+	IgnoreMissing *bool `json:"ignore_missing,omitempty"`
+	// IndexedChars The number of chars being used for extraction to prevent huge fields.
+	// Use `-1` for no limit.
+	IndexedChars *int64 `json:"indexed_chars,omitempty"`
+	// IndexedCharsField Field name from which you can overwrite the number of chars being used for
+	// extraction.
+	IndexedCharsField *string `json:"indexed_chars_field,omitempty"`
+	// OnFailure Handle failures for the processor.
+	OnFailure []ProcessorContainer `json:"on_failure,omitempty"`
+	// Properties Array of properties to select to be stored.
+	// Can be `content`, `title`, `name`, `author`, `keywords`, `date`,
+	// `content_type`, `content_length`, `language`.
+	Properties []string `json:"properties,omitempty"`
+	// ResourceName Field containing the name of the resource to decode.
+	// If specified, the processor passes this resource name to the underlying Tika
+	// library to enable Resource Name Based Detection.
+	ResourceName *string `json:"resource_name,omitempty"`
+	// Tag Identifier for the processor.
+	// Useful for debugging and metrics.
+	Tag *string `json:"tag,omitempty"`
+	// TargetField The field that will hold the attachment information.
+	TargetField *string `json:"target_field,omitempty"`
 }
 
 func (s *AttachmentProcessor) UnmarshalJSON(data []byte) error {
@@ -68,7 +87,11 @@ func (s *AttachmentProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Description = &o
 
 		case "field":
@@ -81,7 +104,11 @@ func (s *AttachmentProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.If = &o
 
 		case "ignore_failure":
@@ -147,7 +174,11 @@ func (s *AttachmentProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.ResourceName = &o
 
 		case "tag":
@@ -155,7 +186,11 @@ func (s *AttachmentProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Tag = &o
 
 		case "target_field":

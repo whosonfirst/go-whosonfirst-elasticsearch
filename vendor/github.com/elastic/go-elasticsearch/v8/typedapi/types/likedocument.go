@@ -16,27 +16,29 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/versiontype"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/versiontype"
 )
 
 // LikeDocument type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/query_dsl/specialized.ts#L91-L101
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/query_dsl/specialized.ts#L165-L184
 type LikeDocument struct {
-	Doc              json.RawMessage          `json:"doc,omitempty"`
-	Fields           []string                 `json:"fields,omitempty"`
-	Id_              *string                  `json:"_id,omitempty"`
+	// Doc A document not present in the index.
+	Doc    json.RawMessage `json:"doc,omitempty"`
+	Fields []string        `json:"fields,omitempty"`
+	// Id_ ID of a document.
+	Id_ *string `json:"_id,omitempty"`
+	// Index_ Index of a document.
 	Index_           *string                  `json:"_index,omitempty"`
 	PerFieldAnalyzer map[string]string        `json:"per_field_analyzer,omitempty"`
 	Routing          *string                  `json:"routing,omitempty"`

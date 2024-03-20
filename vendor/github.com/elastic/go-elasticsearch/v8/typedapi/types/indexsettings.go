@@ -16,27 +16,24 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/indexcheckonstartup"
-
-	"fmt"
-
 	"bytes"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
-
 	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/indexcheckonstartup"
 )
 
 // IndexSettings type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/indices/_types/IndexSettings.ts#L69-L168
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/indices/_types/IndexSettings.ts#L69-L167
 type IndexSettings struct {
 	Analysis *IndexSettingsAnalysis `json:"analysis,omitempty"`
 	// Analyze Settings to define analyzers, tokenizers, token filters and character
@@ -58,7 +55,7 @@ type IndexSettings struct {
 	IndexSettings      map[string]json.RawMessage               `json:"-"`
 	// IndexingPressure Configure indexing back pressure limits.
 	IndexingPressure              *IndicesIndexingPressure `json:"indexing_pressure,omitempty"`
-	IndexingSlowlog               *SlowlogSettings         `json:"indexing.slowlog,omitempty"`
+	IndexingSlowlog               *IndexingSlowlogSettings `json:"indexing.slowlog,omitempty"`
 	Lifecycle                     *IndexSettingsLifecycle  `json:"lifecycle,omitempty"`
 	LoadFixedBitsetFiltersEagerly *bool                    `json:"load_fixed_bitset_filters_eagerly,omitempty"`
 	// Mapping Enable or disable dynamic mapping for an index.
@@ -89,7 +86,6 @@ type IndexSettings struct {
 	RoutingPath             []string              `json:"routing_path,omitempty"`
 	Search                  *SettingsSearch       `json:"search,omitempty"`
 	Settings                *IndexSettings        `json:"settings,omitempty"`
-	Shards                  *int                  `json:"shards,omitempty"`
 	// Similarity Configure custom similarity settings to customize how search results are
 	// scored.
 	Similarity  *SettingsSimilarity `json:"similarity,omitempty"`
@@ -136,7 +132,11 @@ func (s *IndexSettings) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.AutoExpandReplicas = &o
 
 		case "blocks":
@@ -154,7 +154,11 @@ func (s *IndexSettings) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Codec = &o
 
 		case "creation_date":
@@ -182,7 +186,11 @@ func (s *IndexSettings) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Format = o
 
 		case "gc_deletes":
@@ -195,7 +203,11 @@ func (s *IndexSettings) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Hidden = o
 
 		case "highlight":
@@ -428,7 +440,11 @@ func (s *IndexSettings) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Mode = &o
 
 		case "number_of_replicas":
@@ -436,7 +452,11 @@ func (s *IndexSettings) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.NumberOfReplicas = o
 
 		case "number_of_routing_shards":
@@ -460,7 +480,11 @@ func (s *IndexSettings) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.NumberOfShards = o
 
 		case "priority":
@@ -468,7 +492,11 @@ func (s *IndexSettings) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Priority = o
 
 		case "provided_name":
@@ -527,22 +555,6 @@ func (s *IndexSettings) UnmarshalJSON(data []byte) error {
 				return err
 			}
 
-		case "shards":
-
-			var tmp interface{}
-			dec.Decode(&tmp)
-			switch v := tmp.(type) {
-			case string:
-				value, err := strconv.Atoi(v)
-				if err != nil {
-					return err
-				}
-				s.Shards = &value
-			case float64:
-				f := int(v)
-				s.Shards = &f
-			}
-
 		case "similarity":
 			if err := dec.Decode(&s.Similarity); err != nil {
 				return err
@@ -599,7 +611,11 @@ func (s *IndexSettings) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.VerifiedBeforeClose = o
 
 		case "version":

@@ -16,21 +16,20 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
-	"encoding/json"
 )
 
 // UppercaseTokenFilter type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/token_filters.ts#L340-L342
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/token_filters.ts#L340-L342
 type UppercaseTokenFilter struct {
 	Type    string  `json:"type,omitempty"`
 	Version *string `json:"version,omitempty"`
@@ -66,11 +65,22 @@ func (s *UppercaseTokenFilter) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s UppercaseTokenFilter) MarshalJSON() ([]byte, error) {
+	type innerUppercaseTokenFilter UppercaseTokenFilter
+	tmp := innerUppercaseTokenFilter{
+		Type:    s.Type,
+		Version: s.Version,
+	}
+
+	tmp.Type = "uppercase"
+
+	return json.Marshal(tmp)
+}
+
 // NewUppercaseTokenFilter returns a UppercaseTokenFilter.
 func NewUppercaseTokenFilter() *UppercaseTokenFilter {
 	r := &UppercaseTokenFilter{}
-
-	r.Type = "uppercase"
 
 	return r
 }

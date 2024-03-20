@@ -16,28 +16,39 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
-	"encoding/json"
+	"strconv"
 )
 
 // LogstashPipeline type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/logstash/_types/Pipeline.ts#L37-L44
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/logstash/_types/Pipeline.ts#L60-L92
 type LogstashPipeline struct {
-	Description      string           `json:"description"`
-	LastModified     DateTime         `json:"last_modified"`
-	Pipeline         string           `json:"pipeline"`
+	// Description Description of the pipeline.
+	// This description is not used by Elasticsearch or Logstash.
+	Description string `json:"description"`
+	// LastModified Date the pipeline was last updated.
+	// Must be in the `yyyy-MM-dd'T'HH:mm:ss.SSSZZ` strict_date_time format.
+	LastModified DateTime `json:"last_modified"`
+	// Pipeline Configuration for the pipeline.
+	Pipeline string `json:"pipeline"`
+	// PipelineMetadata Optional metadata about the pipeline.
+	// May have any contents.
+	// This metadata is not generated or used by Elasticsearch or Logstash.
 	PipelineMetadata PipelineMetadata `json:"pipeline_metadata"`
+	// PipelineSettings Settings for the pipeline.
+	// Supports only flat keys in dot notation.
 	PipelineSettings PipelineSettings `json:"pipeline_settings"`
-	Username         string           `json:"username"`
+	// Username User who last updated the pipeline.
+	Username string `json:"username"`
 }
 
 func (s *LogstashPipeline) UnmarshalJSON(data []byte) error {
@@ -60,7 +71,11 @@ func (s *LogstashPipeline) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Description = o
 
 		case "last_modified":
@@ -73,7 +88,11 @@ func (s *LogstashPipeline) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Pipeline = o
 
 		case "pipeline_metadata":
@@ -91,7 +110,11 @@ func (s *LogstashPipeline) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Username = o
 
 		}

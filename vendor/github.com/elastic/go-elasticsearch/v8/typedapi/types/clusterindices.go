@@ -16,23 +16,21 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // ClusterIndices type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/cluster/stats/types.ts#L63-L94
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/cluster/stats/types.ts#L74-L107
 type ClusterIndices struct {
 	// Analysis Contains statistics about analyzers and analyzer components used in selected
 	// nodes.
@@ -54,7 +52,9 @@ type ClusterIndices struct {
 	// Shards Contains statistics about indices with shards assigned to selected nodes.
 	Shards ClusterIndicesShards `json:"shards"`
 	// Store Contains statistics about the size of shards assigned to selected nodes.
-	Store    StoreStats        `json:"store"`
+	Store StoreStats `json:"store"`
+	// Versions Contains statistics about analyzers and analyzer components used in selected
+	// nodes.
 	Versions []IndicesVersions `json:"versions,omitempty"`
 }
 

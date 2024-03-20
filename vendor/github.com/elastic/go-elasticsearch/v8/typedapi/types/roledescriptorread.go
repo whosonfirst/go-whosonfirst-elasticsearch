@@ -16,27 +16,36 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
-	"encoding/json"
 )
 
 // RoleDescriptorRead type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/security/_types/RoleDescriptor.ts#L38-L47
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/security/_types/RoleDescriptor.ts#L57-L85
 type RoleDescriptorRead struct {
-	Applications      []ApplicationPrivileges  `json:"applications,omitempty"`
-	Cluster           []string                 `json:"cluster"`
-	Global            []GlobalPrivilege        `json:"global,omitempty"`
-	Indices           []IndicesPrivileges      `json:"indices"`
-	Metadata          Metadata                 `json:"metadata,omitempty"`
+	// Applications A list of application privilege entries
+	Applications []ApplicationPrivileges `json:"applications,omitempty"`
+	// Cluster A list of cluster privileges. These privileges define the cluster level
+	// actions that API keys are able to execute.
+	Cluster []string `json:"cluster"`
+	// Global An object defining global privileges. A global privilege is a form of cluster
+	// privilege that is request-aware. Support for global privileges is currently
+	// limited to the management of application privileges.
+	Global []GlobalPrivilege `json:"global,omitempty"`
+	// Indices A list of indices permissions entries.
+	Indices []IndicesPrivileges `json:"indices"`
+	// Metadata Optional meta-data. Within the metadata object, keys that begin with `_` are
+	// reserved for system usage.
+	Metadata Metadata `json:"metadata,omitempty"`
+	// RunAs A list of users that the API keys can impersonate.
 	RunAs             []string                 `json:"run_as,omitempty"`
 	TransientMetadata *TransientMetadataConfig `json:"transient_metadata,omitempty"`
 }

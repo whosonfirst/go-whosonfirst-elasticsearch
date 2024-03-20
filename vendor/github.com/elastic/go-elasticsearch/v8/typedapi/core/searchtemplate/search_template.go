@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Allows to use the Mustache language to pre-render a search definition.
 package searchtemplate
@@ -35,7 +35,7 @@ import (
 
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
-
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/expandwildcard"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/searchtype"
 )
 
@@ -53,14 +53,19 @@ type SearchTemplate struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
-
-	req *Request
 	raw io.Reader
+
+	req      *Request
+	deferred []func(request *Request) error
+	buf      *gobytes.Buffer
 
 	paramSet int
 
 	index string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewSearchTemplate type alias for index.
@@ -84,7 +89,16 @@ func New(tp elastictransport.Interface) *SearchTemplate {
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+
+		buf: gobytes.NewBuffer(nil),
+
+		req: NewRequest(),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -114,9 +128,17 @@ func (r *SearchTemplate) HttpRequest(ctx context.Context) (*http.Request, error)
 
 	var err error
 
-	if r.raw != nil {
-		r.buf.ReadFrom(r.raw)
-	} else if r.req != nil {
+	if len(r.deferred) > 0 {
+		for _, f := range r.deferred {
+			deferredErr := f(r.req)
+			if deferredErr != nil {
+				return nil, deferredErr
+			}
+		}
+	}
+
+	if r.raw == nil && r.req != nil {
+
 		data, err := json.Marshal(r.req)
 
 		if err != nil {
@@ -124,6 +146,11 @@ func (r *SearchTemplate) HttpRequest(ctx context.Context) (*http.Request, error)
 		}
 
 		r.buf.Write(data)
+
+	}
+
+	if r.buf.Len() > 0 {
+		r.raw = r.buf
 	}
 
 	r.path.Scheme = "http"
@@ -139,6 +166,9 @@ func (r *SearchTemplate) HttpRequest(ctx context.Context) (*http.Request, error)
 	case r.paramSet == indexMask:
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "index", r.index)
+		}
 		path.WriteString(r.index)
 		path.WriteString("/")
 		path.WriteString("_search")
@@ -156,15 +186,15 @@ func (r *SearchTemplate) HttpRequest(ctx context.Context) (*http.Request, error)
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
 
 	if req.Header.Get("Content-Type") == "" {
-		if r.buf.Len() > 0 {
+		if r.raw != nil {
 			req.Header.Set("Content-Type", "application/vnd.elasticsearch+json;compatible-with=8")
 		}
 	}
@@ -181,22 +211,58 @@ func (r *SearchTemplate) HttpRequest(ctx context.Context) (*http.Request, error)
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r SearchTemplate) Perform(ctx context.Context) (*http.Response, error) {
+func (r SearchTemplate) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "search_template")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "search_template")
+		if reader := instrument.RecordRequestBody(ctx, "search_template", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "search_template")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the SearchTemplate query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the SearchTemplate query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a searchtemplate.Response
-func (r SearchTemplate) Do(ctx context.Context) (*Response, error) {
+func (r SearchTemplate) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "search_template")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
@@ -204,6 +270,9 @@ func (r SearchTemplate) Do(ctx context.Context) (*Response, error) {
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -211,6 +280,9 @@ func (r SearchTemplate) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -220,9 +292,19 @@ func (r SearchTemplate) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
@@ -236,88 +318,81 @@ func (r *SearchTemplate) Header(key, value string) *SearchTemplate {
 // Index Comma-separated list of data streams, indices,
 // and aliases to search. Supports wildcards (*).
 // API Name: index
-func (r *SearchTemplate) Index(v string) *SearchTemplate {
+func (r *SearchTemplate) Index(index string) *SearchTemplate {
 	r.paramSet |= indexMask
-	r.index = v
+	r.index = index
 
 	return r
 }
 
-// AllowNoIndices Whether to ignore if a wildcard indices expression resolves into no concrete
-// indices. (This includes `_all` string or when no indices have been specified)
+// AllowNoIndices If `false`, the request returns an error if any wildcard expression, index
+// alias, or `_all` value targets only missing or closed indices.
+// This behavior applies even if the request targets other open indices.
+// For example, a request targeting `foo*,bar*` returns an error if an index
+// starts with `foo` but no index starts with `bar`.
 // API name: allow_no_indices
-func (r *SearchTemplate) AllowNoIndices(b bool) *SearchTemplate {
-	r.values.Set("allow_no_indices", strconv.FormatBool(b))
+func (r *SearchTemplate) AllowNoIndices(allownoindices bool) *SearchTemplate {
+	r.values.Set("allow_no_indices", strconv.FormatBool(allownoindices))
 
 	return r
 }
 
-// CcsMinimizeRoundtrips Indicates whether network round-trips should be minimized as part of
-// cross-cluster search requests execution
+// CcsMinimizeRoundtrips If `true`, network round-trips are minimized for cross-cluster search
+// requests.
 // API name: ccs_minimize_roundtrips
-func (r *SearchTemplate) CcsMinimizeRoundtrips(b bool) *SearchTemplate {
-	r.values.Set("ccs_minimize_roundtrips", strconv.FormatBool(b))
+func (r *SearchTemplate) CcsMinimizeRoundtrips(ccsminimizeroundtrips bool) *SearchTemplate {
+	r.values.Set("ccs_minimize_roundtrips", strconv.FormatBool(ccsminimizeroundtrips))
 
 	return r
 }
 
-// ExpandWildcards Whether to expand wildcard expression to concrete indices that are open,
-// closed or both.
+// ExpandWildcards Type of index that wildcard patterns can match.
+// If the request can target data streams, this argument determines whether
+// wildcard expressions match hidden data streams.
+// Supports comma-separated values, such as `open,hidden`.
+// Valid values are: `all`, `open`, `closed`, `hidden`, `none`.
 // API name: expand_wildcards
-func (r *SearchTemplate) ExpandWildcards(v string) *SearchTemplate {
-	r.values.Set("expand_wildcards", v)
+func (r *SearchTemplate) ExpandWildcards(expandwildcards ...expandwildcard.ExpandWildcard) *SearchTemplate {
+	tmp := []string{}
+	for _, item := range expandwildcards {
+		tmp = append(tmp, item.String())
+	}
+	r.values.Set("expand_wildcards", strings.Join(tmp, ","))
 
 	return r
 }
 
-// Explain Specify whether to return detailed information about score computation as
-// part of a hit
-// API name: explain
-func (r *SearchTemplate) Explain(b bool) *SearchTemplate {
-	r.values.Set("explain", strconv.FormatBool(b))
-
-	return r
-}
-
-// IgnoreThrottled Whether specified concrete, expanded or aliased indices should be ignored
-// when throttled
+// IgnoreThrottled If `true`, specified concrete, expanded, or aliased indices are not included
+// in the response when throttled.
 // API name: ignore_throttled
-func (r *SearchTemplate) IgnoreThrottled(b bool) *SearchTemplate {
-	r.values.Set("ignore_throttled", strconv.FormatBool(b))
+func (r *SearchTemplate) IgnoreThrottled(ignorethrottled bool) *SearchTemplate {
+	r.values.Set("ignore_throttled", strconv.FormatBool(ignorethrottled))
 
 	return r
 }
 
-// IgnoreUnavailable Whether specified concrete indices should be ignored when unavailable
-// (missing or closed)
+// IgnoreUnavailable If `false`, the request returns an error if it targets a missing or closed
+// index.
 // API name: ignore_unavailable
-func (r *SearchTemplate) IgnoreUnavailable(b bool) *SearchTemplate {
-	r.values.Set("ignore_unavailable", strconv.FormatBool(b))
+func (r *SearchTemplate) IgnoreUnavailable(ignoreunavailable bool) *SearchTemplate {
+	r.values.Set("ignore_unavailable", strconv.FormatBool(ignoreunavailable))
 
 	return r
 }
 
-// Preference Specify the node or shard the operation should be performed on (default:
-// random)
+// Preference Specifies the node or shard the operation should be performed on.
+// Random by default.
 // API name: preference
-func (r *SearchTemplate) Preference(v string) *SearchTemplate {
-	r.values.Set("preference", v)
-
-	return r
-}
-
-// Profile Specify whether to profile the query execution
-// API name: profile
-func (r *SearchTemplate) Profile(b bool) *SearchTemplate {
-	r.values.Set("profile", strconv.FormatBool(b))
+func (r *SearchTemplate) Preference(preference string) *SearchTemplate {
+	r.values.Set("preference", preference)
 
 	return r
 }
 
 // Routing Custom value used to route operations to a specific shard.
 // API name: routing
-func (r *SearchTemplate) Routing(v string) *SearchTemplate {
-	r.values.Set("routing", v)
+func (r *SearchTemplate) Routing(routing string) *SearchTemplate {
+	r.values.Set("routing", routing)
 
 	return r
 }
@@ -325,33 +400,81 @@ func (r *SearchTemplate) Routing(v string) *SearchTemplate {
 // Scroll Specifies how long a consistent view of the index
 // should be maintained for scrolled search.
 // API name: scroll
-func (r *SearchTemplate) Scroll(v string) *SearchTemplate {
-	r.values.Set("scroll", v)
+func (r *SearchTemplate) Scroll(duration string) *SearchTemplate {
+	r.values.Set("scroll", duration)
 
 	return r
 }
 
 // SearchType The type of the search operation.
 // API name: search_type
-func (r *SearchTemplate) SearchType(enum searchtype.SearchType) *SearchTemplate {
-	r.values.Set("search_type", enum.String())
+func (r *SearchTemplate) SearchType(searchtype searchtype.SearchType) *SearchTemplate {
+	r.values.Set("search_type", searchtype.String())
 
 	return r
 }
 
 // RestTotalHitsAsInt If true, hits.total are rendered as an integer in the response.
 // API name: rest_total_hits_as_int
-func (r *SearchTemplate) RestTotalHitsAsInt(b bool) *SearchTemplate {
-	r.values.Set("rest_total_hits_as_int", strconv.FormatBool(b))
+func (r *SearchTemplate) RestTotalHitsAsInt(resttotalhitsasint bool) *SearchTemplate {
+	r.values.Set("rest_total_hits_as_int", strconv.FormatBool(resttotalhitsasint))
 
 	return r
 }
 
-// TypedKeys Specify whether aggregation and suggester names should be prefixed by their
-// respective types in the response
+// TypedKeys If `true`, the response prefixes aggregation and suggester names with their
+// respective types.
 // API name: typed_keys
-func (r *SearchTemplate) TypedKeys(b bool) *SearchTemplate {
-	r.values.Set("typed_keys", strconv.FormatBool(b))
+func (r *SearchTemplate) TypedKeys(typedkeys bool) *SearchTemplate {
+	r.values.Set("typed_keys", strconv.FormatBool(typedkeys))
+
+	return r
+}
+
+// Explain If `true`, returns detailed information about score calculation as part of
+// each hit.
+// API name: explain
+func (r *SearchTemplate) Explain(explain bool) *SearchTemplate {
+	r.req.Explain = &explain
+
+	return r
+}
+
+// Id ID of the search template to use. If no source is specified,
+// this parameter is required.
+// API name: id
+func (r *SearchTemplate) Id(id string) *SearchTemplate {
+	r.req.Id = &id
+
+	return r
+}
+
+// Params Key-value pairs used to replace Mustache variables in the template.
+// The key is the variable name.
+// The value is the variable value.
+// API name: params
+func (r *SearchTemplate) Params(params map[string]json.RawMessage) *SearchTemplate {
+
+	r.req.Params = params
+
+	return r
+}
+
+// Profile If `true`, the query execution is profiled.
+// API name: profile
+func (r *SearchTemplate) Profile(profile bool) *SearchTemplate {
+	r.req.Profile = &profile
+
+	return r
+}
+
+// Source An inline search template. Supports the same parameters as the search API's
+// request body. Also supports Mustache variables. If no id is specified, this
+// parameter is required.
+// API name: source
+func (r *SearchTemplate) Source(source string) *SearchTemplate {
+
+	r.req.Source = &source
 
 	return r
 }

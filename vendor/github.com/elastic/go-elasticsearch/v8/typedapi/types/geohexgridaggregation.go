@@ -16,29 +16,26 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // GeohexGridAggregation type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/aggregations/bucket.ts#L200-L226
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/aggregations/bucket.ts#L460-L485
 type GeohexGridAggregation struct {
 	// Bounds Bounding box used to filter the geo-points in each bucket.
 	Bounds GeoBounds `json:"bounds,omitempty"`
-	// Field Field containing indexed geo-point values. Must be explicitly
-	// mapped as a `geo_point` field. If the field contains an array
-	// `geohex_grid` aggregates all array values.
+	// Field Field containing indexed `geo_point` or `geo_shape` values.
+	// If the field contains an array, `geohex_grid` aggregates all array values.
 	Field string   `json:"field"`
 	Meta  Metadata `json:"meta,omitempty"`
 	Name  *string  `json:"name,omitempty"`
@@ -86,7 +83,11 @@ func (s *GeohexGridAggregation) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Name = &o
 
 		case "precision":

@@ -16,13 +16,12 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Upgrades a given job snapshot to the current major version.
 package upgradejobsnapshot
 
 import (
-	gobytes "bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -54,12 +53,16 @@ type UpgradeJobSnapshot struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	jobid      string
 	snapshotid string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewUpgradeJobSnapshot type alias for index.
@@ -71,9 +74,9 @@ func NewUpgradeJobSnapshotFunc(tp elastictransport.Interface) NewUpgradeJobSnaps
 	return func(jobid, snapshotid string) *UpgradeJobSnapshot {
 		n := New(tp)
 
-		n.JobId(jobid)
+		n._jobid(jobid)
 
-		n.SnapshotId(snapshotid)
+		n._snapshotid(snapshotid)
 
 		return n
 	}
@@ -87,7 +90,12 @@ func New(tp elastictransport.Interface) *UpgradeJobSnapshot {
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -112,11 +120,17 @@ func (r *UpgradeJobSnapshot) HttpRequest(ctx context.Context) (*http.Request, er
 		path.WriteString("anomaly_detectors")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "jobid", r.jobid)
+		}
 		path.WriteString(r.jobid)
 		path.WriteString("/")
 		path.WriteString("model_snapshots")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "snapshotid", r.snapshotid)
+		}
 		path.WriteString(r.snapshotid)
 		path.WriteString("/")
 		path.WriteString("_upgrade")
@@ -132,9 +146,9 @@ func (r *UpgradeJobSnapshot) HttpRequest(ctx context.Context) (*http.Request, er
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
@@ -151,27 +165,66 @@ func (r *UpgradeJobSnapshot) HttpRequest(ctx context.Context) (*http.Request, er
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r UpgradeJobSnapshot) Perform(ctx context.Context) (*http.Response, error) {
+func (r UpgradeJobSnapshot) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "ml.upgrade_job_snapshot")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "ml.upgrade_job_snapshot")
+		if reader := instrument.RecordRequestBody(ctx, "ml.upgrade_job_snapshot", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "ml.upgrade_job_snapshot")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the UpgradeJobSnapshot query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the UpgradeJobSnapshot query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a upgradejobsnapshot.Response
-func (r UpgradeJobSnapshot) Do(ctx context.Context) (*Response, error) {
+func (r UpgradeJobSnapshot) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "ml.upgrade_job_snapshot")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -179,6 +232,9 @@ func (r UpgradeJobSnapshot) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -188,15 +244,35 @@ func (r UpgradeJobSnapshot) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r UpgradeJobSnapshot) IsSuccess(ctx context.Context) (bool, error) {
+func (r UpgradeJobSnapshot) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "ml.upgrade_job_snapshot")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -212,6 +288,14 @@ func (r UpgradeJobSnapshot) IsSuccess(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the UpgradeJobSnapshot query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -224,18 +308,18 @@ func (r *UpgradeJobSnapshot) Header(key, value string) *UpgradeJobSnapshot {
 
 // JobId Identifier for the anomaly detection job.
 // API Name: jobid
-func (r *UpgradeJobSnapshot) JobId(v string) *UpgradeJobSnapshot {
+func (r *UpgradeJobSnapshot) _jobid(jobid string) *UpgradeJobSnapshot {
 	r.paramSet |= jobidMask
-	r.jobid = v
+	r.jobid = jobid
 
 	return r
 }
 
 // SnapshotId A numerical character string that uniquely identifies the model snapshot.
 // API Name: snapshotid
-func (r *UpgradeJobSnapshot) SnapshotId(v string) *UpgradeJobSnapshot {
+func (r *UpgradeJobSnapshot) _snapshotid(snapshotid string) *UpgradeJobSnapshot {
 	r.paramSet |= snapshotidMask
-	r.snapshotid = v
+	r.snapshotid = snapshotid
 
 	return r
 }
@@ -243,16 +327,16 @@ func (r *UpgradeJobSnapshot) SnapshotId(v string) *UpgradeJobSnapshot {
 // WaitForCompletion When true, the API won’t respond until the upgrade is complete.
 // Otherwise, it responds as soon as the upgrade task is assigned to a node.
 // API name: wait_for_completion
-func (r *UpgradeJobSnapshot) WaitForCompletion(b bool) *UpgradeJobSnapshot {
-	r.values.Set("wait_for_completion", strconv.FormatBool(b))
+func (r *UpgradeJobSnapshot) WaitForCompletion(waitforcompletion bool) *UpgradeJobSnapshot {
+	r.values.Set("wait_for_completion", strconv.FormatBool(waitforcompletion))
 
 	return r
 }
 
 // Timeout Controls the time to wait for the request to complete.
 // API name: timeout
-func (r *UpgradeJobSnapshot) Timeout(v string) *UpgradeJobSnapshot {
-	r.values.Set("timeout", v)
+func (r *UpgradeJobSnapshot) Timeout(duration string) *UpgradeJobSnapshot {
+	r.values.Set("timeout", duration)
 
 	return r
 }

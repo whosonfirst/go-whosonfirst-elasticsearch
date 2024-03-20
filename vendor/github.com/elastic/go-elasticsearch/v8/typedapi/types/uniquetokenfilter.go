@@ -16,23 +16,21 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // UniqueTokenFilter type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/token_filters.ts#L335-L338
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/token_filters.ts#L335-L338
 type UniqueTokenFilter struct {
 	OnlyOnSamePosition *bool   `json:"only_on_same_position,omitempty"`
 	Type               string  `json:"type,omitempty"`
@@ -83,11 +81,23 @@ func (s *UniqueTokenFilter) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s UniqueTokenFilter) MarshalJSON() ([]byte, error) {
+	type innerUniqueTokenFilter UniqueTokenFilter
+	tmp := innerUniqueTokenFilter{
+		OnlyOnSamePosition: s.OnlyOnSamePosition,
+		Type:               s.Type,
+		Version:            s.Version,
+	}
+
+	tmp.Type = "unique"
+
+	return json.Marshal(tmp)
+}
+
 // NewUniqueTokenFilter returns a UniqueTokenFilter.
 func NewUniqueTokenFilter() *UniqueTokenFilter {
 	r := &UniqueTokenFilter{}
-
-	r.Type = "unique"
 
 	return r
 }

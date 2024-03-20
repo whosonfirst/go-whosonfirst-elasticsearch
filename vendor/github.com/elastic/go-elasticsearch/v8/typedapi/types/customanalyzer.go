@@ -16,23 +16,21 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // CustomAnalyzer type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/analyzers.ts#L28-L35
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/analyzers.ts#L28-L35
 type CustomAnalyzer struct {
 	CharFilter           []string `json:"char_filter,omitempty"`
 	Filter               []string `json:"filter,omitempty"`
@@ -104,7 +102,11 @@ func (s *CustomAnalyzer) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Tokenizer = o
 
 		case "type":
@@ -117,11 +119,26 @@ func (s *CustomAnalyzer) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s CustomAnalyzer) MarshalJSON() ([]byte, error) {
+	type innerCustomAnalyzer CustomAnalyzer
+	tmp := innerCustomAnalyzer{
+		CharFilter:           s.CharFilter,
+		Filter:               s.Filter,
+		PositionIncrementGap: s.PositionIncrementGap,
+		PositionOffsetGap:    s.PositionOffsetGap,
+		Tokenizer:            s.Tokenizer,
+		Type:                 s.Type,
+	}
+
+	tmp.Type = "custom"
+
+	return json.Marshal(tmp)
+}
+
 // NewCustomAnalyzer returns a CustomAnalyzer.
 func NewCustomAnalyzer() *CustomAnalyzer {
 	r := &CustomAnalyzer{}
-
-	r.Type = "custom"
 
 	return r
 }

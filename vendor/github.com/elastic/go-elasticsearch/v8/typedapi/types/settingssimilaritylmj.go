@@ -16,23 +16,21 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // SettingsSimilarityLmj type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/indices/_types/IndexSettings.ts#L211-L214
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/indices/_types/IndexSettings.ts#L210-L213
 type SettingsSimilarityLmj struct {
 	Lambda Float64 `json:"lambda"`
 	Type   string  `json:"type,omitempty"`
@@ -79,11 +77,22 @@ func (s *SettingsSimilarityLmj) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s SettingsSimilarityLmj) MarshalJSON() ([]byte, error) {
+	type innerSettingsSimilarityLmj SettingsSimilarityLmj
+	tmp := innerSettingsSimilarityLmj{
+		Lambda: s.Lambda,
+		Type:   s.Type,
+	}
+
+	tmp.Type = "LMJelinekMercer"
+
+	return json.Marshal(tmp)
+}
+
 // NewSettingsSimilarityLmj returns a SettingsSimilarityLmj.
 func NewSettingsSimilarityLmj() *SettingsSimilarityLmj {
 	r := &SettingsSimilarityLmj{}
-
-	r.Type = "LMJelinekMercer"
 
 	return r
 }

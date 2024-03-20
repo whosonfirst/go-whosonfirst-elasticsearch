@@ -16,13 +16,12 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Returns an index template.
 package gettemplate
 
 import (
-	gobytes "bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -52,11 +51,15 @@ type GetTemplate struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	name string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewGetTemplate type alias for index.
@@ -74,13 +77,18 @@ func NewGetTemplateFunc(tp elastictransport.Interface) NewGetTemplate {
 
 // Returns an index template.
 //
-// https://www.elastic.co/guide/en/elasticsearch/reference/master/indices-templates.html
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-get-template-v1.html
 func New(tp elastictransport.Interface) *GetTemplate {
 	r := &GetTemplate{
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -108,6 +116,9 @@ func (r *GetTemplate) HttpRequest(ctx context.Context) (*http.Request, error) {
 		path.WriteString("_template")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "name", r.name)
+		}
 		path.WriteString(r.name)
 
 		method = http.MethodGet
@@ -121,9 +132,9 @@ func (r *GetTemplate) HttpRequest(ctx context.Context) (*http.Request, error) {
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
@@ -140,27 +151,66 @@ func (r *GetTemplate) HttpRequest(ctx context.Context) (*http.Request, error) {
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r GetTemplate) Perform(ctx context.Context) (*http.Response, error) {
+func (r GetTemplate) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "indices.get_template")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "indices.get_template")
+		if reader := instrument.RecordRequestBody(ctx, "indices.get_template", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "indices.get_template")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the GetTemplate query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the GetTemplate query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a gettemplate.Response
-func (r GetTemplate) Do(ctx context.Context) (Response, error) {
+func (r GetTemplate) Do(providedCtx context.Context) (Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "indices.get_template")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -168,6 +218,9 @@ func (r GetTemplate) Do(ctx context.Context) (Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(&response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -177,15 +230,35 @@ func (r GetTemplate) Do(ctx context.Context) (Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r GetTemplate) IsSuccess(ctx context.Context) (bool, error) {
+func (r GetTemplate) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "indices.get_template")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -201,6 +274,14 @@ func (r GetTemplate) IsSuccess(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the GetTemplate query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -211,36 +292,40 @@ func (r *GetTemplate) Header(key, value string) *GetTemplate {
 	return r
 }
 
-// Name The comma separated names of the index templates
+// Name Comma-separated list of index template names used to limit the request.
+// Wildcard (`*`) expressions are supported.
+// To return all index templates, omit this parameter or use a value of `_all`
+// or `*`.
 // API Name: name
-func (r *GetTemplate) Name(v string) *GetTemplate {
+func (r *GetTemplate) Name(name string) *GetTemplate {
 	r.paramSet |= nameMask
-	r.name = v
+	r.name = name
 
 	return r
 }
 
-// FlatSettings Return settings in flat format (default: false)
+// FlatSettings If `true`, returns settings in flat format.
 // API name: flat_settings
-func (r *GetTemplate) FlatSettings(b bool) *GetTemplate {
-	r.values.Set("flat_settings", strconv.FormatBool(b))
+func (r *GetTemplate) FlatSettings(flatsettings bool) *GetTemplate {
+	r.values.Set("flat_settings", strconv.FormatBool(flatsettings))
 
 	return r
 }
 
-// Local Return local information, do not retrieve the state from master node
-// (default: false)
+// Local If `true`, the request retrieves information from the local node only.
 // API name: local
-func (r *GetTemplate) Local(b bool) *GetTemplate {
-	r.values.Set("local", strconv.FormatBool(b))
+func (r *GetTemplate) Local(local bool) *GetTemplate {
+	r.values.Set("local", strconv.FormatBool(local))
 
 	return r
 }
 
-// MasterTimeout Explicit operation timeout for connection to master node
+// MasterTimeout Period to wait for a connection to the master node.
+// If no response is received before the timeout expires, the request fails and
+// returns an error.
 // API name: master_timeout
-func (r *GetTemplate) MasterTimeout(v string) *GetTemplate {
-	r.values.Set("master_timeout", v)
+func (r *GetTemplate) MasterTimeout(duration string) *GetTemplate {
+	r.values.Set("master_timeout", duration)
 
 	return r
 }

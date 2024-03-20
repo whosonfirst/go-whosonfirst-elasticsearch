@@ -16,26 +16,29 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
-	"encoding/json"
 )
 
 // RunningStateSearchInterval type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ml/_types/Datafeed.ts#L164-L169
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ml/_types/Datafeed.ts#L214-L231
 type RunningStateSearchInterval struct {
-	End     Duration `json:"end,omitempty"`
-	EndMs   int64    `json:"end_ms"`
-	Start   Duration `json:"start,omitempty"`
-	StartMs int64    `json:"start_ms"`
+	// End The end time.
+	End Duration `json:"end,omitempty"`
+	// EndMs The end time as an epoch in milliseconds.
+	EndMs int64 `json:"end_ms"`
+	// Start The start time.
+	Start Duration `json:"start,omitempty"`
+	// StartMs The start time as an epoch in milliseconds.
+	StartMs int64 `json:"start_ms"`
 }
 
 func (s *RunningStateSearchInterval) UnmarshalJSON(data []byte) error {

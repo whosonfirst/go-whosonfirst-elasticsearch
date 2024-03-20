@@ -16,21 +16,20 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
-	"encoding/json"
 )
 
 // TrimTokenFilter type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/token_filters.ts#L326-L328
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/token_filters.ts#L326-L328
 type TrimTokenFilter struct {
 	Type    string  `json:"type,omitempty"`
 	Version *string `json:"version,omitempty"`
@@ -66,11 +65,22 @@ func (s *TrimTokenFilter) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s TrimTokenFilter) MarshalJSON() ([]byte, error) {
+	type innerTrimTokenFilter TrimTokenFilter
+	tmp := innerTrimTokenFilter{
+		Type:    s.Type,
+		Version: s.Version,
+	}
+
+	tmp.Type = "trim"
+
+	return json.Marshal(tmp)
+}
+
 // NewTrimTokenFilter returns a TrimTokenFilter.
 func NewTrimTokenFilter() *TrimTokenFilter {
 	r := &TrimTokenFilter{}
-
-	r.Type = "trim"
 
 	return r
 }

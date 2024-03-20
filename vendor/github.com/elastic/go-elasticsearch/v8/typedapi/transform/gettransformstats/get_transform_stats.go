@@ -16,13 +16,12 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Retrieves usage information for transforms.
 package gettransformstats
 
 import (
-	gobytes "bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -52,11 +51,15 @@ type GetTransformStats struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	transformid string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewGetTransformStats type alias for index.
@@ -68,7 +71,7 @@ func NewGetTransformStatsFunc(tp elastictransport.Interface) NewGetTransformStat
 	return func(transformid string) *GetTransformStats {
 		n := New(tp)
 
-		n.TransformId(transformid)
+		n._transformid(transformid)
 
 		return n
 	}
@@ -82,7 +85,12 @@ func New(tp elastictransport.Interface) *GetTransformStats {
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -105,6 +113,9 @@ func (r *GetTransformStats) HttpRequest(ctx context.Context) (*http.Request, err
 		path.WriteString("_transform")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "transformid", r.transformid)
+		}
 		path.WriteString(r.transformid)
 		path.WriteString("/")
 		path.WriteString("_stats")
@@ -120,9 +131,9 @@ func (r *GetTransformStats) HttpRequest(ctx context.Context) (*http.Request, err
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
@@ -139,27 +150,66 @@ func (r *GetTransformStats) HttpRequest(ctx context.Context) (*http.Request, err
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r GetTransformStats) Perform(ctx context.Context) (*http.Response, error) {
+func (r GetTransformStats) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "transform.get_transform_stats")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "transform.get_transform_stats")
+		if reader := instrument.RecordRequestBody(ctx, "transform.get_transform_stats", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "transform.get_transform_stats")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the GetTransformStats query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the GetTransformStats query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a gettransformstats.Response
-func (r GetTransformStats) Do(ctx context.Context) (*Response, error) {
+func (r GetTransformStats) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "transform.get_transform_stats")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -167,6 +217,9 @@ func (r GetTransformStats) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -176,15 +229,35 @@ func (r GetTransformStats) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r GetTransformStats) IsSuccess(ctx context.Context) (bool, error) {
+func (r GetTransformStats) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "transform.get_transform_stats")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -198,6 +271,14 @@ func (r GetTransformStats) IsSuccess(ctx context.Context) (bool, error) {
 
 	if res.StatusCode >= 200 && res.StatusCode < 300 {
 		return true, nil
+	}
+
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the GetTransformStats query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
 	}
 
 	return false, nil
@@ -215,9 +296,9 @@ func (r *GetTransformStats) Header(key, value string) *GetTransformStats {
 // `_all`, by specifying `*` as the `<transform_id>`, or by omitting the
 // `<transform_id>`.
 // API Name: transformid
-func (r *GetTransformStats) TransformId(v string) *GetTransformStats {
+func (r *GetTransformStats) _transformid(transformid string) *GetTransformStats {
 	r.paramSet |= transformidMask
-	r.transformid = v
+	r.transformid = transformid
 
 	return r
 }
@@ -231,32 +312,32 @@ func (r *GetTransformStats) TransformId(v string) *GetTransformStats {
 // If this parameter is false, the request returns a 404 status code when
 // there are no matches or only partial matches.
 // API name: allow_no_match
-func (r *GetTransformStats) AllowNoMatch(b bool) *GetTransformStats {
-	r.values.Set("allow_no_match", strconv.FormatBool(b))
+func (r *GetTransformStats) AllowNoMatch(allownomatch bool) *GetTransformStats {
+	r.values.Set("allow_no_match", strconv.FormatBool(allownomatch))
 
 	return r
 }
 
 // From Skips the specified number of transforms.
 // API name: from
-func (r *GetTransformStats) From(v string) *GetTransformStats {
-	r.values.Set("from", v)
+func (r *GetTransformStats) From(from string) *GetTransformStats {
+	r.values.Set("from", from)
 
 	return r
 }
 
 // Size Specifies the maximum number of transforms to obtain.
 // API name: size
-func (r *GetTransformStats) Size(v string) *GetTransformStats {
-	r.values.Set("size", v)
+func (r *GetTransformStats) Size(size string) *GetTransformStats {
+	r.values.Set("size", size)
 
 	return r
 }
 
 // Timeout Controls the time to wait for the stats
 // API name: timeout
-func (r *GetTransformStats) Timeout(v string) *GetTransformStats {
-	r.values.Set("timeout", v)
+func (r *GetTransformStats) Timeout(duration string) *GetTransformStats {
+	r.values.Set("timeout", duration)
 
 	return r
 }

@@ -16,26 +16,31 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package putrolemapping
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"strconv"
 
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
 )
 
 // Request holds the request body struct for the package putrolemapping
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/security/put_role_mapping/SecurityPutRoleMappingRequest.ts#L24-L43
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/security/put_role_mapping/SecurityPutRoleMappingRequest.ts#L25-L45
 type Request struct {
-	Enabled  *bool                  `json:"enabled,omitempty"`
-	Metadata types.Metadata         `json:"metadata,omitempty"`
-	Roles    []string               `json:"roles,omitempty"`
-	Rules    *types.RoleMappingRule `json:"rules,omitempty"`
-	RunAs    []string               `json:"run_as,omitempty"`
+	Enabled       *bool                  `json:"enabled,omitempty"`
+	Metadata      types.Metadata         `json:"metadata,omitempty"`
+	RoleTemplates []types.RoleTemplate   `json:"role_templates,omitempty"`
+	Roles         []string               `json:"roles,omitempty"`
+	Rules         *types.RoleMappingRule `json:"rules,omitempty"`
+	RunAs         []string               `json:"run_as,omitempty"`
 }
 
 // NewRequest returns a Request
@@ -54,4 +59,62 @@ func (r *Request) FromJSON(data string) (*Request, error) {
 	}
 
 	return &req, nil
+}
+
+func (s *Request) UnmarshalJSON(data []byte) error {
+	dec := json.NewDecoder(bytes.NewReader(data))
+
+	for {
+		t, err := dec.Token()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return err
+		}
+
+		switch t {
+
+		case "enabled":
+			var tmp interface{}
+			dec.Decode(&tmp)
+			switch v := tmp.(type) {
+			case string:
+				value, err := strconv.ParseBool(v)
+				if err != nil {
+					return err
+				}
+				s.Enabled = &value
+			case bool:
+				s.Enabled = &v
+			}
+
+		case "metadata":
+			if err := dec.Decode(&s.Metadata); err != nil {
+				return err
+			}
+
+		case "role_templates":
+			if err := dec.Decode(&s.RoleTemplates); err != nil {
+				return err
+			}
+
+		case "roles":
+			if err := dec.Decode(&s.Roles); err != nil {
+				return err
+			}
+
+		case "rules":
+			if err := dec.Decode(&s.Rules); err != nil {
+				return err
+			}
+
+		case "run_as":
+			if err := dec.Decode(&s.RunAs); err != nil {
+				return err
+			}
+
+		}
+	}
+	return nil
 }

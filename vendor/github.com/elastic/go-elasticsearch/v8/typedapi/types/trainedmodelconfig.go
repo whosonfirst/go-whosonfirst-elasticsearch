@@ -16,25 +16,23 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/trainedmodeltype"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/trainedmodeltype"
 )
 
 // TrainedModelConfig type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ml/_types/TrainedModel.ts#L157-L189
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ml/_types/TrainedModel.ts#L165-L199
 type TrainedModelConfig struct {
 	CompressedDefinition *string `json:"compressed_definition,omitempty"`
 	// CreateTime The time when the trained model was created.
@@ -49,10 +47,13 @@ type TrainedModelConfig struct {
 	EstimatedHeapMemoryUsageBytes *int `json:"estimated_heap_memory_usage_bytes,omitempty"`
 	// EstimatedOperations The estimated number of operations to use the trained model.
 	EstimatedOperations *int `json:"estimated_operations,omitempty"`
+	// FullyDefined True if the full model definition is present.
+	FullyDefined *bool `json:"fully_defined,omitempty"`
 	// InferenceConfig The default configuration for inference. This can be either a regression,
 	// classification, or one of the many NLP focused configurations. It must match
-	// the underlying definition.trained_model's target_type.
-	InferenceConfig InferenceConfigCreateContainer `json:"inference_config"`
+	// the underlying definition.trained_model's target_type. For pre-packaged
+	// models such as ELSER the config is not required.
+	InferenceConfig *InferenceConfigCreateContainer `json:"inference_config,omitempty"`
 	// Input The input field names for the model definition.
 	Input TrainedModelConfigInput `json:"input"`
 	// LicenseLevel The license level of the trained model.
@@ -93,7 +94,11 @@ func (s *TrainedModelConfig) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.CompressedDefinition = &o
 
 		case "create_time":
@@ -106,7 +111,11 @@ func (s *TrainedModelConfig) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.CreatedBy = &o
 
 		case "default_field_map":
@@ -122,7 +131,11 @@ func (s *TrainedModelConfig) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Description = &o
 
 		case "estimated_heap_memory_usage_bytes":
@@ -157,6 +170,20 @@ func (s *TrainedModelConfig) UnmarshalJSON(data []byte) error {
 				s.EstimatedOperations = &f
 			}
 
+		case "fully_defined":
+			var tmp interface{}
+			dec.Decode(&tmp)
+			switch v := tmp.(type) {
+			case string:
+				value, err := strconv.ParseBool(v)
+				if err != nil {
+					return err
+				}
+				s.FullyDefined = &value
+			case bool:
+				s.FullyDefined = &v
+			}
+
 		case "inference_config":
 			if err := dec.Decode(&s.InferenceConfig); err != nil {
 				return err
@@ -172,7 +199,11 @@ func (s *TrainedModelConfig) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.LicenseLevel = &o
 
 		case "location":

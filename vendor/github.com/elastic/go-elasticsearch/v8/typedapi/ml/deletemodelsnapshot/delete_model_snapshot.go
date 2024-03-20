@@ -16,13 +16,12 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Deletes an existing model snapshot.
 package deletemodelsnapshot
 
 import (
-	gobytes "bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -53,12 +52,16 @@ type DeleteModelSnapshot struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	jobid      string
 	snapshotid string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewDeleteModelSnapshot type alias for index.
@@ -70,9 +73,9 @@ func NewDeleteModelSnapshotFunc(tp elastictransport.Interface) NewDeleteModelSna
 	return func(jobid, snapshotid string) *DeleteModelSnapshot {
 		n := New(tp)
 
-		n.JobId(jobid)
+		n._jobid(jobid)
 
-		n.SnapshotId(snapshotid)
+		n._snapshotid(snapshotid)
 
 		return n
 	}
@@ -86,7 +89,12 @@ func New(tp elastictransport.Interface) *DeleteModelSnapshot {
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -111,11 +119,17 @@ func (r *DeleteModelSnapshot) HttpRequest(ctx context.Context) (*http.Request, e
 		path.WriteString("anomaly_detectors")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "jobid", r.jobid)
+		}
 		path.WriteString(r.jobid)
 		path.WriteString("/")
 		path.WriteString("model_snapshots")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "snapshotid", r.snapshotid)
+		}
 		path.WriteString(r.snapshotid)
 
 		method = http.MethodDelete
@@ -129,9 +143,9 @@ func (r *DeleteModelSnapshot) HttpRequest(ctx context.Context) (*http.Request, e
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
@@ -148,27 +162,66 @@ func (r *DeleteModelSnapshot) HttpRequest(ctx context.Context) (*http.Request, e
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r DeleteModelSnapshot) Perform(ctx context.Context) (*http.Response, error) {
+func (r DeleteModelSnapshot) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "ml.delete_model_snapshot")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "ml.delete_model_snapshot")
+		if reader := instrument.RecordRequestBody(ctx, "ml.delete_model_snapshot", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "ml.delete_model_snapshot")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the DeleteModelSnapshot query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the DeleteModelSnapshot query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a deletemodelsnapshot.Response
-func (r DeleteModelSnapshot) Do(ctx context.Context) (*Response, error) {
+func (r DeleteModelSnapshot) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "ml.delete_model_snapshot")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -176,6 +229,9 @@ func (r DeleteModelSnapshot) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -185,15 +241,35 @@ func (r DeleteModelSnapshot) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r DeleteModelSnapshot) IsSuccess(ctx context.Context) (bool, error) {
+func (r DeleteModelSnapshot) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "ml.delete_model_snapshot")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -209,6 +285,14 @@ func (r DeleteModelSnapshot) IsSuccess(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the DeleteModelSnapshot query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -221,18 +305,18 @@ func (r *DeleteModelSnapshot) Header(key, value string) *DeleteModelSnapshot {
 
 // JobId Identifier for the anomaly detection job.
 // API Name: jobid
-func (r *DeleteModelSnapshot) JobId(v string) *DeleteModelSnapshot {
+func (r *DeleteModelSnapshot) _jobid(jobid string) *DeleteModelSnapshot {
 	r.paramSet |= jobidMask
-	r.jobid = v
+	r.jobid = jobid
 
 	return r
 }
 
 // SnapshotId Identifier for the model snapshot.
 // API Name: snapshotid
-func (r *DeleteModelSnapshot) SnapshotId(v string) *DeleteModelSnapshot {
+func (r *DeleteModelSnapshot) _snapshotid(snapshotid string) *DeleteModelSnapshot {
 	r.paramSet |= snapshotidMask
-	r.snapshotid = v
+	r.snapshotid = snapshotid
 
 	return r
 }

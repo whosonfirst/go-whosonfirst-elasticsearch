@@ -16,16 +16,18 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 // IntervalsAnyOf type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/query_dsl/fulltext.ts#L58-L61
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/query_dsl/fulltext.ts#L72-L81
 type IntervalsAnyOf struct {
-	Filter    *IntervalsFilter `json:"filter,omitempty"`
-	Intervals []Intervals      `json:"intervals"`
+	// Filter Rule used to filter returned intervals.
+	Filter *IntervalsFilter `json:"filter,omitempty"`
+	// Intervals An array of rules to match.
+	Intervals []Intervals `json:"intervals"`
 }
 
 // NewIntervalsAnyOf returns a IntervalsAnyOf.

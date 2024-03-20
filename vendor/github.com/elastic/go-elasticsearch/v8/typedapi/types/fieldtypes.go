@@ -16,31 +16,39 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // FieldTypes type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/cluster/stats/types.ts#L105-L114
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/cluster/stats/types.ts#L136-L167
 type FieldTypes struct {
-	Count               int    `json:"count"`
-	IndexCount          int    `json:"index_count"`
-	IndexedVectorCount  *int64 `json:"indexed_vector_count,omitempty"`
+	// Count The number of occurrences of the field type in selected nodes.
+	Count int `json:"count"`
+	// IndexCount The number of indices containing the field type in selected nodes.
+	IndexCount int `json:"index_count"`
+	// IndexedVectorCount For dense_vector field types, number of indexed vector types in selected
+	// nodes.
+	IndexedVectorCount *int64 `json:"indexed_vector_count,omitempty"`
+	// IndexedVectorDimMax For dense_vector field types, the maximum dimension of all indexed vector
+	// types in selected nodes.
 	IndexedVectorDimMax *int64 `json:"indexed_vector_dim_max,omitempty"`
+	// IndexedVectorDimMin For dense_vector field types, the minimum dimension of all indexed vector
+	// types in selected nodes.
 	IndexedVectorDimMin *int64 `json:"indexed_vector_dim_min,omitempty"`
-	Name                string `json:"name"`
-	ScriptCount         *int   `json:"script_count,omitempty"`
+	// Name The name for the field type in selected nodes.
+	Name string `json:"name"`
+	// ScriptCount The number of fields that declare a script.
+	ScriptCount *int `json:"script_count,omitempty"`
 }
 
 func (s *FieldTypes) UnmarshalJSON(data []byte) error {

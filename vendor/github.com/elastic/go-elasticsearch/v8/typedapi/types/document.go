@@ -16,24 +16,27 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
-	"encoding/json"
 )
 
 // Document type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ingest/simulate/types.ts#L41-L45
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ingest/simulate/types.ts#L41-L55
 type Document struct {
-	Id_     *string         `json:"_id,omitempty"`
-	Index_  *string         `json:"_index,omitempty"`
+	// Id_ Unique identifier for the document.
+	// This ID must be unique within the `_index`.
+	Id_ *string `json:"_id,omitempty"`
+	// Index_ Name of the index containing the document.
+	Index_ *string `json:"_index,omitempty"`
+	// Source_ JSON body for the document.
 	Source_ json.RawMessage `json:"_source,omitempty"`
 }
 

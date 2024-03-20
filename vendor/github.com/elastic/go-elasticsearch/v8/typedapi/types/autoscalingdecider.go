@@ -16,21 +16,67 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
+	"io"
+	"strconv"
 )
 
 // AutoscalingDecider type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/autoscaling/get_autoscaling_capacity/GetAutoscalingCapacityResponse.ts#L52-L56
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/autoscaling/get_autoscaling_capacity/GetAutoscalingCapacityResponse.ts#L52-L56
 type AutoscalingDecider struct {
 	ReasonDetails    json.RawMessage     `json:"reason_details,omitempty"`
 	ReasonSummary    *string             `json:"reason_summary,omitempty"`
 	RequiredCapacity AutoscalingCapacity `json:"required_capacity"`
+}
+
+func (s *AutoscalingDecider) UnmarshalJSON(data []byte) error {
+
+	dec := json.NewDecoder(bytes.NewReader(data))
+
+	for {
+		t, err := dec.Token()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return err
+		}
+
+		switch t {
+
+		case "reason_details":
+			if err := dec.Decode(&s.ReasonDetails); err != nil {
+				return err
+			}
+
+		case "reason_summary":
+			var tmp json.RawMessage
+			if err := dec.Decode(&tmp); err != nil {
+				return err
+			}
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
+			s.ReasonSummary = &o
+
+		case "required_capacity":
+			if err := dec.Decode(&s.RequiredCapacity); err != nil {
+				return err
+			}
+
+		}
+	}
+	return nil
 }
 
 // NewAutoscalingDecider returns a AutoscalingDecider.

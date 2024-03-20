@@ -16,25 +16,26 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // ClusterJvmMemory type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/cluster/stats/types.ts#L163-L166
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/cluster/stats/types.ts#L294-L303
 type ClusterJvmMemory struct {
-	HeapMaxInBytes  int64 `json:"heap_max_in_bytes"`
+	// HeapMaxInBytes Maximum amount of memory, in bytes, available for use by the heap across all
+	// selected nodes.
+	HeapMaxInBytes int64 `json:"heap_max_in_bytes"`
+	// HeapUsedInBytes Memory, in bytes, currently in use by the heap across all selected nodes.
 	HeapUsedInBytes int64 `json:"heap_used_in_bytes"`
 }
 

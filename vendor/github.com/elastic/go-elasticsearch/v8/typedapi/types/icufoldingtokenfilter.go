@@ -16,21 +16,21 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
-	"encoding/json"
+	"strconv"
 )
 
 // IcuFoldingTokenFilter type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/icu-plugin.ts#L46-L49
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/icu-plugin.ts#L46-L49
 type IcuFoldingTokenFilter struct {
 	Type             string  `json:"type,omitempty"`
 	UnicodeSetFilter string  `json:"unicode_set_filter"`
@@ -62,7 +62,11 @@ func (s *IcuFoldingTokenFilter) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.UnicodeSetFilter = o
 
 		case "version":
@@ -75,11 +79,23 @@ func (s *IcuFoldingTokenFilter) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s IcuFoldingTokenFilter) MarshalJSON() ([]byte, error) {
+	type innerIcuFoldingTokenFilter IcuFoldingTokenFilter
+	tmp := innerIcuFoldingTokenFilter{
+		Type:             s.Type,
+		UnicodeSetFilter: s.UnicodeSetFilter,
+		Version:          s.Version,
+	}
+
+	tmp.Type = "icu_folding"
+
+	return json.Marshal(tmp)
+}
+
 // NewIcuFoldingTokenFilter returns a IcuFoldingTokenFilter.
 func NewIcuFoldingTokenFilter() *IcuFoldingTokenFilter {
 	r := &IcuFoldingTokenFilter{}
-
-	r.Type = "icu_folding"
 
 	return r
 }

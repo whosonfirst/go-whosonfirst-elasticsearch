@@ -16,13 +16,12 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Retrieves configuration information for a trained inference model.
 package gettrainedmodels
 
 import (
-	gobytes "bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -36,7 +35,6 @@ import (
 
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
-
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/include"
 )
 
@@ -54,11 +52,15 @@ type GetTrainedModels struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	modelid string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewGetTrainedModels type alias for index.
@@ -82,7 +84,12 @@ func New(tp elastictransport.Interface) *GetTrainedModels {
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -107,6 +114,9 @@ func (r *GetTrainedModels) HttpRequest(ctx context.Context) (*http.Request, erro
 		path.WriteString("trained_models")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "modelid", r.modelid)
+		}
 		path.WriteString(r.modelid)
 
 		method = http.MethodGet
@@ -127,9 +137,9 @@ func (r *GetTrainedModels) HttpRequest(ctx context.Context) (*http.Request, erro
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
@@ -146,27 +156,66 @@ func (r *GetTrainedModels) HttpRequest(ctx context.Context) (*http.Request, erro
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r GetTrainedModels) Perform(ctx context.Context) (*http.Response, error) {
+func (r GetTrainedModels) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "ml.get_trained_models")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "ml.get_trained_models")
+		if reader := instrument.RecordRequestBody(ctx, "ml.get_trained_models", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "ml.get_trained_models")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the GetTrainedModels query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the GetTrainedModels query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a gettrainedmodels.Response
-func (r GetTrainedModels) Do(ctx context.Context) (*Response, error) {
+func (r GetTrainedModels) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "ml.get_trained_models")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -174,6 +223,9 @@ func (r GetTrainedModels) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -183,15 +235,35 @@ func (r GetTrainedModels) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r GetTrainedModels) IsSuccess(ctx context.Context) (bool, error) {
+func (r GetTrainedModels) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "ml.get_trained_models")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -207,6 +279,14 @@ func (r GetTrainedModels) IsSuccess(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the GetTrainedModels query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -219,9 +299,9 @@ func (r *GetTrainedModels) Header(key, value string) *GetTrainedModels {
 
 // ModelId The unique identifier of the trained model.
 // API Name: modelid
-func (r *GetTrainedModels) ModelId(v string) *GetTrainedModels {
+func (r *GetTrainedModels) ModelId(modelid string) *GetTrainedModels {
 	r.paramSet |= modelidMask
-	r.modelid = v
+	r.modelid = modelid
 
 	return r
 }
@@ -235,8 +315,8 @@ func (r *GetTrainedModels) ModelId(v string) *GetTrainedModels {
 // If true, it returns an empty array when there are no matches and the
 // subset of results when there are partial matches.
 // API name: allow_no_match
-func (r *GetTrainedModels) AllowNoMatch(b bool) *GetTrainedModels {
-	r.values.Set("allow_no_match", strconv.FormatBool(b))
+func (r *GetTrainedModels) AllowNoMatch(allownomatch bool) *GetTrainedModels {
+	r.values.Set("allow_no_match", strconv.FormatBool(allownomatch))
 
 	return r
 }
@@ -244,8 +324,8 @@ func (r *GetTrainedModels) AllowNoMatch(b bool) *GetTrainedModels {
 // DecompressDefinition Specifies whether the included model definition should be returned as a
 // JSON map (true) or in a custom compressed format (false).
 // API name: decompress_definition
-func (r *GetTrainedModels) DecompressDefinition(b bool) *GetTrainedModels {
-	r.values.Set("decompress_definition", strconv.FormatBool(b))
+func (r *GetTrainedModels) DecompressDefinition(decompressdefinition bool) *GetTrainedModels {
+	r.values.Set("decompress_definition", strconv.FormatBool(decompressdefinition))
 
 	return r
 }
@@ -254,16 +334,16 @@ func (r *GetTrainedModels) DecompressDefinition(b bool) *GetTrainedModels {
 // retrieval. This allows the configuration to be in an acceptable format to
 // be retrieved and then added to another cluster.
 // API name: exclude_generated
-func (r *GetTrainedModels) ExcludeGenerated(b bool) *GetTrainedModels {
-	r.values.Set("exclude_generated", strconv.FormatBool(b))
+func (r *GetTrainedModels) ExcludeGenerated(excludegenerated bool) *GetTrainedModels {
+	r.values.Set("exclude_generated", strconv.FormatBool(excludegenerated))
 
 	return r
 }
 
 // From Skips the specified number of models.
 // API name: from
-func (r *GetTrainedModels) From(i int) *GetTrainedModels {
-	r.values.Set("from", strconv.Itoa(i))
+func (r *GetTrainedModels) From(from int) *GetTrainedModels {
+	r.values.Set("from", strconv.Itoa(from))
 
 	return r
 }
@@ -271,16 +351,16 @@ func (r *GetTrainedModels) From(i int) *GetTrainedModels {
 // Include A comma delimited string of optional fields to include in the response
 // body.
 // API name: include
-func (r *GetTrainedModels) Include(enum include.Include) *GetTrainedModels {
-	r.values.Set("include", enum.String())
+func (r *GetTrainedModels) Include(include include.Include) *GetTrainedModels {
+	r.values.Set("include", include.String())
 
 	return r
 }
 
 // Size Specifies the maximum number of models to obtain.
 // API name: size
-func (r *GetTrainedModels) Size(i int) *GetTrainedModels {
-	r.values.Set("size", strconv.Itoa(i))
+func (r *GetTrainedModels) Size(size int) *GetTrainedModels {
+	r.values.Set("size", strconv.Itoa(size))
 
 	return r
 }
@@ -289,8 +369,8 @@ func (r *GetTrainedModels) Size(i int) *GetTrainedModels {
 // none. When supplied, only trained models that contain all the supplied
 // tags are returned.
 // API name: tags
-func (r *GetTrainedModels) Tags(v string) *GetTrainedModels {
-	r.values.Set("tags", v)
+func (r *GetTrainedModels) Tags(tags string) *GetTrainedModels {
+	r.values.Set("tags", tags)
 
 	return r
 }

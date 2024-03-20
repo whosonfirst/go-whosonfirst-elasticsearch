@@ -16,25 +16,36 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package searchtemplate
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"strconv"
 )
 
 // Request holds the request body struct for the package searchtemplate
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_global/search_template/SearchTemplateRequest.ts#L32-L96
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_global/search_template/SearchTemplateRequest.ts#L32-L134
 type Request struct {
+
+	// Explain If `true`, returns detailed information about score calculation as part of
+	// each hit.
 	Explain *bool `json:"explain,omitempty"`
 	// Id ID of the search template to use. If no source is specified,
 	// this parameter is required.
-	Id      *string                    `json:"id,omitempty"`
-	Params  map[string]json.RawMessage `json:"params,omitempty"`
-	Profile *bool                      `json:"profile,omitempty"`
+	Id *string `json:"id,omitempty"`
+	// Params Key-value pairs used to replace Mustache variables in the template.
+	// The key is the variable name.
+	// The value is the variable value.
+	Params map[string]json.RawMessage `json:"params,omitempty"`
+	// Profile If `true`, the query execution is profiled.
+	Profile *bool `json:"profile,omitempty"`
 	// Source An inline search template. Supports the same parameters as the search API's
 	// request body. Also supports Mustache variables. If no id is specified, this
 	// parameter is required.
@@ -59,4 +70,76 @@ func (r *Request) FromJSON(data string) (*Request, error) {
 	}
 
 	return &req, nil
+}
+
+func (s *Request) UnmarshalJSON(data []byte) error {
+	dec := json.NewDecoder(bytes.NewReader(data))
+
+	for {
+		t, err := dec.Token()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return err
+		}
+
+		switch t {
+
+		case "explain":
+			var tmp interface{}
+			dec.Decode(&tmp)
+			switch v := tmp.(type) {
+			case string:
+				value, err := strconv.ParseBool(v)
+				if err != nil {
+					return err
+				}
+				s.Explain = &value
+			case bool:
+				s.Explain = &v
+			}
+
+		case "id":
+			if err := dec.Decode(&s.Id); err != nil {
+				return err
+			}
+
+		case "params":
+			if s.Params == nil {
+				s.Params = make(map[string]json.RawMessage, 0)
+			}
+			if err := dec.Decode(&s.Params); err != nil {
+				return err
+			}
+
+		case "profile":
+			var tmp interface{}
+			dec.Decode(&tmp)
+			switch v := tmp.(type) {
+			case string:
+				value, err := strconv.ParseBool(v)
+				if err != nil {
+					return err
+				}
+				s.Profile = &value
+			case bool:
+				s.Profile = &v
+			}
+
+		case "source":
+			var tmp json.RawMessage
+			if err := dec.Decode(&tmp); err != nil {
+				return err
+			}
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
+			s.Source = &o
+
+		}
+	}
+	return nil
 }

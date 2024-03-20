@@ -16,41 +16,60 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // DateIndexNameProcessor type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ingest/_types/Processors.ts#L164-L177
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ingest/_types/Processors.ts#L498-L536
 type DateIndexNameProcessor struct {
+	// DateFormats An array of the expected date formats for parsing dates / timestamps in the
+	// document being preprocessed.
+	// Can be a java time pattern or one of the following formats: ISO8601, UNIX,
+	// UNIX_MS, or TAI64N.
 	DateFormats []string `json:"date_formats"`
 	// DateRounding How to round the date when formatting the date into the index name. Valid
 	// values are:
 	// `y` (year), `M` (month), `w` (week), `d` (day), `h` (hour), `m` (minute) and
 	// `s` (second).
 	// Supports template snippets.
-	DateRounding    string               `json:"date_rounding"`
-	Description     *string              `json:"description,omitempty"`
-	Field           string               `json:"field"`
-	If              *string              `json:"if,omitempty"`
-	IgnoreFailure   *bool                `json:"ignore_failure,omitempty"`
-	IndexNameFormat *string              `json:"index_name_format,omitempty"`
-	IndexNamePrefix *string              `json:"index_name_prefix,omitempty"`
-	Locale          *string              `json:"locale,omitempty"`
-	OnFailure       []ProcessorContainer `json:"on_failure,omitempty"`
-	Tag             *string              `json:"tag,omitempty"`
-	Timezone        *string              `json:"timezone,omitempty"`
+	DateRounding string `json:"date_rounding"`
+	// Description Description of the processor.
+	// Useful for describing the purpose of the processor or its configuration.
+	Description *string `json:"description,omitempty"`
+	// Field The field to get the date or timestamp from.
+	Field string `json:"field"`
+	// If Conditionally execute the processor.
+	If *string `json:"if,omitempty"`
+	// IgnoreFailure Ignore failures for the processor.
+	IgnoreFailure *bool `json:"ignore_failure,omitempty"`
+	// IndexNameFormat The format to be used when printing the parsed date into the index name.
+	// A valid java time pattern is expected here.
+	// Supports template snippets.
+	IndexNameFormat *string `json:"index_name_format,omitempty"`
+	// IndexNamePrefix A prefix of the index name to be prepended before the printed date.
+	// Supports template snippets.
+	IndexNamePrefix *string `json:"index_name_prefix,omitempty"`
+	// Locale The locale to use when parsing the date from the document being preprocessed,
+	// relevant when parsing month names or week days.
+	Locale *string `json:"locale,omitempty"`
+	// OnFailure Handle failures for the processor.
+	OnFailure []ProcessorContainer `json:"on_failure,omitempty"`
+	// Tag Identifier for the processor.
+	// Useful for debugging and metrics.
+	Tag *string `json:"tag,omitempty"`
+	// Timezone The timezone to use when parsing the date and when date math index supports
+	// resolves expressions into concrete index names.
+	Timezone *string `json:"timezone,omitempty"`
 }
 
 func (s *DateIndexNameProcessor) UnmarshalJSON(data []byte) error {
@@ -78,7 +97,11 @@ func (s *DateIndexNameProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.DateRounding = o
 
 		case "description":
@@ -86,7 +109,11 @@ func (s *DateIndexNameProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Description = &o
 
 		case "field":
@@ -99,7 +126,11 @@ func (s *DateIndexNameProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.If = &o
 
 		case "ignore_failure":
@@ -121,7 +152,11 @@ func (s *DateIndexNameProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.IndexNameFormat = &o
 
 		case "index_name_prefix":
@@ -129,7 +164,11 @@ func (s *DateIndexNameProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.IndexNamePrefix = &o
 
 		case "locale":
@@ -137,7 +176,11 @@ func (s *DateIndexNameProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Locale = &o
 
 		case "on_failure":
@@ -150,7 +193,11 @@ func (s *DateIndexNameProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Tag = &o
 
 		case "timezone":
@@ -158,7 +205,11 @@ func (s *DateIndexNameProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Timezone = &o
 
 		}

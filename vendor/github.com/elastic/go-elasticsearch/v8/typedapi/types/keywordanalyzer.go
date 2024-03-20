@@ -16,21 +16,20 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
-	"encoding/json"
 )
 
 // KeywordAnalyzer type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/analyzers.ts#L47-L50
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/analyzers.ts#L47-L50
 type KeywordAnalyzer struct {
 	Type    string  `json:"type,omitempty"`
 	Version *string `json:"version,omitempty"`
@@ -66,11 +65,22 @@ func (s *KeywordAnalyzer) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s KeywordAnalyzer) MarshalJSON() ([]byte, error) {
+	type innerKeywordAnalyzer KeywordAnalyzer
+	tmp := innerKeywordAnalyzer{
+		Type:    s.Type,
+		Version: s.Version,
+	}
+
+	tmp.Type = "keyword"
+
+	return json.Marshal(tmp)
+}
+
 // NewKeywordAnalyzer returns a KeywordAnalyzer.
 func NewKeywordAnalyzer() *KeywordAnalyzer {
 	r := &KeywordAnalyzer{}
-
-	r.Type = "keyword"
 
 	return r
 }

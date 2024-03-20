@@ -16,31 +16,39 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // ClusterJvmVersion type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/cluster/stats/types.ts#L168-L176
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/cluster/stats/types.ts#L305-L335
 type ClusterJvmVersion struct {
-	BundledJdk      bool   `json:"bundled_jdk"`
-	Count           int    `json:"count"`
-	UsingBundledJdk bool   `json:"using_bundled_jdk"`
-	Version         string `json:"version"`
-	VmName          string `json:"vm_name"`
-	VmVendor        string `json:"vm_vendor"`
-	VmVersion       string `json:"vm_version"`
+	// BundledJdk Always `true`. All distributions come with a bundled Java Development Kit
+	// (JDK).
+	BundledJdk bool `json:"bundled_jdk"`
+	// Count Total number of selected nodes using JVM.
+	Count int `json:"count"`
+	// UsingBundledJdk If `true`, a bundled JDK is in use by JVM.
+	UsingBundledJdk bool `json:"using_bundled_jdk"`
+	// Version Version of JVM used by one or more selected nodes.
+	Version string `json:"version"`
+	// VmName Name of the JVM.
+	VmName string `json:"vm_name"`
+	// VmVendor Vendor of the JVM.
+	VmVendor string `json:"vm_vendor"`
+	// VmVersion Full version number of JVM.
+	// The full version number includes a plus sign (+) followed by the build
+	// number.
+	VmVersion string `json:"vm_version"`
 }
 
 func (s *ClusterJvmVersion) UnmarshalJSON(data []byte) error {
@@ -112,7 +120,11 @@ func (s *ClusterJvmVersion) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.VmName = o
 
 		case "vm_vendor":
@@ -120,7 +132,11 @@ func (s *ClusterJvmVersion) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.VmVendor = o
 
 		case "vm_version":

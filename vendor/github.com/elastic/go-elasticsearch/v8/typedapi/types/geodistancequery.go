@@ -16,34 +16,48 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/geodistancetype"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/geovalidationmethod"
-
-	"fmt"
-
 	"bytes"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
-
 	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/geodistancetype"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/geovalidationmethod"
 )
 
 // GeoDistanceQuery type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/query_dsl/geo.ts#L48-L57
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/query_dsl/geo.ts#L57-L85
 type GeoDistanceQuery struct {
-	Boost            *float32                                 `json:"boost,omitempty"`
-	Distance         *string                                  `json:"distance,omitempty"`
-	DistanceType     *geodistancetype.GeoDistanceType         `json:"distance_type,omitempty"`
-	GeoDistanceQuery map[string]GeoLocation                   `json:"GeoDistanceQuery,omitempty"`
-	QueryName_       *string                                  `json:"_name,omitempty"`
+	// Boost Floating point number used to decrease or increase the relevance scores of
+	// the query.
+	// Boost values are relative to the default value of 1.0.
+	// A boost value between 0 and 1.0 decreases the relevance score.
+	// A value greater than 1.0 increases the relevance score.
+	Boost *float32 `json:"boost,omitempty"`
+	// Distance The radius of the circle centred on the specified location.
+	// Points which fall into this circle are considered to be matches.
+	Distance string `json:"distance"`
+	// DistanceType How to compute the distance.
+	// Set to `plane` for a faster calculation that's inaccurate on long distances
+	// and close to the poles.
+	DistanceType     *geodistancetype.GeoDistanceType `json:"distance_type,omitempty"`
+	GeoDistanceQuery map[string]GeoLocation           `json:"GeoDistanceQuery,omitempty"`
+	// IgnoreUnmapped Set to `true` to ignore an unmapped field and not match any documents for
+	// this query.
+	// Set to `false` to throw an exception if the field is not mapped.
+	IgnoreUnmapped *bool   `json:"ignore_unmapped,omitempty"`
+	QueryName_     *string `json:"_name,omitempty"`
+	// ValidationMethod Set to `IGNORE_MALFORMED` to accept geo points with invalid latitude or
+	// longitude.
+	// Set to `COERCE` to also try to infer correct latitude or longitude.
 	ValidationMethod *geovalidationmethod.GeoValidationMethod `json:"validation_method,omitempty"`
 }
 
@@ -96,12 +110,30 @@ func (s *GeoDistanceQuery) UnmarshalJSON(data []byte) error {
 				return err
 			}
 
+		case "ignore_unmapped":
+			var tmp interface{}
+			dec.Decode(&tmp)
+			switch v := tmp.(type) {
+			case string:
+				value, err := strconv.ParseBool(v)
+				if err != nil {
+					return err
+				}
+				s.IgnoreUnmapped = &value
+			case bool:
+				s.IgnoreUnmapped = &v
+			}
+
 		case "_name":
 			var tmp json.RawMessage
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.QueryName_ = &o
 
 		case "validation_method":

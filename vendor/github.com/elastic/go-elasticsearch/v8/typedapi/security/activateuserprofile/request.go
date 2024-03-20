@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package activateuserprofile
 
@@ -29,7 +29,7 @@ import (
 
 // Request holds the request body struct for the package activateuserprofile
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/security/activate_user_profile/Request.ts#L23-L37
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/security/activate_user_profile/Request.ts#L23-L37
 type Request struct {
 	AccessToken *string             `json:"access_token,omitempty"`
 	GrantType   granttype.GrantType `json:"grant_type"`

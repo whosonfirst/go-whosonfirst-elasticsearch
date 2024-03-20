@@ -16,35 +16,43 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/rangerelation"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/rangerelation"
 )
 
 // NumberRangeQuery type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/query_dsl/term.ts#L83-L90
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/query_dsl/term.ts#L145-L164
 type NumberRangeQuery struct {
-	Boost      *float32                     `json:"boost,omitempty"`
-	From       Float64                      `json:"from,omitempty"`
-	Gt         *Float64                     `json:"gt,omitempty"`
-	Gte        *Float64                     `json:"gte,omitempty"`
-	Lt         *Float64                     `json:"lt,omitempty"`
-	Lte        *Float64                     `json:"lte,omitempty"`
-	QueryName_ *string                      `json:"_name,omitempty"`
-	Relation   *rangerelation.RangeRelation `json:"relation,omitempty"`
-	To         Float64                      `json:"to,omitempty"`
+	// Boost Floating point number used to decrease or increase the relevance scores of
+	// the query.
+	// Boost values are relative to the default value of 1.0.
+	// A boost value between 0 and 1.0 decreases the relevance score.
+	// A value greater than 1.0 increases the relevance score.
+	Boost *float32 `json:"boost,omitempty"`
+	From  Float64  `json:"from,omitempty"`
+	// Gt Greater than.
+	Gt *Float64 `json:"gt,omitempty"`
+	// Gte Greater than or equal to.
+	Gte *Float64 `json:"gte,omitempty"`
+	// Lt Less than.
+	Lt *Float64 `json:"lt,omitempty"`
+	// Lte Less than or equal to.
+	Lte        *Float64 `json:"lte,omitempty"`
+	QueryName_ *string  `json:"_name,omitempty"`
+	// Relation Indicates how the range query matches values for `range` fields.
+	Relation *rangerelation.RangeRelation `json:"relation,omitempty"`
+	To       Float64                      `json:"to,omitempty"`
 }
 
 func (s *NumberRangeQuery) UnmarshalJSON(data []byte) error {
@@ -152,7 +160,11 @@ func (s *NumberRangeQuery) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.QueryName_ = &o
 
 		case "relation":

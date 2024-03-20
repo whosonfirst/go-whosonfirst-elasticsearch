@@ -16,28 +16,34 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // CgroupCpu type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/nodes/_types/Stats.ts#L199-L204
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/nodes/_types/Stats.ts#L487-L504
 type CgroupCpu struct {
-	CfsPeriodMicros *int           `json:"cfs_period_micros,omitempty"`
-	CfsQuotaMicros  *int           `json:"cfs_quota_micros,omitempty"`
-	ControlGroup    *string        `json:"control_group,omitempty"`
-	Stat            *CgroupCpuStat `json:"stat,omitempty"`
+	// CfsPeriodMicros The period of time, in microseconds, for how regularly all tasks in the same
+	// cgroup as the Elasticsearch process should have their access to CPU resources
+	// reallocated.
+	CfsPeriodMicros *int `json:"cfs_period_micros,omitempty"`
+	// CfsQuotaMicros The total amount of time, in microseconds, for which all tasks in the same
+	// cgroup as the Elasticsearch process can run during one period
+	// `cfs_period_micros`.
+	CfsQuotaMicros *int `json:"cfs_quota_micros,omitempty"`
+	// ControlGroup The `cpu` control group to which the Elasticsearch process belongs.
+	ControlGroup *string `json:"control_group,omitempty"`
+	// Stat Contains CPU statistics for the node.
+	Stat *CgroupCpuStat `json:"stat,omitempty"`
 }
 
 func (s *CgroupCpu) UnmarshalJSON(data []byte) error {
@@ -92,7 +98,11 @@ func (s *CgroupCpu) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.ControlGroup = &o
 
 		case "stat":

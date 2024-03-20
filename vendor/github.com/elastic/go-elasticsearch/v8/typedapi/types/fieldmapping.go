@@ -16,21 +16,21 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
-	"encoding/json"
+	"strconv"
 )
 
 // FieldMapping type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/mapping/meta-fields.ts#L24-L27
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/mapping/meta-fields.ts#L24-L27
 type FieldMapping struct {
 	FullName string              `json:"full_name"`
 	Mapping  map[string]Property `json:"mapping"`
@@ -56,7 +56,11 @@ func (s *FieldMapping) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.FullName = o
 
 		case "mapping":
@@ -71,7 +75,9 @@ func (s *FieldMapping) UnmarshalJSON(data []byte) error {
 				localDec := json.NewDecoder(buf)
 				localDec.Decode(&kind)
 				buf.Seek(0, io.SeekStart)
-
+				if _, ok := kind["type"]; !ok {
+					kind["type"] = "object"
+				}
 				switch kind["type"] {
 				case "binary":
 					oo := NewBinaryProperty()
@@ -171,6 +177,12 @@ func (s *FieldMapping) UnmarshalJSON(data []byte) error {
 					s.Mapping[key] = oo
 				case "dense_vector":
 					oo := NewDenseVectorProperty()
+					if err := localDec.Decode(&oo); err != nil {
+						return err
+					}
+					s.Mapping[key] = oo
+				case "sparse_vector":
+					oo := NewSparseVectorProperty()
 					if err := localDec.Decode(&oo); err != nil {
 						return err
 					}
@@ -350,9 +362,11 @@ func (s *FieldMapping) UnmarshalJSON(data []byte) error {
 					}
 					s.Mapping[key] = oo
 				default:
-					if err := localDec.Decode(&s.Mapping); err != nil {
+					oo := new(Property)
+					if err := localDec.Decode(&oo); err != nil {
 						return err
 					}
+					s.Mapping[key] = oo
 				}
 			}
 

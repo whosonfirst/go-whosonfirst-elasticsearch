@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Returns a document.
 package get
@@ -36,7 +36,6 @@ import (
 
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
-
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/versiontype"
 )
 
@@ -56,12 +55,16 @@ type Get struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	id    string
 	index string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewGet type alias for index.
@@ -73,9 +76,9 @@ func NewGetFunc(tp elastictransport.Interface) NewGet {
 	return func(index, id string) *Get {
 		n := New(tp)
 
-		n.Id(id)
+		n._id(id)
 
-		n.Index(index)
+		n._index(index)
 
 		return n
 	}
@@ -83,13 +86,18 @@ func NewGetFunc(tp elastictransport.Interface) NewGet {
 
 // Returns a document.
 //
-// https://www.elastic.co/guide/en/elasticsearch/reference/master/docs-get.html
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-get.html
 func New(tp elastictransport.Interface) *Get {
 	r := &Get{
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -110,11 +118,17 @@ func (r *Get) HttpRequest(ctx context.Context) (*http.Request, error) {
 	case r.paramSet == indexMask|idMask:
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "index", r.index)
+		}
 		path.WriteString(r.index)
 		path.WriteString("/")
 		path.WriteString("_doc")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "id", r.id)
+		}
 		path.WriteString(r.id)
 
 		method = http.MethodGet
@@ -128,9 +142,9 @@ func (r *Get) HttpRequest(ctx context.Context) (*http.Request, error) {
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
@@ -147,27 +161,66 @@ func (r *Get) HttpRequest(ctx context.Context) (*http.Request, error) {
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r Get) Perform(ctx context.Context) (*http.Response, error) {
+func (r Get) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "get")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "get")
+		if reader := instrument.RecordRequestBody(ctx, "get", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "get")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the Get query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the Get query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a get.Response
-func (r Get) Do(ctx context.Context) (*Response, error) {
+func (r Get) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "get")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -175,24 +228,83 @@ func (r Get) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
 		return response, nil
 	}
 
+	if res.StatusCode == 404 {
+		data, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
+			return nil, err
+		}
+
+		errorResponse := types.NewElasticsearchError()
+		err = json.NewDecoder(gobytes.NewReader(data)).Decode(&errorResponse)
+		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
+			return nil, err
+		}
+
+		if errorResponse.Status == 0 {
+			err = json.NewDecoder(gobytes.NewReader(data)).Decode(&response)
+			if err != nil {
+				if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+					instrument.RecordError(ctx, err)
+				}
+				return nil, err
+			}
+
+			return response, nil
+		}
+
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, errorResponse)
+		}
+		return nil, errorResponse
+	}
+
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r Get) IsSuccess(ctx context.Context) (bool, error) {
+func (r Get) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "get")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -208,6 +320,14 @@ func (r Get) IsSuccess(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the Get query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -220,18 +340,18 @@ func (r *Get) Header(key, value string) *Get {
 
 // Id Unique identifier of the document.
 // API Name: id
-func (r *Get) Id(v string) *Get {
+func (r *Get) _id(id string) *Get {
 	r.paramSet |= idMask
-	r.id = v
+	r.id = id
 
 	return r
 }
 
 // Index Name of the index that contains the document.
 // API Name: index
-func (r *Get) Index(v string) *Get {
+func (r *Get) _index(index string) *Get {
 	r.paramSet |= indexMask
-	r.index = v
+	r.index = index
 
 	return r
 }
@@ -239,16 +359,16 @@ func (r *Get) Index(v string) *Get {
 // Preference Specifies the node or shard the operation should be performed on. Random by
 // default.
 // API name: preference
-func (r *Get) Preference(v string) *Get {
-	r.values.Set("preference", v)
+func (r *Get) Preference(preference string) *Get {
+	r.values.Set("preference", preference)
 
 	return r
 }
 
-// Realtime Boolean) If true, the request is real-time as opposed to near-real-time.
+// Realtime If `true`, the request is real-time as opposed to near-real-time.
 // API name: realtime
-func (r *Get) Realtime(b bool) *Get {
-	r.values.Set("realtime", strconv.FormatBool(b))
+func (r *Get) Realtime(realtime bool) *Get {
+	r.values.Set("realtime", strconv.FormatBool(realtime))
 
 	return r
 }
@@ -256,16 +376,16 @@ func (r *Get) Realtime(b bool) *Get {
 // Refresh If true, Elasticsearch refreshes the affected shards to make this operation
 // visible to search. If false, do nothing with refreshes.
 // API name: refresh
-func (r *Get) Refresh(b bool) *Get {
-	r.values.Set("refresh", strconv.FormatBool(b))
+func (r *Get) Refresh(refresh bool) *Get {
+	r.values.Set("refresh", strconv.FormatBool(refresh))
 
 	return r
 }
 
 // Routing Target the specified primary shard.
 // API name: routing
-func (r *Get) Routing(v string) *Get {
-	r.values.Set("routing", v)
+func (r *Get) Routing(routing string) *Get {
+	r.values.Set("routing", routing)
 
 	return r
 }
@@ -273,32 +393,34 @@ func (r *Get) Routing(v string) *Get {
 // Source_ True or false to return the _source field or not, or a list of fields to
 // return.
 // API name: _source
-func (r *Get) Source_(v string) *Get {
-	r.values.Set("_source", v)
+func (r *Get) Source_(sourceconfigparam string) *Get {
+	r.values.Set("_source", sourceconfigparam)
 
 	return r
 }
 
 // SourceExcludes_ A comma-separated list of source fields to exclude in the response.
 // API name: _source_excludes
-func (r *Get) SourceExcludes_(v string) *Get {
-	r.values.Set("_source_excludes", v)
+func (r *Get) SourceExcludes_(fields ...string) *Get {
+	r.values.Set("_source_excludes", strings.Join(fields, ","))
 
 	return r
 }
 
 // SourceIncludes_ A comma-separated list of source fields to include in the response.
 // API name: _source_includes
-func (r *Get) SourceIncludes_(v string) *Get {
-	r.values.Set("_source_includes", v)
+func (r *Get) SourceIncludes_(fields ...string) *Get {
+	r.values.Set("_source_includes", strings.Join(fields, ","))
 
 	return r
 }
 
-// StoredFields A comma-separated list of stored fields to return in the response
+// StoredFields List of stored fields to return as part of a hit.
+// If no fields are specified, no stored fields are included in the response.
+// If this field is specified, the `_source` parameter defaults to false.
 // API name: stored_fields
-func (r *Get) StoredFields(v string) *Get {
-	r.values.Set("stored_fields", v)
+func (r *Get) StoredFields(fields ...string) *Get {
+	r.values.Set("stored_fields", strings.Join(fields, ","))
 
 	return r
 }
@@ -306,16 +428,16 @@ func (r *Get) StoredFields(v string) *Get {
 // Version Explicit version number for concurrency control. The specified version must
 // match the current version of the document for the request to succeed.
 // API name: version
-func (r *Get) Version(v string) *Get {
-	r.values.Set("version", v)
+func (r *Get) Version(versionnumber string) *Get {
+	r.values.Set("version", versionnumber)
 
 	return r
 }
 
 // VersionType Specific version type: internal, external, external_gte.
 // API name: version_type
-func (r *Get) VersionType(enum versiontype.VersionType) *Get {
-	r.values.Set("version_type", enum.String())
+func (r *Get) VersionType(versiontype versiontype.VersionType) *Get {
+	r.values.Set("version_type", versiontype.String())
 
 	return r
 }

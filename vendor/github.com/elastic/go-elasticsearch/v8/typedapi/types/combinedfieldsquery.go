@@ -16,35 +16,49 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/combinedfieldsoperator"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/combinedfieldszeroterms"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/combinedfieldsoperator"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/combinedfieldszeroterms"
 )
 
 // CombinedFieldsQuery type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/query_dsl/abstractions.ts#L181-L195
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/query_dsl/abstractions.ts#L437-L471
 type CombinedFieldsQuery struct {
-	AutoGenerateSynonymsPhraseQuery *bool                                            `json:"auto_generate_synonyms_phrase_query,omitempty"`
-	Boost                           *float32                                         `json:"boost,omitempty"`
-	Fields                          []string                                         `json:"fields"`
-	MinimumShouldMatch              MinimumShouldMatch                               `json:"minimum_should_match,omitempty"`
-	Operator                        *combinedfieldsoperator.CombinedFieldsOperator   `json:"operator,omitempty"`
-	Query                           string                                           `json:"query"`
-	QueryName_                      *string                                          `json:"_name,omitempty"`
-	ZeroTermsQuery                  *combinedfieldszeroterms.CombinedFieldsZeroTerms `json:"zero_terms_query,omitempty"`
+	// AutoGenerateSynonymsPhraseQuery If true, match phrase queries are automatically created for multi-term
+	// synonyms.
+	AutoGenerateSynonymsPhraseQuery *bool `json:"auto_generate_synonyms_phrase_query,omitempty"`
+	// Boost Floating point number used to decrease or increase the relevance scores of
+	// the query.
+	// Boost values are relative to the default value of 1.0.
+	// A boost value between 0 and 1.0 decreases the relevance score.
+	// A value greater than 1.0 increases the relevance score.
+	Boost *float32 `json:"boost,omitempty"`
+	// Fields List of fields to search. Field wildcard patterns are allowed. Only `text`
+	// fields are supported, and they must all have the same search `analyzer`.
+	Fields []string `json:"fields"`
+	// MinimumShouldMatch Minimum number of clauses that must match for a document to be returned.
+	MinimumShouldMatch MinimumShouldMatch `json:"minimum_should_match,omitempty"`
+	// Operator Boolean logic used to interpret text in the query value.
+	Operator *combinedfieldsoperator.CombinedFieldsOperator `json:"operator,omitempty"`
+	// Query Text to search for in the provided `fields`.
+	// The `combined_fields` query analyzes the provided text before performing a
+	// search.
+	Query      string  `json:"query"`
+	QueryName_ *string `json:"_name,omitempty"`
+	// ZeroTermsQuery Indicates whether no documents are returned if the analyzer removes all
+	// tokens, such as when using a `stop` filter.
+	ZeroTermsQuery *combinedfieldszeroterms.CombinedFieldsZeroTerms `json:"zero_terms_query,omitempty"`
 }
 
 func (s *CombinedFieldsQuery) UnmarshalJSON(data []byte) error {
@@ -112,7 +126,11 @@ func (s *CombinedFieldsQuery) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Query = o
 
 		case "_name":
@@ -120,7 +138,11 @@ func (s *CombinedFieldsQuery) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.QueryName_ = &o
 
 		case "zero_terms_query":

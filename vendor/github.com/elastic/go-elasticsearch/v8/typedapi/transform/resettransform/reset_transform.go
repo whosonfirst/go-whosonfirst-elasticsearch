@@ -16,13 +16,12 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Resets an existing transform.
 package resettransform
 
 import (
-	gobytes "bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -52,11 +51,15 @@ type ResetTransform struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	transformid string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewResetTransform type alias for index.
@@ -68,7 +71,7 @@ func NewResetTransformFunc(tp elastictransport.Interface) NewResetTransform {
 	return func(transformid string) *ResetTransform {
 		n := New(tp)
 
-		n.TransformId(transformid)
+		n._transformid(transformid)
 
 		return n
 	}
@@ -82,7 +85,12 @@ func New(tp elastictransport.Interface) *ResetTransform {
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -105,6 +113,9 @@ func (r *ResetTransform) HttpRequest(ctx context.Context) (*http.Request, error)
 		path.WriteString("_transform")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "transformid", r.transformid)
+		}
 		path.WriteString(r.transformid)
 		path.WriteString("/")
 		path.WriteString("_reset")
@@ -120,9 +131,9 @@ func (r *ResetTransform) HttpRequest(ctx context.Context) (*http.Request, error)
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
@@ -139,27 +150,66 @@ func (r *ResetTransform) HttpRequest(ctx context.Context) (*http.Request, error)
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r ResetTransform) Perform(ctx context.Context) (*http.Response, error) {
+func (r ResetTransform) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "transform.reset_transform")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "transform.reset_transform")
+		if reader := instrument.RecordRequestBody(ctx, "transform.reset_transform", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "transform.reset_transform")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the ResetTransform query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the ResetTransform query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a resettransform.Response
-func (r ResetTransform) Do(ctx context.Context) (*Response, error) {
+func (r ResetTransform) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "transform.reset_transform")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -167,6 +217,9 @@ func (r ResetTransform) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -176,15 +229,35 @@ func (r ResetTransform) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r ResetTransform) IsSuccess(ctx context.Context) (bool, error) {
+func (r ResetTransform) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "transform.reset_transform")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -198,6 +271,14 @@ func (r ResetTransform) IsSuccess(ctx context.Context) (bool, error) {
 
 	if res.StatusCode >= 200 && res.StatusCode < 300 {
 		return true, nil
+	}
+
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the ResetTransform query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
 	}
 
 	return false, nil
@@ -215,9 +296,9 @@ func (r *ResetTransform) Header(key, value string) *ResetTransform {
 // hyphens, and underscores. It has a 64 character limit and must start and end
 // with alphanumeric characters.
 // API Name: transformid
-func (r *ResetTransform) TransformId(v string) *ResetTransform {
+func (r *ResetTransform) _transformid(transformid string) *ResetTransform {
 	r.paramSet |= transformidMask
-	r.transformid = v
+	r.transformid = transformid
 
 	return r
 }
@@ -226,8 +307,8 @@ func (r *ResetTransform) TransformId(v string) *ResetTransform {
 // state. If it's `false`, the transform
 // must be stopped before it can be reset.
 // API name: force
-func (r *ResetTransform) Force(b bool) *ResetTransform {
-	r.values.Set("force", strconv.FormatBool(b))
+func (r *ResetTransform) Force(force bool) *ResetTransform {
+	r.values.Set("force", strconv.FormatBool(force))
 
 	return r
 }

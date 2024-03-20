@@ -16,27 +16,30 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/geoshaperelation"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/geoshaperelation"
 )
 
 // ShapeFieldQuery type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/query_dsl/specialized.ts#L183-L187
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/query_dsl/specialized.ts#L354-L367
 type ShapeFieldQuery struct {
-	IndexedShape *FieldLookup                       `json:"indexed_shape,omitempty"`
-	Relation     *geoshaperelation.GeoShapeRelation `json:"relation,omitempty"`
-	Shape        json.RawMessage                    `json:"shape,omitempty"`
+	// IndexedShape Queries using a pre-indexed shape.
+	IndexedShape *FieldLookup `json:"indexed_shape,omitempty"`
+	// Relation Spatial relation between the query shape and the document shape.
+	Relation *geoshaperelation.GeoShapeRelation `json:"relation,omitempty"`
+	// Shape Queries using an inline shape definition in GeoJSON or Well Known Text (WKT)
+	// format.
+	Shape json.RawMessage `json:"shape,omitempty"`
 }
 
 func (s *ShapeFieldQuery) UnmarshalJSON(data []byte) error {

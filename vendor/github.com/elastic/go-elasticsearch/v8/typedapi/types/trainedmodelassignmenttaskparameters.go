@@ -16,28 +16,28 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/trainingpriority"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/trainingpriority"
 )
 
 // TrainedModelAssignmentTaskParameters type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ml/_types/TrainedModel.ts#L305-L333
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ml/_types/TrainedModel.ts#L315-L348
 type TrainedModelAssignmentTaskParameters struct {
 	// CacheSize The size of the trained model cache.
 	CacheSize ByteSize `json:"cache_size"`
+	// DeploymentId The unique identifier for the trained model deployment.
+	DeploymentId string `json:"deployment_id"`
 	// ModelBytes The size of the trained model in bytes.
 	ModelBytes int `json:"model_bytes"`
 	// ModelId The unique identifier for the trained model.
@@ -68,6 +68,11 @@ func (s *TrainedModelAssignmentTaskParameters) UnmarshalJSON(data []byte) error 
 
 		case "cache_size":
 			if err := dec.Decode(&s.CacheSize); err != nil {
+				return err
+			}
+
+		case "deployment_id":
+			if err := dec.Decode(&s.DeploymentId); err != nil {
 				return err
 			}
 

@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Forces any buffered data to be processed by the job.
 package flushjob
@@ -30,7 +30,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
@@ -51,14 +50,19 @@ type FlushJob struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
-
-	req *Request
 	raw io.Reader
+
+	req      *Request
+	deferred []func(request *Request) error
+	buf      *gobytes.Buffer
 
 	paramSet int
 
 	jobid string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewFlushJob type alias for index.
@@ -70,7 +74,7 @@ func NewFlushJobFunc(tp elastictransport.Interface) NewFlushJob {
 	return func(jobid string) *FlushJob {
 		n := New(tp)
 
-		n.JobId(jobid)
+		n._jobid(jobid)
 
 		return n
 	}
@@ -84,7 +88,16 @@ func New(tp elastictransport.Interface) *FlushJob {
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+
+		buf: gobytes.NewBuffer(nil),
+
+		req: NewRequest(),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -114,9 +127,17 @@ func (r *FlushJob) HttpRequest(ctx context.Context) (*http.Request, error) {
 
 	var err error
 
-	if r.raw != nil {
-		r.buf.ReadFrom(r.raw)
-	} else if r.req != nil {
+	if len(r.deferred) > 0 {
+		for _, f := range r.deferred {
+			deferredErr := f(r.req)
+			if deferredErr != nil {
+				return nil, deferredErr
+			}
+		}
+	}
+
+	if r.raw == nil && r.req != nil {
+
 		data, err := json.Marshal(r.req)
 
 		if err != nil {
@@ -124,6 +145,11 @@ func (r *FlushJob) HttpRequest(ctx context.Context) (*http.Request, error) {
 		}
 
 		r.buf.Write(data)
+
+	}
+
+	if r.buf.Len() > 0 {
+		r.raw = r.buf
 	}
 
 	r.path.Scheme = "http"
@@ -136,6 +162,9 @@ func (r *FlushJob) HttpRequest(ctx context.Context) (*http.Request, error) {
 		path.WriteString("anomaly_detectors")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "jobid", r.jobid)
+		}
 		path.WriteString(r.jobid)
 		path.WriteString("/")
 		path.WriteString("_flush")
@@ -151,15 +180,15 @@ func (r *FlushJob) HttpRequest(ctx context.Context) (*http.Request, error) {
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
 
 	if req.Header.Get("Content-Type") == "" {
-		if r.buf.Len() > 0 {
+		if r.raw != nil {
 			req.Header.Set("Content-Type", "application/vnd.elasticsearch+json;compatible-with=8")
 		}
 	}
@@ -176,27 +205,66 @@ func (r *FlushJob) HttpRequest(ctx context.Context) (*http.Request, error) {
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r FlushJob) Perform(ctx context.Context) (*http.Response, error) {
+func (r FlushJob) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "ml.flush_job")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "ml.flush_job")
+		if reader := instrument.RecordRequestBody(ctx, "ml.flush_job", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "ml.flush_job")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the FlushJob query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the FlushJob query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a flushjob.Response
-func (r FlushJob) Do(ctx context.Context) (*Response, error) {
+func (r FlushJob) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "ml.flush_job")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -204,6 +272,9 @@ func (r FlushJob) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -213,9 +284,19 @@ func (r FlushJob) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
@@ -228,54 +309,49 @@ func (r *FlushJob) Header(key, value string) *FlushJob {
 
 // JobId Identifier for the anomaly detection job.
 // API Name: jobid
-func (r *FlushJob) JobId(v string) *FlushJob {
+func (r *FlushJob) _jobid(jobid string) *FlushJob {
 	r.paramSet |= jobidMask
-	r.jobid = v
+	r.jobid = jobid
 
 	return r
 }
 
-// AdvanceTime Specifies to advance to a particular time value. Results are generated
-// and the model is updated for data from the specified time interval.
+// AdvanceTime Refer to the description for the `advance_time` query parameter.
 // API name: advance_time
-func (r *FlushJob) AdvanceTime(v string) *FlushJob {
-	r.values.Set("advance_time", v)
+func (r *FlushJob) AdvanceTime(datetime types.DateTime) *FlushJob {
+	r.req.AdvanceTime = datetime
 
 	return r
 }
 
-// CalcInterim If true, calculates the interim results for the most recent bucket or all
-// buckets within the latency period.
+// CalcInterim Refer to the description for the `calc_interim` query parameter.
 // API name: calc_interim
-func (r *FlushJob) CalcInterim(b bool) *FlushJob {
-	r.values.Set("calc_interim", strconv.FormatBool(b))
+func (r *FlushJob) CalcInterim(calcinterim bool) *FlushJob {
+	r.req.CalcInterim = &calcinterim
 
 	return r
 }
 
-// End When used in conjunction with `calc_interim` and `start`, specifies the
-// range of buckets on which to calculate interim results.
+// End Refer to the description for the `end` query parameter.
 // API name: end
-func (r *FlushJob) End(v string) *FlushJob {
-	r.values.Set("end", v)
+func (r *FlushJob) End(datetime types.DateTime) *FlushJob {
+	r.req.End = datetime
 
 	return r
 }
 
-// SkipTime Specifies to skip to a particular time value. Results are not generated
-// and the model is not updated for data from the specified time interval.
+// SkipTime Refer to the description for the `skip_time` query parameter.
 // API name: skip_time
-func (r *FlushJob) SkipTime(v string) *FlushJob {
-	r.values.Set("skip_time", v)
+func (r *FlushJob) SkipTime(datetime types.DateTime) *FlushJob {
+	r.req.SkipTime = datetime
 
 	return r
 }
 
-// Start When used in conjunction with `calc_interim`, specifies the range of
-// buckets on which to calculate interim results.
+// Start Refer to the description for the `start` query parameter.
 // API name: start
-func (r *FlushJob) Start(v string) *FlushJob {
-	r.values.Set("start", v)
+func (r *FlushJob) Start(datetime types.DateTime) *FlushJob {
+	r.req.Start = datetime
 
 	return r
 }

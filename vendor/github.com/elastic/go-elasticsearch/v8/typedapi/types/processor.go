@@ -16,27 +16,29 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // Processor type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/nodes/_types/Stats.ts#L162-L167
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/nodes/_types/Stats.ts#L384-L401
 type Processor struct {
-	Count        *int64 `json:"count,omitempty"`
-	Current      *int64 `json:"current,omitempty"`
-	Failed       *int64 `json:"failed,omitempty"`
+	// Count Number of documents transformed by the processor.
+	Count *int64 `json:"count,omitempty"`
+	// Current Number of documents currently being transformed by the processor.
+	Current *int64 `json:"current,omitempty"`
+	// Failed Number of failed operations for the processor.
+	Failed *int64 `json:"failed,omitempty"`
+	// TimeInMillis Time, in milliseconds, spent by the processor transforming documents.
 	TimeInMillis *int64 `json:"time_in_millis,omitempty"`
 }
 

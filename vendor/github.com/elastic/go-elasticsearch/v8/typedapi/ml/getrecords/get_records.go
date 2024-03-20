@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Retrieves anomaly records for an anomaly detection job.
 package getrecords
@@ -51,14 +51,19 @@ type GetRecords struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
-
-	req *Request
 	raw io.Reader
+
+	req      *Request
+	deferred []func(request *Request) error
+	buf      *gobytes.Buffer
 
 	paramSet int
 
 	jobid string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewGetRecords type alias for index.
@@ -70,7 +75,7 @@ func NewGetRecordsFunc(tp elastictransport.Interface) NewGetRecords {
 	return func(jobid string) *GetRecords {
 		n := New(tp)
 
-		n.JobId(jobid)
+		n._jobid(jobid)
 
 		return n
 	}
@@ -84,7 +89,16 @@ func New(tp elastictransport.Interface) *GetRecords {
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+
+		buf: gobytes.NewBuffer(nil),
+
+		req: NewRequest(),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -114,9 +128,17 @@ func (r *GetRecords) HttpRequest(ctx context.Context) (*http.Request, error) {
 
 	var err error
 
-	if r.raw != nil {
-		r.buf.ReadFrom(r.raw)
-	} else if r.req != nil {
+	if len(r.deferred) > 0 {
+		for _, f := range r.deferred {
+			deferredErr := f(r.req)
+			if deferredErr != nil {
+				return nil, deferredErr
+			}
+		}
+	}
+
+	if r.raw == nil && r.req != nil {
+
 		data, err := json.Marshal(r.req)
 
 		if err != nil {
@@ -124,6 +146,11 @@ func (r *GetRecords) HttpRequest(ctx context.Context) (*http.Request, error) {
 		}
 
 		r.buf.Write(data)
+
+	}
+
+	if r.buf.Len() > 0 {
+		r.raw = r.buf
 	}
 
 	r.path.Scheme = "http"
@@ -136,6 +163,9 @@ func (r *GetRecords) HttpRequest(ctx context.Context) (*http.Request, error) {
 		path.WriteString("anomaly_detectors")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "jobid", r.jobid)
+		}
 		path.WriteString(r.jobid)
 		path.WriteString("/")
 		path.WriteString("results")
@@ -153,15 +183,15 @@ func (r *GetRecords) HttpRequest(ctx context.Context) (*http.Request, error) {
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
 
 	if req.Header.Get("Content-Type") == "" {
-		if r.buf.Len() > 0 {
+		if r.raw != nil {
 			req.Header.Set("Content-Type", "application/vnd.elasticsearch+json;compatible-with=8")
 		}
 	}
@@ -178,27 +208,66 @@ func (r *GetRecords) HttpRequest(ctx context.Context) (*http.Request, error) {
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r GetRecords) Perform(ctx context.Context) (*http.Response, error) {
+func (r GetRecords) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "ml.get_records")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "ml.get_records")
+		if reader := instrument.RecordRequestBody(ctx, "ml.get_records", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "ml.get_records")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the GetRecords query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the GetRecords query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a getrecords.Response
-func (r GetRecords) Do(ctx context.Context) (*Response, error) {
+func (r GetRecords) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "ml.get_records")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -206,6 +275,9 @@ func (r GetRecords) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -215,9 +287,19 @@ func (r GetRecords) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
@@ -230,75 +312,82 @@ func (r *GetRecords) Header(key, value string) *GetRecords {
 
 // JobId Identifier for the anomaly detection job.
 // API Name: jobid
-func (r *GetRecords) JobId(v string) *GetRecords {
+func (r *GetRecords) _jobid(jobid string) *GetRecords {
 	r.paramSet |= jobidMask
-	r.jobid = v
-
-	return r
-}
-
-// Desc If true, the results are sorted in descending order.
-// API name: desc
-func (r *GetRecords) Desc(b bool) *GetRecords {
-	r.values.Set("desc", strconv.FormatBool(b))
-
-	return r
-}
-
-// End Returns records with timestamps earlier than this time. The default value
-// means results are not limited to specific timestamps.
-// API name: end
-func (r *GetRecords) End(v string) *GetRecords {
-	r.values.Set("end", v)
-
-	return r
-}
-
-// ExcludeInterim If `true`, the output excludes interim results.
-// API name: exclude_interim
-func (r *GetRecords) ExcludeInterim(b bool) *GetRecords {
-	r.values.Set("exclude_interim", strconv.FormatBool(b))
+	r.jobid = jobid
 
 	return r
 }
 
 // From Skips the specified number of records.
 // API name: from
-func (r *GetRecords) From(i int) *GetRecords {
-	r.values.Set("from", strconv.Itoa(i))
-
-	return r
-}
-
-// RecordScore Returns records with anomaly scores greater or equal than this value.
-// API name: record_score
-func (r *GetRecords) RecordScore(v string) *GetRecords {
-	r.values.Set("record_score", v)
+func (r *GetRecords) From(from int) *GetRecords {
+	r.values.Set("from", strconv.Itoa(from))
 
 	return r
 }
 
 // Size Specifies the maximum number of records to obtain.
 // API name: size
-func (r *GetRecords) Size(i int) *GetRecords {
-	r.values.Set("size", strconv.Itoa(i))
+func (r *GetRecords) Size(size int) *GetRecords {
+	r.values.Set("size", strconv.Itoa(size))
 
 	return r
 }
 
-// Sort Specifies the sort field for the requested records.
+// Desc Refer to the description for the `desc` query parameter.
+// API name: desc
+func (r *GetRecords) Desc(desc bool) *GetRecords {
+	r.req.Desc = &desc
+
+	return r
+}
+
+// End Refer to the description for the `end` query parameter.
+// API name: end
+func (r *GetRecords) End(datetime types.DateTime) *GetRecords {
+	r.req.End = datetime
+
+	return r
+}
+
+// ExcludeInterim Refer to the description for the `exclude_interim` query parameter.
+// API name: exclude_interim
+func (r *GetRecords) ExcludeInterim(excludeinterim bool) *GetRecords {
+	r.req.ExcludeInterim = &excludeinterim
+
+	return r
+}
+
+// API name: page
+func (r *GetRecords) Page(page *types.Page) *GetRecords {
+
+	r.req.Page = page
+
+	return r
+}
+
+// RecordScore Refer to the description for the `record_score` query parameter.
+// API name: record_score
+func (r *GetRecords) RecordScore(recordscore types.Float64) *GetRecords {
+
+	r.req.RecordScore = &recordscore
+
+	return r
+}
+
+// Sort Refer to the description for the `sort` query parameter.
 // API name: sort
-func (r *GetRecords) Sort(v string) *GetRecords {
-	r.values.Set("sort", v)
+func (r *GetRecords) Sort(field string) *GetRecords {
+	r.req.Sort = &field
 
 	return r
 }
 
-// Start Returns records with timestamps after this time. The default value means
-// results are not limited to specific timestamps.
+// Start Refer to the description for the `start` query parameter.
 // API name: start
-func (r *GetRecords) Start(v string) *GetRecords {
-	r.values.Set("start", v)
+func (r *GetRecords) Start(datetime types.DateTime) *GetRecords {
+	r.req.Start = datetime
 
 	return r
 }

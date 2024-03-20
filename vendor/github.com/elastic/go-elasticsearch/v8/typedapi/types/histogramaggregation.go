@@ -16,39 +16,55 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortorder"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortorder"
 )
 
 // HistogramAggregation type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/aggregations/bucket.ts#L235-L247
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/aggregations/bucket.ts#L500-L546
 type HistogramAggregation struct {
+	// ExtendedBounds Enables extending the bounds of the histogram beyond the data itself.
 	ExtendedBounds *ExtendedBoundsdouble `json:"extended_bounds,omitempty"`
-	Field          *string               `json:"field,omitempty"`
-	Format         *string               `json:"format,omitempty"`
-	HardBounds     *ExtendedBoundsdouble `json:"hard_bounds,omitempty"`
-	Interval       *Float64              `json:"interval,omitempty"`
-	Keyed          *bool                 `json:"keyed,omitempty"`
-	Meta           Metadata              `json:"meta,omitempty"`
-	MinDocCount    *int                  `json:"min_doc_count,omitempty"`
-	Missing        *Float64              `json:"missing,omitempty"`
-	Name           *string               `json:"name,omitempty"`
-	Offset         *Float64              `json:"offset,omitempty"`
-	Order          AggregateOrder        `json:"order,omitempty"`
-	Script         Script                `json:"script,omitempty"`
+	// Field The name of the field to aggregate on.
+	Field  *string `json:"field,omitempty"`
+	Format *string `json:"format,omitempty"`
+	// HardBounds Limits the range of buckets in the histogram.
+	// It is particularly useful in the case of open data ranges that can result in
+	// a very large number of buckets.
+	HardBounds *ExtendedBoundsdouble `json:"hard_bounds,omitempty"`
+	// Interval The interval for the buckets.
+	// Must be a positive decimal.
+	Interval *Float64 `json:"interval,omitempty"`
+	// Keyed If `true`, returns buckets as a hash instead of an array, keyed by the bucket
+	// keys.
+	Keyed *bool    `json:"keyed,omitempty"`
+	Meta  Metadata `json:"meta,omitempty"`
+	// MinDocCount Only returns buckets that have `min_doc_count` number of documents.
+	// By default, the response will fill gaps in the histogram with empty buckets.
+	MinDocCount *int `json:"min_doc_count,omitempty"`
+	// Missing The value to apply to documents that do not have a value.
+	// By default, documents without a value are ignored.
+	Missing *Float64 `json:"missing,omitempty"`
+	Name    *string  `json:"name,omitempty"`
+	// Offset By default, the bucket keys start with 0 and then continue in even spaced
+	// steps of `interval`.
+	// The bucket boundaries can be shifted by using the `offset` option.
+	Offset *Float64 `json:"offset,omitempty"`
+	// Order The sort order of the returned buckets.
+	// By default, the returned buckets are sorted by their key ascending.
+	Order  AggregateOrder `json:"order,omitempty"`
+	Script Script         `json:"script,omitempty"`
 }
 
 func (s *HistogramAggregation) UnmarshalJSON(data []byte) error {
@@ -81,7 +97,11 @@ func (s *HistogramAggregation) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Format = &o
 
 		case "hard_bounds":
@@ -161,7 +181,11 @@ func (s *HistogramAggregation) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Name = &o
 
 		case "offset":
@@ -202,8 +226,39 @@ func (s *HistogramAggregation) UnmarshalJSON(data []byte) error {
 			}
 
 		case "script":
-			if err := dec.Decode(&s.Script); err != nil {
+			message := json.RawMessage{}
+			if err := dec.Decode(&message); err != nil {
 				return err
+			}
+			keyDec := json.NewDecoder(bytes.NewReader(message))
+			for {
+				t, err := keyDec.Token()
+				if err != nil {
+					if errors.Is(err, io.EOF) {
+						break
+					}
+					return err
+				}
+
+				switch t {
+
+				case "lang", "options", "source":
+					o := NewInlineScript()
+					localDec := json.NewDecoder(bytes.NewReader(message))
+					if err := localDec.Decode(&o); err != nil {
+						return err
+					}
+					s.Script = o
+
+				case "id":
+					o := NewStoredScriptId()
+					localDec := json.NewDecoder(bytes.NewReader(message))
+					if err := localDec.Decode(&o); err != nil {
+						return err
+					}
+					s.Script = o
+
+				}
 			}
 
 		}

@@ -16,13 +16,12 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Adds a block to an index.
 package addblock
 
 import (
-	gobytes "bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -36,6 +35,7 @@ import (
 
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/expandwildcard"
 )
 
 const (
@@ -54,12 +54,16 @@ type AddBlock struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	index string
 	block string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewAddBlock type alias for index.
@@ -71,9 +75,9 @@ func NewAddBlockFunc(tp elastictransport.Interface) NewAddBlock {
 	return func(index, block string) *AddBlock {
 		n := New(tp)
 
-		n.Index(index)
+		n._index(index)
 
-		n.Block(block)
+		n._block(block)
 
 		return n
 	}
@@ -81,13 +85,18 @@ func NewAddBlockFunc(tp elastictransport.Interface) NewAddBlock {
 
 // Adds a block to an index.
 //
-// https://www.elastic.co/guide/en/elasticsearch/reference/master/index-modules-blocks.html
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/index-modules-blocks.html
 func New(tp elastictransport.Interface) *AddBlock {
 	r := &AddBlock{
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -108,11 +117,17 @@ func (r *AddBlock) HttpRequest(ctx context.Context) (*http.Request, error) {
 	case r.paramSet == indexMask|blockMask:
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "index", r.index)
+		}
 		path.WriteString(r.index)
 		path.WriteString("/")
 		path.WriteString("_block")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "block", r.block)
+		}
 		path.WriteString(r.block)
 
 		method = http.MethodPut
@@ -126,9 +141,9 @@ func (r *AddBlock) HttpRequest(ctx context.Context) (*http.Request, error) {
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
@@ -145,27 +160,66 @@ func (r *AddBlock) HttpRequest(ctx context.Context) (*http.Request, error) {
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r AddBlock) Perform(ctx context.Context) (*http.Response, error) {
+func (r AddBlock) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "indices.add_block")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "indices.add_block")
+		if reader := instrument.RecordRequestBody(ctx, "indices.add_block", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "indices.add_block")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the AddBlock query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the AddBlock query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a addblock.Response
-func (r AddBlock) Do(ctx context.Context) (*Response, error) {
+func (r AddBlock) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "indices.add_block")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -173,6 +227,9 @@ func (r AddBlock) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -182,15 +239,35 @@ func (r AddBlock) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r AddBlock) IsSuccess(ctx context.Context) (bool, error) {
+func (r AddBlock) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "indices.add_block")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -206,6 +283,14 @@ func (r AddBlock) IsSuccess(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the AddBlock query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -218,18 +303,18 @@ func (r *AddBlock) Header(key, value string) *AddBlock {
 
 // Index A comma separated list of indices to add a block to
 // API Name: index
-func (r *AddBlock) Index(v string) *AddBlock {
+func (r *AddBlock) _index(index string) *AddBlock {
 	r.paramSet |= indexMask
-	r.index = v
+	r.index = index
 
 	return r
 }
 
 // Block The block to add (one of read, write, read_only or metadata)
 // API Name: block
-func (r *AddBlock) Block(v string) *AddBlock {
+func (r *AddBlock) _block(block string) *AddBlock {
 	r.paramSet |= blockMask
-	r.block = v
+	r.block = block
 
 	return r
 }
@@ -237,8 +322,8 @@ func (r *AddBlock) Block(v string) *AddBlock {
 // AllowNoIndices Whether to ignore if a wildcard indices expression resolves into no concrete
 // indices. (This includes `_all` string or when no indices have been specified)
 // API name: allow_no_indices
-func (r *AddBlock) AllowNoIndices(b bool) *AddBlock {
-	r.values.Set("allow_no_indices", strconv.FormatBool(b))
+func (r *AddBlock) AllowNoIndices(allownoindices bool) *AddBlock {
+	r.values.Set("allow_no_indices", strconv.FormatBool(allownoindices))
 
 	return r
 }
@@ -246,8 +331,12 @@ func (r *AddBlock) AllowNoIndices(b bool) *AddBlock {
 // ExpandWildcards Whether to expand wildcard expression to concrete indices that are open,
 // closed or both.
 // API name: expand_wildcards
-func (r *AddBlock) ExpandWildcards(v string) *AddBlock {
-	r.values.Set("expand_wildcards", v)
+func (r *AddBlock) ExpandWildcards(expandwildcards ...expandwildcard.ExpandWildcard) *AddBlock {
+	tmp := []string{}
+	for _, item := range expandwildcards {
+		tmp = append(tmp, item.String())
+	}
+	r.values.Set("expand_wildcards", strings.Join(tmp, ","))
 
 	return r
 }
@@ -255,24 +344,24 @@ func (r *AddBlock) ExpandWildcards(v string) *AddBlock {
 // IgnoreUnavailable Whether specified concrete indices should be ignored when unavailable
 // (missing or closed)
 // API name: ignore_unavailable
-func (r *AddBlock) IgnoreUnavailable(b bool) *AddBlock {
-	r.values.Set("ignore_unavailable", strconv.FormatBool(b))
+func (r *AddBlock) IgnoreUnavailable(ignoreunavailable bool) *AddBlock {
+	r.values.Set("ignore_unavailable", strconv.FormatBool(ignoreunavailable))
 
 	return r
 }
 
 // MasterTimeout Specify timeout for connection to master
 // API name: master_timeout
-func (r *AddBlock) MasterTimeout(v string) *AddBlock {
-	r.values.Set("master_timeout", v)
+func (r *AddBlock) MasterTimeout(duration string) *AddBlock {
+	r.values.Set("master_timeout", duration)
 
 	return r
 }
 
 // Timeout Explicit operation timeout
 // API name: timeout
-func (r *AddBlock) Timeout(v string) *AddBlock {
-	r.values.Set("timeout", v)
+func (r *AddBlock) Timeout(duration string) *AddBlock {
+	r.values.Set("timeout", duration)
 
 	return r
 }

@@ -16,36 +16,54 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/jsonprocessorconflictstrategy"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/jsonprocessorconflictstrategy"
 )
 
 // JsonProcessor type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ingest/_types/Processors.ts#L271-L277
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ingest/_types/Processors.ts#L814-L843
 type JsonProcessor struct {
-	AddToRoot                 *bool                                                        `json:"add_to_root,omitempty"`
+	// AddToRoot Flag that forces the parsed JSON to be added at the top level of the
+	// document.
+	// `target_field` must not be set when this option is chosen.
+	AddToRoot *bool `json:"add_to_root,omitempty"`
+	// AddToRootConflictStrategy When set to `replace`, root fields that conflict with fields from the parsed
+	// JSON will be overridden.
+	// When set to `merge`, conflicting fields will be merged.
+	// Only applicable `if add_to_root` is set to true.
 	AddToRootConflictStrategy *jsonprocessorconflictstrategy.JsonProcessorConflictStrategy `json:"add_to_root_conflict_strategy,omitempty"`
-	AllowDuplicateKeys        *bool                                                        `json:"allow_duplicate_keys,omitempty"`
-	Description               *string                                                      `json:"description,omitempty"`
-	Field                     string                                                       `json:"field"`
-	If                        *string                                                      `json:"if,omitempty"`
-	IgnoreFailure             *bool                                                        `json:"ignore_failure,omitempty"`
-	OnFailure                 []ProcessorContainer                                         `json:"on_failure,omitempty"`
-	Tag                       *string                                                      `json:"tag,omitempty"`
-	TargetField               *string                                                      `json:"target_field,omitempty"`
+	// AllowDuplicateKeys When set to `true`, the JSON parser will not fail if the JSON contains
+	// duplicate keys.
+	// Instead, the last encountered value for any duplicate key wins.
+	AllowDuplicateKeys *bool `json:"allow_duplicate_keys,omitempty"`
+	// Description Description of the processor.
+	// Useful for describing the purpose of the processor or its configuration.
+	Description *string `json:"description,omitempty"`
+	// Field The field to be parsed.
+	Field string `json:"field"`
+	// If Conditionally execute the processor.
+	If *string `json:"if,omitempty"`
+	// IgnoreFailure Ignore failures for the processor.
+	IgnoreFailure *bool `json:"ignore_failure,omitempty"`
+	// OnFailure Handle failures for the processor.
+	OnFailure []ProcessorContainer `json:"on_failure,omitempty"`
+	// Tag Identifier for the processor.
+	// Useful for debugging and metrics.
+	Tag *string `json:"tag,omitempty"`
+	// TargetField The field that the converted structured object will be written into.
+	// Any existing content in this field will be overwritten.
+	TargetField *string `json:"target_field,omitempty"`
 }
 
 func (s *JsonProcessor) UnmarshalJSON(data []byte) error {
@@ -101,7 +119,11 @@ func (s *JsonProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Description = &o
 
 		case "field":
@@ -114,7 +136,11 @@ func (s *JsonProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.If = &o
 
 		case "ignore_failure":
@@ -141,7 +167,11 @@ func (s *JsonProcessor) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Tag = &o
 
 		case "target_field":

@@ -16,36 +16,37 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/deploymentstate"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/deploymentstate"
 )
 
 // TrainedModelDeploymentStats type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ml/_types/TrainedModel.ts#L62-L97
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ml/_types/TrainedModel.ts#L62-L102
 type TrainedModelDeploymentStats struct {
 	// AllocationStatus The detailed allocation status for the deployment.
 	AllocationStatus TrainedModelDeploymentAllocationStatus `json:"allocation_status"`
 	CacheSize        ByteSize                               `json:"cache_size,omitempty"`
+	// DeploymentId The unique identifier for the trained model deployment.
+	DeploymentId string `json:"deployment_id"`
 	// ErrorCount The sum of `error_count` for all nodes in the deployment.
 	ErrorCount int `json:"error_count"`
 	// InferenceCount The sum of `inference_count` for all nodes in the deployment.
 	InferenceCount int `json:"inference_count"`
 	// ModelId The unique identifier for the trained model.
 	ModelId string `json:"model_id"`
-	// Nodes The deployent stats for each node that currently has the model allocated.
+	// Nodes The deployment stats for each node that currently has the model allocated.
+	// In serverless, stats are reported for a single unnamed virtual node.
 	Nodes TrainedModelDeploymentNodesStats `json:"nodes"`
 	// NumberOfAllocations The number of allocations requested.
 	NumberOfAllocations int `json:"number_of_allocations"`
@@ -92,6 +93,11 @@ func (s *TrainedModelDeploymentStats) UnmarshalJSON(data []byte) error {
 
 		case "cache_size":
 			if err := dec.Decode(&s.CacheSize); err != nil {
+				return err
+			}
+
+		case "deployment_id":
+			if err := dec.Decode(&s.DeploymentId); err != nil {
 				return err
 			}
 
@@ -174,7 +180,11 @@ func (s *TrainedModelDeploymentStats) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Reason = o
 
 		case "rejected_execution_count":

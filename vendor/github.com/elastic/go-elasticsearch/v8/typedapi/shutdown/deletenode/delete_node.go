@@ -16,14 +16,13 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Removes a node from the shutdown list. Designed for indirect use by ECE/ESS
 // and ECK. Direct use is not supported.
 package deletenode
 
 import (
-	gobytes "bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -36,7 +35,6 @@ import (
 
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
-
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/timeunit"
 )
 
@@ -54,11 +52,15 @@ type DeleteNode struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	nodeid string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewDeleteNode type alias for index.
@@ -70,7 +72,7 @@ func NewDeleteNodeFunc(tp elastictransport.Interface) NewDeleteNode {
 	return func(nodeid string) *DeleteNode {
 		n := New(tp)
 
-		n.NodeId(nodeid)
+		n._nodeid(nodeid)
 
 		return n
 	}
@@ -85,7 +87,12 @@ func New(tp elastictransport.Interface) *DeleteNode {
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -108,6 +115,9 @@ func (r *DeleteNode) HttpRequest(ctx context.Context) (*http.Request, error) {
 		path.WriteString("_nodes")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "nodeid", r.nodeid)
+		}
 		path.WriteString(r.nodeid)
 		path.WriteString("/")
 		path.WriteString("shutdown")
@@ -123,15 +133,15 @@ func (r *DeleteNode) HttpRequest(ctx context.Context) (*http.Request, error) {
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
 
 	if req.Header.Get("Content-Type") == "" {
-		if r.buf.Len() > 0 {
+		if r.raw != nil {
 			req.Header.Set("Content-Type", "application/vnd.elasticsearch+json;compatible-with=8")
 		}
 	}
@@ -148,27 +158,66 @@ func (r *DeleteNode) HttpRequest(ctx context.Context) (*http.Request, error) {
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r DeleteNode) Perform(ctx context.Context) (*http.Response, error) {
+func (r DeleteNode) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "shutdown.delete_node")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "shutdown.delete_node")
+		if reader := instrument.RecordRequestBody(ctx, "shutdown.delete_node", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "shutdown.delete_node")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the DeleteNode query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the DeleteNode query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a deletenode.Response
-func (r DeleteNode) Do(ctx context.Context) (*Response, error) {
+func (r DeleteNode) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "shutdown.delete_node")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -176,6 +225,9 @@ func (r DeleteNode) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -185,15 +237,35 @@ func (r DeleteNode) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r DeleteNode) IsSuccess(ctx context.Context) (bool, error) {
+func (r DeleteNode) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "shutdown.delete_node")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -209,6 +281,14 @@ func (r DeleteNode) IsSuccess(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the DeleteNode query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -221,9 +301,9 @@ func (r *DeleteNode) Header(key, value string) *DeleteNode {
 
 // NodeId The node id of node to be removed from the shutdown state
 // API Name: nodeid
-func (r *DeleteNode) NodeId(v string) *DeleteNode {
+func (r *DeleteNode) _nodeid(nodeid string) *DeleteNode {
 	r.paramSet |= nodeidMask
-	r.nodeid = v
+	r.nodeid = nodeid
 
 	return r
 }
@@ -231,8 +311,8 @@ func (r *DeleteNode) NodeId(v string) *DeleteNode {
 // MasterTimeout Period to wait for a connection to the master node. If no response is
 // received before the timeout expires, the request fails and returns an error.
 // API name: master_timeout
-func (r *DeleteNode) MasterTimeout(enum timeunit.TimeUnit) *DeleteNode {
-	r.values.Set("master_timeout", enum.String())
+func (r *DeleteNode) MasterTimeout(mastertimeout timeunit.TimeUnit) *DeleteNode {
+	r.values.Set("master_timeout", mastertimeout.String())
 
 	return r
 }
@@ -240,8 +320,8 @@ func (r *DeleteNode) MasterTimeout(enum timeunit.TimeUnit) *DeleteNode {
 // Timeout Period to wait for a response. If no response is received before the timeout
 // expires, the request fails and returns an error.
 // API name: timeout
-func (r *DeleteNode) Timeout(enum timeunit.TimeUnit) *DeleteNode {
-	r.values.Set("timeout", enum.String())
+func (r *DeleteNode) Timeout(timeout timeunit.TimeUnit) *DeleteNode {
+	r.values.Set("timeout", timeout.String())
 
 	return r
 }

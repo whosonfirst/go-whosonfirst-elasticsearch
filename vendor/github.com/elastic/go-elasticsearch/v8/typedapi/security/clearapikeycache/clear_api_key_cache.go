@@ -16,13 +16,12 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Clear a subset or all entries from the API key cache.
 package clearapikeycache
 
 import (
-	gobytes "bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -51,11 +50,15 @@ type ClearApiKeyCache struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	ids string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewClearApiKeyCache type alias for index.
@@ -67,7 +70,7 @@ func NewClearApiKeyCacheFunc(tp elastictransport.Interface) NewClearApiKeyCache 
 	return func(ids string) *ClearApiKeyCache {
 		n := New(tp)
 
-		n.Ids(ids)
+		n._ids(ids)
 
 		return n
 	}
@@ -81,7 +84,12 @@ func New(tp elastictransport.Interface) *ClearApiKeyCache {
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -106,6 +114,9 @@ func (r *ClearApiKeyCache) HttpRequest(ctx context.Context) (*http.Request, erro
 		path.WriteString("api_key")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "ids", r.ids)
+		}
 		path.WriteString(r.ids)
 		path.WriteString("/")
 		path.WriteString("_clear_cache")
@@ -121,9 +132,9 @@ func (r *ClearApiKeyCache) HttpRequest(ctx context.Context) (*http.Request, erro
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
@@ -140,27 +151,66 @@ func (r *ClearApiKeyCache) HttpRequest(ctx context.Context) (*http.Request, erro
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r ClearApiKeyCache) Perform(ctx context.Context) (*http.Response, error) {
+func (r ClearApiKeyCache) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "security.clear_api_key_cache")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "security.clear_api_key_cache")
+		if reader := instrument.RecordRequestBody(ctx, "security.clear_api_key_cache", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "security.clear_api_key_cache")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the ClearApiKeyCache query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the ClearApiKeyCache query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a clearapikeycache.Response
-func (r ClearApiKeyCache) Do(ctx context.Context) (*Response, error) {
+func (r ClearApiKeyCache) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "security.clear_api_key_cache")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -168,6 +218,9 @@ func (r ClearApiKeyCache) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -177,15 +230,35 @@ func (r ClearApiKeyCache) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r ClearApiKeyCache) IsSuccess(ctx context.Context) (bool, error) {
+func (r ClearApiKeyCache) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "security.clear_api_key_cache")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -201,6 +274,14 @@ func (r ClearApiKeyCache) IsSuccess(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the ClearApiKeyCache query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -211,11 +292,13 @@ func (r *ClearApiKeyCache) Header(key, value string) *ClearApiKeyCache {
 	return r
 }
 
-// Ids A comma-separated list of IDs of API keys to clear from the cache
+// Ids Comma-separated list of API key IDs to evict from the API key cache.
+// To evict all API keys, use `*`.
+// Does not support other wildcard patterns.
 // API Name: ids
-func (r *ClearApiKeyCache) Ids(v string) *ClearApiKeyCache {
+func (r *ClearApiKeyCache) _ids(ids string) *ClearApiKeyCache {
 	r.paramSet |= idsMask
-	r.ids = v
+	r.ids = ids
 
 	return r
 }

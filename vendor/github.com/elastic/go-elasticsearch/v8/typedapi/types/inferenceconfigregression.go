@@ -16,26 +16,27 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // InferenceConfigRegression type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ingest/_types/Processors.ts#L252-L255
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ingest/_types/Processors.ts#L756-L767
 type InferenceConfigRegression struct {
-	NumTopFeatureImportanceValues *int    `json:"num_top_feature_importance_values,omitempty"`
-	ResultsField                  *string `json:"results_field,omitempty"`
+	// NumTopFeatureImportanceValues Specifies the maximum number of feature importance values per document.
+	NumTopFeatureImportanceValues *int `json:"num_top_feature_importance_values,omitempty"`
+	// ResultsField The field that is added to incoming documents to contain the inference
+	// prediction.
+	ResultsField *string `json:"results_field,omitempty"`
 }
 
 func (s *InferenceConfigRegression) UnmarshalJSON(data []byte) error {

@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Explore extracted and summarized information about the documents and terms in
 // an index.
@@ -51,14 +51,19 @@ type Explore struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
-
-	req *Request
 	raw io.Reader
+
+	req      *Request
+	deferred []func(request *Request) error
+	buf      *gobytes.Buffer
 
 	paramSet int
 
 	index string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewExplore type alias for index.
@@ -70,7 +75,7 @@ func NewExploreFunc(tp elastictransport.Interface) NewExplore {
 	return func(index string) *Explore {
 		n := New(tp)
 
-		n.Index(index)
+		n._index(index)
 
 		return n
 	}
@@ -85,7 +90,16 @@ func New(tp elastictransport.Interface) *Explore {
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+
+		buf: gobytes.NewBuffer(nil),
+
+		req: NewRequest(),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -115,9 +129,17 @@ func (r *Explore) HttpRequest(ctx context.Context) (*http.Request, error) {
 
 	var err error
 
-	if r.raw != nil {
-		r.buf.ReadFrom(r.raw)
-	} else if r.req != nil {
+	if len(r.deferred) > 0 {
+		for _, f := range r.deferred {
+			deferredErr := f(r.req)
+			if deferredErr != nil {
+				return nil, deferredErr
+			}
+		}
+	}
+
+	if r.raw == nil && r.req != nil {
+
 		data, err := json.Marshal(r.req)
 
 		if err != nil {
@@ -125,6 +147,11 @@ func (r *Explore) HttpRequest(ctx context.Context) (*http.Request, error) {
 		}
 
 		r.buf.Write(data)
+
+	}
+
+	if r.buf.Len() > 0 {
+		r.raw = r.buf
 	}
 
 	r.path.Scheme = "http"
@@ -133,6 +160,9 @@ func (r *Explore) HttpRequest(ctx context.Context) (*http.Request, error) {
 	case r.paramSet == indexMask:
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "index", r.index)
+		}
 		path.WriteString(r.index)
 		path.WriteString("/")
 		path.WriteString("_graph")
@@ -150,15 +180,15 @@ func (r *Explore) HttpRequest(ctx context.Context) (*http.Request, error) {
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
 
 	if req.Header.Get("Content-Type") == "" {
-		if r.buf.Len() > 0 {
+		if r.raw != nil {
 			req.Header.Set("Content-Type", "application/vnd.elasticsearch+json;compatible-with=8")
 		}
 	}
@@ -175,27 +205,66 @@ func (r *Explore) HttpRequest(ctx context.Context) (*http.Request, error) {
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r Explore) Perform(ctx context.Context) (*http.Response, error) {
+func (r Explore) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "graph.explore")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "graph.explore")
+		if reader := instrument.RecordRequestBody(ctx, "graph.explore", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "graph.explore")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the Explore query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the Explore query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a explore.Response
-func (r Explore) Do(ctx context.Context) (*Response, error) {
+func (r Explore) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "graph.explore")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -203,6 +272,9 @@ func (r Explore) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -212,9 +284,19 @@ func (r Explore) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
@@ -225,28 +307,68 @@ func (r *Explore) Header(key, value string) *Explore {
 	return r
 }
 
-// Index A comma-separated list of index names to search; use `_all` or empty string
-// to perform the operation on all indices
+// Index Name of the index.
 // API Name: index
-func (r *Explore) Index(v string) *Explore {
+func (r *Explore) _index(index string) *Explore {
 	r.paramSet |= indexMask
-	r.index = v
+	r.index = index
 
 	return r
 }
 
-// Routing Specific routing value
+// Routing Custom value used to route operations to a specific shard.
 // API name: routing
-func (r *Explore) Routing(v string) *Explore {
-	r.values.Set("routing", v)
+func (r *Explore) Routing(routing string) *Explore {
+	r.values.Set("routing", routing)
 
 	return r
 }
 
-// Timeout Explicit operation timeout
+// Timeout Specifies the period of time to wait for a response from each shard.
+// If no response is received before the timeout expires, the request fails and
+// returns an error.
+// Defaults to no timeout.
 // API name: timeout
-func (r *Explore) Timeout(v string) *Explore {
-	r.values.Set("timeout", v)
+func (r *Explore) Timeout(duration string) *Explore {
+	r.values.Set("timeout", duration)
+
+	return r
+}
+
+// Connections Specifies or more fields from which you want to extract terms that are
+// associated with the specified vertices.
+// API name: connections
+func (r *Explore) Connections(connections *types.Hop) *Explore {
+
+	r.req.Connections = connections
+
+	return r
+}
+
+// Controls Direct the Graph API how to build the graph.
+// API name: controls
+func (r *Explore) Controls(controls *types.ExploreControls) *Explore {
+
+	r.req.Controls = controls
+
+	return r
+}
+
+// Query A seed query that identifies the documents of interest. Can be any valid
+// Elasticsearch query.
+// API name: query
+func (r *Explore) Query(query *types.Query) *Explore {
+
+	r.req.Query = query
+
+	return r
+}
+
+// Vertices Specifies one or more fields that contain the terms you want to include in
+// the graph as vertices.
+// API name: vertices
+func (r *Explore) Vertices(vertices ...types.VertexDefinition) *Explore {
+	r.req.Vertices = vertices
 
 	return r
 }

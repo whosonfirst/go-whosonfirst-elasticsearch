@@ -16,23 +16,23 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/language"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
+	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/language"
 )
 
 // LanguageAnalyzer type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/analyzers.ts#L52-L59
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/analyzers.ts#L52-L59
 type LanguageAnalyzer struct {
 	Language      language.Language `json:"language"`
 	StemExclusion []string          `json:"stem_exclusion"`
@@ -88,7 +88,11 @@ func (s *LanguageAnalyzer) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.StopwordsPath = &o
 
 		case "type":
@@ -106,11 +110,26 @@ func (s *LanguageAnalyzer) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s LanguageAnalyzer) MarshalJSON() ([]byte, error) {
+	type innerLanguageAnalyzer LanguageAnalyzer
+	tmp := innerLanguageAnalyzer{
+		Language:      s.Language,
+		StemExclusion: s.StemExclusion,
+		Stopwords:     s.Stopwords,
+		StopwordsPath: s.StopwordsPath,
+		Type:          s.Type,
+		Version:       s.Version,
+	}
+
+	tmp.Type = "language"
+
+	return json.Marshal(tmp)
+}
+
 // NewLanguageAnalyzer returns a LanguageAnalyzer.
 func NewLanguageAnalyzer() *LanguageAnalyzer {
 	r := &LanguageAnalyzer{}
-
-	r.Type = "language"
 
 	return r
 }

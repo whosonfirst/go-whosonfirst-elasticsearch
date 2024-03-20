@@ -16,30 +16,38 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // IntervalsFuzzy type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/query_dsl/fulltext.ts#L88-L97
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/query_dsl/fulltext.ts#L154-L184
 type IntervalsFuzzy struct {
-	Analyzer       *string   `json:"analyzer,omitempty"`
-	Fuzziness      Fuzziness `json:"fuzziness,omitempty"`
-	PrefixLength   *int      `json:"prefix_length,omitempty"`
-	Term           string    `json:"term"`
-	Transpositions *bool     `json:"transpositions,omitempty"`
-	UseField       *string   `json:"use_field,omitempty"`
+	// Analyzer Analyzer used to normalize the term.
+	Analyzer *string `json:"analyzer,omitempty"`
+	// Fuzziness Maximum edit distance allowed for matching.
+	Fuzziness Fuzziness `json:"fuzziness,omitempty"`
+	// PrefixLength Number of beginning characters left unchanged when creating expansions.
+	PrefixLength *int `json:"prefix_length,omitempty"`
+	// Term The term to match.
+	Term string `json:"term"`
+	// Transpositions Indicates whether edits include transpositions of two adjacent characters
+	// (for example, `ab` to `ba`).
+	Transpositions *bool `json:"transpositions,omitempty"`
+	// UseField If specified, match intervals from this field rather than the top-level
+	// field.
+	// The `term` is normalized using the search analyzer from this field, unless
+	// `analyzer` is specified separately.
+	UseField *string `json:"use_field,omitempty"`
 }
 
 func (s *IntervalsFuzzy) UnmarshalJSON(data []byte) error {
@@ -62,7 +70,11 @@ func (s *IntervalsFuzzy) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Analyzer = &o
 
 		case "fuzziness":
@@ -91,7 +103,11 @@ func (s *IntervalsFuzzy) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Term = o
 
 		case "transpositions":

@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package putpolicy
 
@@ -29,11 +29,16 @@ import (
 
 // Request holds the request body struct for the package putpolicy
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/enrich/put_policy/PutEnrichPolicyRequest.ts#L24-L38
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/enrich/put_policy/PutEnrichPolicyRequest.ts#L24-L52
 type Request struct {
+
+	// GeoMatch Matches enrich data to incoming documents based on a `geo_shape` query.
 	GeoMatch *types.EnrichPolicy `json:"geo_match,omitempty"`
-	Match    *types.EnrichPolicy `json:"match,omitempty"`
-	Range    *types.EnrichPolicy `json:"range,omitempty"`
+	// Match Matches enrich data to incoming documents based on a `term` query.
+	Match *types.EnrichPolicy `json:"match,omitempty"`
+	// Range Matches a number, date, or IP address in incoming documents to a range in the
+	// enrich index based on a `term` query.
+	Range *types.EnrichPolicy `json:"range,omitempty"`
 }
 
 // NewRequest returns a Request

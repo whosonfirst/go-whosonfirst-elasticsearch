@@ -16,21 +16,21 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
-	"encoding/json"
+	"strconv"
 )
 
 // StemmerOverrideTokenFilter type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/token_filters.ts#L314-L318
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/token_filters.ts#L314-L318
 type StemmerOverrideTokenFilter struct {
 	Rules     []string `json:"rules,omitempty"`
 	RulesPath *string  `json:"rules_path,omitempty"`
@@ -63,7 +63,11 @@ func (s *StemmerOverrideTokenFilter) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.RulesPath = &o
 
 		case "type":
@@ -81,11 +85,24 @@ func (s *StemmerOverrideTokenFilter) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s StemmerOverrideTokenFilter) MarshalJSON() ([]byte, error) {
+	type innerStemmerOverrideTokenFilter StemmerOverrideTokenFilter
+	tmp := innerStemmerOverrideTokenFilter{
+		Rules:     s.Rules,
+		RulesPath: s.RulesPath,
+		Type:      s.Type,
+		Version:   s.Version,
+	}
+
+	tmp.Type = "stemmer_override"
+
+	return json.Marshal(tmp)
+}
+
 // NewStemmerOverrideTokenFilter returns a StemmerOverrideTokenFilter.
 func NewStemmerOverrideTokenFilter() *StemmerOverrideTokenFilter {
 	r := &StemmerOverrideTokenFilter{}
-
-	r.Type = "stemmer_override"
 
 	return r
 }

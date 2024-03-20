@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 //
-// Code generated from specification version 7.13.0: DO NOT EDIT
+// Code generated from specification version 7.17.10: DO NOT EDIT
 
 package esapi
 
@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func newTransformDeleteTransformFunc(t Transport) TransformDeleteTransform {
@@ -41,15 +42,14 @@ func newTransformDeleteTransformFunc(t Transport) TransformDeleteTransform {
 // TransformDeleteTransform - Deletes an existing transform.
 //
 // See full documentation at https://www.elastic.co/guide/en/elasticsearch/reference/current/delete-transform.html.
-//
 type TransformDeleteTransform func(transform_id string, o ...func(*TransformDeleteTransformRequest)) (*Response, error)
 
 // TransformDeleteTransformRequest configures the Transform Delete Transform API request.
-//
 type TransformDeleteTransformRequest struct {
 	TransformID string
 
-	Force *bool
+	Force   *bool
+	Timeout time.Duration
 
 	Pretty     bool
 	Human      bool
@@ -62,7 +62,6 @@ type TransformDeleteTransformRequest struct {
 }
 
 // Do executes the request and returns response or error.
-//
 func (r TransformDeleteTransformRequest) Do(ctx context.Context, transport Transport) (*Response, error) {
 	var (
 		method string
@@ -82,6 +81,10 @@ func (r TransformDeleteTransformRequest) Do(ctx context.Context, transport Trans
 
 	if r.Force != nil {
 		params["force"] = strconv.FormatBool(*r.Force)
+	}
+
+	if r.Timeout != 0 {
+		params["timeout"] = formatDuration(r.Timeout)
 	}
 
 	if r.Pretty {
@@ -144,7 +147,6 @@ func (r TransformDeleteTransformRequest) Do(ctx context.Context, transport Trans
 }
 
 // WithContext sets the request context.
-//
 func (f TransformDeleteTransform) WithContext(v context.Context) func(*TransformDeleteTransformRequest) {
 	return func(r *TransformDeleteTransformRequest) {
 		r.ctx = v
@@ -152,15 +154,20 @@ func (f TransformDeleteTransform) WithContext(v context.Context) func(*Transform
 }
 
 // WithForce - when `true`, the transform is deleted regardless of its current state. the default value is `false`, meaning that the transform must be `stopped` before it can be deleted..
-//
 func (f TransformDeleteTransform) WithForce(v bool) func(*TransformDeleteTransformRequest) {
 	return func(r *TransformDeleteTransformRequest) {
 		r.Force = &v
 	}
 }
 
+// WithTimeout - controls the time to wait for the transform deletion.
+func (f TransformDeleteTransform) WithTimeout(v time.Duration) func(*TransformDeleteTransformRequest) {
+	return func(r *TransformDeleteTransformRequest) {
+		r.Timeout = v
+	}
+}
+
 // WithPretty makes the response body pretty-printed.
-//
 func (f TransformDeleteTransform) WithPretty() func(*TransformDeleteTransformRequest) {
 	return func(r *TransformDeleteTransformRequest) {
 		r.Pretty = true
@@ -168,7 +175,6 @@ func (f TransformDeleteTransform) WithPretty() func(*TransformDeleteTransformReq
 }
 
 // WithHuman makes statistical values human-readable.
-//
 func (f TransformDeleteTransform) WithHuman() func(*TransformDeleteTransformRequest) {
 	return func(r *TransformDeleteTransformRequest) {
 		r.Human = true
@@ -176,7 +182,6 @@ func (f TransformDeleteTransform) WithHuman() func(*TransformDeleteTransformRequ
 }
 
 // WithErrorTrace includes the stack trace for errors in the response body.
-//
 func (f TransformDeleteTransform) WithErrorTrace() func(*TransformDeleteTransformRequest) {
 	return func(r *TransformDeleteTransformRequest) {
 		r.ErrorTrace = true
@@ -184,7 +189,6 @@ func (f TransformDeleteTransform) WithErrorTrace() func(*TransformDeleteTransfor
 }
 
 // WithFilterPath filters the properties of the response body.
-//
 func (f TransformDeleteTransform) WithFilterPath(v ...string) func(*TransformDeleteTransformRequest) {
 	return func(r *TransformDeleteTransformRequest) {
 		r.FilterPath = v
@@ -192,7 +196,6 @@ func (f TransformDeleteTransform) WithFilterPath(v ...string) func(*TransformDel
 }
 
 // WithHeader adds the headers to the HTTP request.
-//
 func (f TransformDeleteTransform) WithHeader(h map[string]string) func(*TransformDeleteTransformRequest) {
 	return func(r *TransformDeleteTransformRequest) {
 		if r.Header == nil {
@@ -205,7 +208,6 @@ func (f TransformDeleteTransform) WithHeader(h map[string]string) func(*Transfor
 }
 
 // WithOpaqueID adds the X-Opaque-Id header to the HTTP request.
-//
 func (f TransformDeleteTransform) WithOpaqueID(s string) func(*TransformDeleteTransformRequest) {
 	return func(r *TransformDeleteTransformRequest) {
 		if r.Header == nil {

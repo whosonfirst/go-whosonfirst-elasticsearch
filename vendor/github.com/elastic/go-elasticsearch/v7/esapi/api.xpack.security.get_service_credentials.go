@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 //
-// Code generated from specification version 7.13.0: DO NOT EDIT
+// Code generated from specification version 7.17.10: DO NOT EDIT
 
 package esapi
 
@@ -39,14 +39,10 @@ func newSecurityGetServiceCredentialsFunc(t Transport) SecurityGetServiceCredent
 
 // SecurityGetServiceCredentials - Retrieves information of all service credentials for a service account.
 //
-// This API is beta.
-//
 // See full documentation at https://www.elastic.co/guide/en/elasticsearch/reference/current/security-api-get-service-credentials.html.
-//
 type SecurityGetServiceCredentials func(namespace string, service string, o ...func(*SecurityGetServiceCredentialsRequest)) (*Response, error)
 
 // SecurityGetServiceCredentialsRequest configures the Security Get Service Credentials API request.
-//
 type SecurityGetServiceCredentialsRequest struct {
 	Namespace string
 	Service   string
@@ -62,7 +58,6 @@ type SecurityGetServiceCredentialsRequest struct {
 }
 
 // Do executes the request and returns response or error.
-//
 func (r SecurityGetServiceCredentialsRequest) Do(ctx context.Context, transport Transport) (*Response, error) {
 	var (
 		method string
@@ -146,7 +141,6 @@ func (r SecurityGetServiceCredentialsRequest) Do(ctx context.Context, transport 
 }
 
 // WithContext sets the request context.
-//
 func (f SecurityGetServiceCredentials) WithContext(v context.Context) func(*SecurityGetServiceCredentialsRequest) {
 	return func(r *SecurityGetServiceCredentialsRequest) {
 		r.ctx = v
@@ -154,7 +148,6 @@ func (f SecurityGetServiceCredentials) WithContext(v context.Context) func(*Secu
 }
 
 // WithPretty makes the response body pretty-printed.
-//
 func (f SecurityGetServiceCredentials) WithPretty() func(*SecurityGetServiceCredentialsRequest) {
 	return func(r *SecurityGetServiceCredentialsRequest) {
 		r.Pretty = true
@@ -162,7 +155,6 @@ func (f SecurityGetServiceCredentials) WithPretty() func(*SecurityGetServiceCred
 }
 
 // WithHuman makes statistical values human-readable.
-//
 func (f SecurityGetServiceCredentials) WithHuman() func(*SecurityGetServiceCredentialsRequest) {
 	return func(r *SecurityGetServiceCredentialsRequest) {
 		r.Human = true
@@ -170,7 +162,6 @@ func (f SecurityGetServiceCredentials) WithHuman() func(*SecurityGetServiceCrede
 }
 
 // WithErrorTrace includes the stack trace for errors in the response body.
-//
 func (f SecurityGetServiceCredentials) WithErrorTrace() func(*SecurityGetServiceCredentialsRequest) {
 	return func(r *SecurityGetServiceCredentialsRequest) {
 		r.ErrorTrace = true
@@ -178,7 +169,6 @@ func (f SecurityGetServiceCredentials) WithErrorTrace() func(*SecurityGetService
 }
 
 // WithFilterPath filters the properties of the response body.
-//
 func (f SecurityGetServiceCredentials) WithFilterPath(v ...string) func(*SecurityGetServiceCredentialsRequest) {
 	return func(r *SecurityGetServiceCredentialsRequest) {
 		r.FilterPath = v
@@ -186,7 +176,6 @@ func (f SecurityGetServiceCredentials) WithFilterPath(v ...string) func(*Securit
 }
 
 // WithHeader adds the headers to the HTTP request.
-//
 func (f SecurityGetServiceCredentials) WithHeader(h map[string]string) func(*SecurityGetServiceCredentialsRequest) {
 	return func(r *SecurityGetServiceCredentialsRequest) {
 		if r.Header == nil {
@@ -199,7 +188,6 @@ func (f SecurityGetServiceCredentials) WithHeader(h map[string]string) func(*Sec
 }
 
 // WithOpaqueID adds the X-Opaque-Id header to the HTTP request.
-//
 func (f SecurityGetServiceCredentials) WithOpaqueID(s string) func(*SecurityGetServiceCredentialsRequest) {
 	return func(r *SecurityGetServiceCredentialsRequest) {
 		if r.Header == nil {

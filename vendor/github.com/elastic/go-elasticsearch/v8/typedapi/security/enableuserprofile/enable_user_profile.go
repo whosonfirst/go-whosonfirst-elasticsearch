@@ -16,13 +16,12 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Enables a user profile so it's visible in user profile searches.
 package enableuserprofile
 
 import (
-	gobytes "bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -35,7 +34,6 @@ import (
 
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
-
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/refresh"
 )
 
@@ -53,11 +51,15 @@ type EnableUserProfile struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	uid string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewEnableUserProfile type alias for index.
@@ -69,7 +71,7 @@ func NewEnableUserProfileFunc(tp elastictransport.Interface) NewEnableUserProfil
 	return func(uid string) *EnableUserProfile {
 		n := New(tp)
 
-		n.Uid(uid)
+		n._uid(uid)
 
 		return n
 	}
@@ -77,13 +79,18 @@ func NewEnableUserProfileFunc(tp elastictransport.Interface) NewEnableUserProfil
 
 // Enables a user profile so it's visible in user profile searches.
 //
-// https://www.elastic.co/guide/en/elasticsearch/reference/master/security-api-enable-user-profile.html
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/security-api-enable-user-profile.html
 func New(tp elastictransport.Interface) *EnableUserProfile {
 	r := &EnableUserProfile{
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -108,6 +115,9 @@ func (r *EnableUserProfile) HttpRequest(ctx context.Context) (*http.Request, err
 		path.WriteString("profile")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "uid", r.uid)
+		}
 		path.WriteString(r.uid)
 		path.WriteString("/")
 		path.WriteString("_enable")
@@ -123,9 +133,9 @@ func (r *EnableUserProfile) HttpRequest(ctx context.Context) (*http.Request, err
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
@@ -142,27 +152,66 @@ func (r *EnableUserProfile) HttpRequest(ctx context.Context) (*http.Request, err
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r EnableUserProfile) Perform(ctx context.Context) (*http.Response, error) {
+func (r EnableUserProfile) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "security.enable_user_profile")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "security.enable_user_profile")
+		if reader := instrument.RecordRequestBody(ctx, "security.enable_user_profile", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "security.enable_user_profile")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the EnableUserProfile query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the EnableUserProfile query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a enableuserprofile.Response
-func (r EnableUserProfile) Do(ctx context.Context) (*Response, error) {
+func (r EnableUserProfile) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "security.enable_user_profile")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -170,6 +219,9 @@ func (r EnableUserProfile) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -179,15 +231,35 @@ func (r EnableUserProfile) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r EnableUserProfile) IsSuccess(ctx context.Context) (bool, error) {
+func (r EnableUserProfile) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "security.enable_user_profile")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -203,6 +275,14 @@ func (r EnableUserProfile) IsSuccess(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the EnableUserProfile query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -215,9 +295,9 @@ func (r *EnableUserProfile) Header(key, value string) *EnableUserProfile {
 
 // Uid Unique identifier for the user profile.
 // API Name: uid
-func (r *EnableUserProfile) Uid(v string) *EnableUserProfile {
+func (r *EnableUserProfile) _uid(uid string) *EnableUserProfile {
 	r.paramSet |= uidMask
-	r.uid = v
+	r.uid = uid
 
 	return r
 }
@@ -227,8 +307,8 @@ func (r *EnableUserProfile) Uid(v string) *EnableUserProfile {
 // operation
 // visible to search, if 'false' do nothing with refreshes.
 // API name: refresh
-func (r *EnableUserProfile) Refresh(enum refresh.Refresh) *EnableUserProfile {
-	r.values.Set("refresh", enum.String())
+func (r *EnableUserProfile) Refresh(refresh refresh.Refresh) *EnableUserProfile {
+	r.values.Set("refresh", refresh.String())
 
 	return r
 }

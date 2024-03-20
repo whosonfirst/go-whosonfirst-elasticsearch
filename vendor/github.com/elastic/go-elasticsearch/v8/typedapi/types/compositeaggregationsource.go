@@ -16,18 +16,22 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 // CompositeAggregationSource type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/aggregations/bucket.ts#L86-L91
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/aggregations/bucket.ts#L138-L155
 type CompositeAggregationSource struct {
-	DateHistogram *DateHistogramAggregation `json:"date_histogram,omitempty"`
-	GeotileGrid   *GeoTileGridAggregation   `json:"geotile_grid,omitempty"`
-	Histogram     *HistogramAggregation     `json:"histogram,omitempty"`
-	Terms         *TermsAggregation         `json:"terms,omitempty"`
+	// DateHistogram A date histogram aggregation.
+	DateHistogram *CompositeDateHistogramAggregation `json:"date_histogram,omitempty"`
+	// GeotileGrid A geotile grid aggregation.
+	GeotileGrid *CompositeGeoTileGridAggregation `json:"geotile_grid,omitempty"`
+	// Histogram A histogram aggregation.
+	Histogram *CompositeHistogramAggregation `json:"histogram,omitempty"`
+	// Terms A terms aggregation.
+	Terms *CompositeTermsAggregation `json:"terms,omitempty"`
 }
 
 // NewCompositeAggregationSource returns a CompositeAggregationSource.

@@ -16,26 +16,26 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // RegexOptions type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_global/search/_types/suggester.ts#L137-L140
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_global/search/_types/suggester.ts#L180-L191
 type RegexOptions struct {
-	Flags                 string `json:"flags,omitempty"`
-	MaxDeterminizedStates *int   `json:"max_determinized_states,omitempty"`
+	// Flags Optional operators for the regular expression.
+	Flags string `json:"flags,omitempty"`
+	// MaxDeterminizedStates Maximum number of automaton states required for the query.
+	MaxDeterminizedStates *int `json:"max_determinized_states,omitempty"`
 }
 
 func (s *RegexOptions) UnmarshalJSON(data []byte) error {
@@ -58,7 +58,11 @@ func (s *RegexOptions) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Flags = o
 
 		case "max_determinized_states":

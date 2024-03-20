@@ -16,13 +16,12 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Returns information about nodes in the cluster.
 package info
 
 import (
-	gobytes "bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -54,12 +53,16 @@ type Info struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	nodeid string
 	metric string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewInfo type alias for index.
@@ -77,13 +80,18 @@ func NewInfoFunc(tp elastictransport.Interface) NewInfo {
 
 // Returns information about nodes in the cluster.
 //
-// https://www.elastic.co/guide/en/elasticsearch/reference/{branch}/cluster-nodes-info.html
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-nodes-info.html
 func New(tp elastictransport.Interface) *Info {
 	r := &Info{
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -111,6 +119,9 @@ func (r *Info) HttpRequest(ctx context.Context) (*http.Request, error) {
 		path.WriteString("_nodes")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "nodeid", r.nodeid)
+		}
 		path.WriteString(r.nodeid)
 
 		method = http.MethodGet
@@ -119,6 +130,9 @@ func (r *Info) HttpRequest(ctx context.Context) (*http.Request, error) {
 		path.WriteString("_nodes")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "metric", r.metric)
+		}
 		path.WriteString(r.metric)
 
 		method = http.MethodGet
@@ -127,9 +141,15 @@ func (r *Info) HttpRequest(ctx context.Context) (*http.Request, error) {
 		path.WriteString("_nodes")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "nodeid", r.nodeid)
+		}
 		path.WriteString(r.nodeid)
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "metric", r.metric)
+		}
 		path.WriteString(r.metric)
 
 		method = http.MethodGet
@@ -143,9 +163,9 @@ func (r *Info) HttpRequest(ctx context.Context) (*http.Request, error) {
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
@@ -162,27 +182,66 @@ func (r *Info) HttpRequest(ctx context.Context) (*http.Request, error) {
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r Info) Perform(ctx context.Context) (*http.Response, error) {
+func (r Info) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "nodes.info")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "nodes.info")
+		if reader := instrument.RecordRequestBody(ctx, "nodes.info", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "nodes.info")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the Info query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the Info query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a info.Response
-func (r Info) Do(ctx context.Context) (*Response, error) {
+func (r Info) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "nodes.info")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -190,6 +249,9 @@ func (r Info) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -199,15 +261,35 @@ func (r Info) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r Info) IsSuccess(ctx context.Context) (bool, error) {
+func (r Info) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "nodes.info")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -223,6 +305,14 @@ func (r Info) IsSuccess(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the Info query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -235,9 +325,9 @@ func (r *Info) Header(key, value string) *Info {
 
 // NodeId Comma-separated list of node IDs or names used to limit returned information.
 // API Name: nodeid
-func (r *Info) NodeId(v string) *Info {
+func (r *Info) NodeId(nodeid string) *Info {
 	r.paramSet |= nodeidMask
-	r.nodeid = v
+	r.nodeid = nodeid
 
 	return r
 }
@@ -245,17 +335,17 @@ func (r *Info) NodeId(v string) *Info {
 // Metric Limits the information returned to the specific metrics. Supports a
 // comma-separated list, such as http,ingest.
 // API Name: metric
-func (r *Info) Metric(v string) *Info {
+func (r *Info) Metric(metric string) *Info {
 	r.paramSet |= metricMask
-	r.metric = v
+	r.metric = metric
 
 	return r
 }
 
 // FlatSettings If true, returns settings in flat format.
 // API name: flat_settings
-func (r *Info) FlatSettings(b bool) *Info {
-	r.values.Set("flat_settings", strconv.FormatBool(b))
+func (r *Info) FlatSettings(flatsettings bool) *Info {
+	r.values.Set("flat_settings", strconv.FormatBool(flatsettings))
 
 	return r
 }
@@ -263,8 +353,8 @@ func (r *Info) FlatSettings(b bool) *Info {
 // MasterTimeout Period to wait for a connection to the master node. If no response is
 // received before the timeout expires, the request fails and returns an error.
 // API name: master_timeout
-func (r *Info) MasterTimeout(v string) *Info {
-	r.values.Set("master_timeout", v)
+func (r *Info) MasterTimeout(duration string) *Info {
+	r.values.Set("master_timeout", duration)
 
 	return r
 }
@@ -272,8 +362,8 @@ func (r *Info) MasterTimeout(v string) *Info {
 // Timeout Period to wait for a response. If no response is received before the timeout
 // expires, the request fails and returns an error.
 // API name: timeout
-func (r *Info) Timeout(v string) *Info {
-	r.values.Set("timeout", v)
+func (r *Info) Timeout(duration string) *Info {
+	r.values.Set("timeout", duration)
 
 	return r
 }

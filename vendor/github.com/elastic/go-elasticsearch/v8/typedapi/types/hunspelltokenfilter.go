@@ -16,23 +16,21 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // HunspellTokenFilter type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/token_filters.ts#L200-L206
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/token_filters.ts#L200-L206
 type HunspellTokenFilter struct {
 	Dedup       *bool   `json:"dedup,omitempty"`
 	Dictionary  *string `json:"dictionary,omitempty"`
@@ -76,7 +74,11 @@ func (s *HunspellTokenFilter) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Dictionary = &o
 
 		case "locale":
@@ -84,7 +86,11 @@ func (s *HunspellTokenFilter) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Locale = o
 
 		case "longest_only":
@@ -116,11 +122,26 @@ func (s *HunspellTokenFilter) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s HunspellTokenFilter) MarshalJSON() ([]byte, error) {
+	type innerHunspellTokenFilter HunspellTokenFilter
+	tmp := innerHunspellTokenFilter{
+		Dedup:       s.Dedup,
+		Dictionary:  s.Dictionary,
+		Locale:      s.Locale,
+		LongestOnly: s.LongestOnly,
+		Type:        s.Type,
+		Version:     s.Version,
+	}
+
+	tmp.Type = "hunspell"
+
+	return json.Marshal(tmp)
+}
+
 // NewHunspellTokenFilter returns a HunspellTokenFilter.
 func NewHunspellTokenFilter() *HunspellTokenFilter {
 	r := &HunspellTokenFilter{}
-
-	r.Type = "hunspell"
 
 	return r
 }

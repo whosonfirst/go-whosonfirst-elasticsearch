@@ -16,19 +16,22 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package startdataframeanalytics
 
 // Response holds the response body struct for the package startdataframeanalytics
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ml/start_data_frame_analytics/MlStartDataFrameAnalyticsResponse.ts#L22-L28
-
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ml/start_data_frame_analytics/MlStartDataFrameAnalyticsResponse.ts#L22-L34
 type Response struct {
 	Acknowledged bool `json:"acknowledged"`
 	// Node The ID of the node that the job was started on. If the job is allowed to open
 	// lazily and has not yet been assigned to a node, this value is an empty
 	// string.
+	// The node ID of the node the job has been assigned to, or
+	// an empty string if it hasn't been assigned to a node. In
+	// serverless if the job has been assigned to run then the
+	// node ID will be "serverless".
 	Node string `json:"node"`
 }
 

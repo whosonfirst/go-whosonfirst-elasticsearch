@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package termvectors
 
@@ -29,11 +29,16 @@ import (
 
 // Request holds the request body struct for the package termvectors
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_global/termvectors/TermVectorsRequest.ts#L33-L61
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_global/termvectors/TermVectorsRequest.ts#L33-L118
 type Request struct {
-	Doc              json.RawMessage          `json:"doc,omitempty"`
-	Filter           *types.TermVectorsFilter `json:"filter,omitempty"`
-	PerFieldAnalyzer map[string]string        `json:"per_field_analyzer,omitempty"`
+
+	// Doc An artificial document (a document not present in the index) for which you
+	// want to retrieve term vectors.
+	Doc json.RawMessage `json:"doc,omitempty"`
+	// Filter Filter terms based on their tf-idf scores.
+	Filter *types.TermVectorsFilter `json:"filter,omitempty"`
+	// PerFieldAnalyzer Overrides the default per-field analyzer.
+	PerFieldAnalyzer map[string]string `json:"per_field_analyzer,omitempty"`
 }
 
 // NewRequest returns a Request

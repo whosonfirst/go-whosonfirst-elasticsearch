@@ -16,25 +16,23 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/kuromojitokenizationmode"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/kuromojitokenizationmode"
 )
 
 // KuromojiTokenizer type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/kuromoji-plugin.ts#L58-L67
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/kuromoji-plugin.ts#L58-L67
 type KuromojiTokenizer struct {
 	DiscardCompoundToken *bool                                             `json:"discard_compound_token,omitempty"`
 	DiscardPunctuation   *bool                                             `json:"discard_punctuation,omitempty"`
@@ -116,7 +114,11 @@ func (s *KuromojiTokenizer) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.NbestExamples = &o
 
 		case "type":
@@ -129,7 +131,11 @@ func (s *KuromojiTokenizer) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.UserDictionary = &o
 
 		case "user_dictionary_rules":
@@ -147,11 +153,29 @@ func (s *KuromojiTokenizer) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s KuromojiTokenizer) MarshalJSON() ([]byte, error) {
+	type innerKuromojiTokenizer KuromojiTokenizer
+	tmp := innerKuromojiTokenizer{
+		DiscardCompoundToken: s.DiscardCompoundToken,
+		DiscardPunctuation:   s.DiscardPunctuation,
+		Mode:                 s.Mode,
+		NbestCost:            s.NbestCost,
+		NbestExamples:        s.NbestExamples,
+		Type:                 s.Type,
+		UserDictionary:       s.UserDictionary,
+		UserDictionaryRules:  s.UserDictionaryRules,
+		Version:              s.Version,
+	}
+
+	tmp.Type = "kuromoji_tokenizer"
+
+	return json.Marshal(tmp)
+}
+
 // NewKuromojiTokenizer returns a KuromojiTokenizer.
 func NewKuromojiTokenizer() *KuromojiTokenizer {
 	r := &KuromojiTokenizer{}
-
-	r.Type = "kuromoji_tokenizer"
 
 	return r
 }

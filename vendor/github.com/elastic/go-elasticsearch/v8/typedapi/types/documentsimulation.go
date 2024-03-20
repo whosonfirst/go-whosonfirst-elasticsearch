@@ -16,34 +16,38 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/versiontype"
-
-	"fmt"
-
 	"bytes"
-	"errors"
-	"io"
-
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"strconv"
+
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/versiontype"
 )
 
 // DocumentSimulation type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ingest/simulate/types.ts#L47-L60
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ingest/simulate/types.ts#L57-L85
 type DocumentSimulation struct {
-	DocumentSimulation map[string]string          `json:"-"`
-	Id_                string                     `json:"_id"`
-	Index_             string                     `json:"_index"`
-	Ingest_            SimulateIngest             `json:"_ingest"`
-	Routing_           *string                    `json:"_routing,omitempty"`
-	Source_            map[string]json.RawMessage `json:"_source"`
-	VersionType_       *versiontype.VersionType   `json:"_version_type,omitempty"`
-	Version_           StringifiedVersionNumber   `json:"_version,omitempty"`
+	DocumentSimulation map[string]string `json:"-"`
+	// Id_ Unique identifier for the document. This ID must be unique within the
+	// `_index`.
+	Id_ string `json:"_id"`
+	// Index_ Name of the index containing the document.
+	Index_  string         `json:"_index"`
+	Ingest_ SimulateIngest `json:"_ingest"`
+	// Routing_ Value used to send the document to a specific primary shard.
+	Routing_ *string `json:"_routing,omitempty"`
+	// Source_ JSON body for the document.
+	Source_      map[string]json.RawMessage `json:"_source"`
+	VersionType_ *versiontype.VersionType   `json:"_version_type,omitempty"`
+	Version_     StringifiedVersionNumber   `json:"_version,omitempty"`
 }
 
 func (s *DocumentSimulation) UnmarshalJSON(data []byte) error {
@@ -81,7 +85,11 @@ func (s *DocumentSimulation) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Routing_ = &o
 
 		case "_source":

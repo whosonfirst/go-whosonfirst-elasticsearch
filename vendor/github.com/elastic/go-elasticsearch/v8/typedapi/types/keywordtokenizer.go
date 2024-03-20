@@ -16,23 +16,21 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // KeywordTokenizer type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/tokenizers.ts#L61-L64
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/tokenizers.ts#L62-L65
 type KeywordTokenizer struct {
 	BufferSize int     `json:"buffer_size"`
 	Type       string  `json:"type,omitempty"`
@@ -85,11 +83,23 @@ func (s *KeywordTokenizer) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s KeywordTokenizer) MarshalJSON() ([]byte, error) {
+	type innerKeywordTokenizer KeywordTokenizer
+	tmp := innerKeywordTokenizer{
+		BufferSize: s.BufferSize,
+		Type:       s.Type,
+		Version:    s.Version,
+	}
+
+	tmp.Type = "keyword"
+
+	return json.Marshal(tmp)
+}
+
 // NewKeywordTokenizer returns a KeywordTokenizer.
 func NewKeywordTokenizer() *KeywordTokenizer {
 	r := &KeywordTokenizer{}
-
-	r.Type = "keyword"
 
 	return r
 }

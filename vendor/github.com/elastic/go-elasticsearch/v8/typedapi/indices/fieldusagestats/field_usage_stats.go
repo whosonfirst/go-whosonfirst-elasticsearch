@@ -16,13 +16,12 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Returns the field usage stats for each field of an index
 package fieldusagestats
 
 import (
-	gobytes "bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -36,6 +35,7 @@ import (
 
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/expandwildcard"
 )
 
 const (
@@ -52,11 +52,15 @@ type FieldUsageStats struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	index string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewFieldUsageStats type alias for index.
@@ -68,7 +72,7 @@ func NewFieldUsageStatsFunc(tp elastictransport.Interface) NewFieldUsageStats {
 	return func(index string) *FieldUsageStats {
 		n := New(tp)
 
-		n.Index(index)
+		n._index(index)
 
 		return n
 	}
@@ -76,13 +80,18 @@ func NewFieldUsageStatsFunc(tp elastictransport.Interface) NewFieldUsageStats {
 
 // Returns the field usage stats for each field of an index
 //
-// https://www.elastic.co/guide/en/elasticsearch/reference/master/field-usage-stats.html
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/field-usage-stats.html
 func New(tp elastictransport.Interface) *FieldUsageStats {
 	r := &FieldUsageStats{
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -103,6 +112,9 @@ func (r *FieldUsageStats) HttpRequest(ctx context.Context) (*http.Request, error
 	case r.paramSet == indexMask:
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "index", r.index)
+		}
 		path.WriteString(r.index)
 		path.WriteString("/")
 		path.WriteString("_field_usage_stats")
@@ -118,9 +130,9 @@ func (r *FieldUsageStats) HttpRequest(ctx context.Context) (*http.Request, error
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
@@ -137,27 +149,66 @@ func (r *FieldUsageStats) HttpRequest(ctx context.Context) (*http.Request, error
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r FieldUsageStats) Perform(ctx context.Context) (*http.Response, error) {
+func (r FieldUsageStats) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "indices.field_usage_stats")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "indices.field_usage_stats")
+		if reader := instrument.RecordRequestBody(ctx, "indices.field_usage_stats", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "indices.field_usage_stats")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the FieldUsageStats query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the FieldUsageStats query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a fieldusagestats.Response
-func (r FieldUsageStats) Do(ctx context.Context) (*Response, error) {
+func (r FieldUsageStats) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "indices.field_usage_stats")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -165,6 +216,9 @@ func (r FieldUsageStats) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -174,15 +228,35 @@ func (r FieldUsageStats) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r FieldUsageStats) IsSuccess(ctx context.Context) (bool, error) {
+func (r FieldUsageStats) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "indices.field_usage_stats")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -198,6 +272,14 @@ func (r FieldUsageStats) IsSuccess(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the FieldUsageStats query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -211,43 +293,44 @@ func (r *FieldUsageStats) Header(key, value string) *FieldUsageStats {
 // Index Comma-separated list or wildcard expression of index names used to limit the
 // request.
 // API Name: index
-func (r *FieldUsageStats) Index(v string) *FieldUsageStats {
+func (r *FieldUsageStats) _index(index string) *FieldUsageStats {
 	r.paramSet |= indexMask
-	r.index = v
+	r.index = index
 
 	return r
 }
 
-// AllowNoIndices If false, the request returns an error if any wildcard expression, index
-// alias, or _all value targets
-// only missing or closed indices. This behavior applies even if the request
-// targets other open indices.
+// AllowNoIndices If `false`, the request returns an error if any wildcard expression, index
+// alias, or `_all` value targets only missing or closed indices.
+// This behavior applies even if the request targets other open indices.
 // For example, a request targeting `foo*,bar*` returns an error if an index
-// starts with `foo` but no index
-// starts with `bar`.
+// starts with `foo` but no index starts with `bar`.
 // API name: allow_no_indices
-func (r *FieldUsageStats) AllowNoIndices(b bool) *FieldUsageStats {
-	r.values.Set("allow_no_indices", strconv.FormatBool(b))
+func (r *FieldUsageStats) AllowNoIndices(allownoindices bool) *FieldUsageStats {
+	r.values.Set("allow_no_indices", strconv.FormatBool(allownoindices))
 
 	return r
 }
 
-// ExpandWildcards Type of index that wildcard patterns can match. If the request can target
-// data streams, this argument
-// determines whether wildcard expressions match hidden data streams. Supports
-// comma-separated values,
-// such as `open,hidden`.
+// ExpandWildcards Type of index that wildcard patterns can match.
+// If the request can target data streams, this argument determines whether
+// wildcard expressions match hidden data streams.
+// Supports comma-separated values, such as `open,hidden`.
 // API name: expand_wildcards
-func (r *FieldUsageStats) ExpandWildcards(v string) *FieldUsageStats {
-	r.values.Set("expand_wildcards", v)
+func (r *FieldUsageStats) ExpandWildcards(expandwildcards ...expandwildcard.ExpandWildcard) *FieldUsageStats {
+	tmp := []string{}
+	for _, item := range expandwildcards {
+		tmp = append(tmp, item.String())
+	}
+	r.values.Set("expand_wildcards", strings.Join(tmp, ","))
 
 	return r
 }
 
-// IgnoreUnavailable If true, missing or closed indices are not included in the response.
+// IgnoreUnavailable If `true`, missing or closed indices are not included in the response.
 // API name: ignore_unavailable
-func (r *FieldUsageStats) IgnoreUnavailable(b bool) *FieldUsageStats {
-	r.values.Set("ignore_unavailable", strconv.FormatBool(b))
+func (r *FieldUsageStats) IgnoreUnavailable(ignoreunavailable bool) *FieldUsageStats {
+	r.values.Set("ignore_unavailable", strconv.FormatBool(ignoreunavailable))
 
 	return r
 }
@@ -255,39 +338,39 @@ func (r *FieldUsageStats) IgnoreUnavailable(b bool) *FieldUsageStats {
 // Fields Comma-separated list or wildcard expressions of fields to include in the
 // statistics.
 // API name: fields
-func (r *FieldUsageStats) Fields(v string) *FieldUsageStats {
-	r.values.Set("fields", v)
+func (r *FieldUsageStats) Fields(fields ...string) *FieldUsageStats {
+	r.values.Set("fields", strings.Join(fields, ","))
 
 	return r
 }
 
-// MasterTimeout Period to wait for a connection to the master node. If no response is
-// received before the timeout expires,
-// the request fails and returns an error.
+// MasterTimeout Period to wait for a connection to the master node.
+// If no response is received before the timeout expires, the request fails and
+// returns an error.
 // API name: master_timeout
-func (r *FieldUsageStats) MasterTimeout(v string) *FieldUsageStats {
-	r.values.Set("master_timeout", v)
+func (r *FieldUsageStats) MasterTimeout(duration string) *FieldUsageStats {
+	r.values.Set("master_timeout", duration)
 
 	return r
 }
 
-// Timeout Period to wait for a response. If no response is received before the timeout
-// expires, the request fails
-// and returns an error.
+// Timeout Period to wait for a response.
+// If no response is received before the timeout expires, the request fails and
+// returns an error.
 // API name: timeout
-func (r *FieldUsageStats) Timeout(v string) *FieldUsageStats {
-	r.values.Set("timeout", v)
+func (r *FieldUsageStats) Timeout(duration string) *FieldUsageStats {
+	r.values.Set("timeout", duration)
 
 	return r
 }
 
 // WaitForActiveShards The number of shard copies that must be active before proceeding with the
-// operation. Set to all or any
-// positive integer up to the total number of shards in the index
-// (`number_of_replicas+1`).
+// operation.
+// Set to all or any positive integer up to the total number of shards in the
+// index (`number_of_replicas+1`).
 // API name: wait_for_active_shards
-func (r *FieldUsageStats) WaitForActiveShards(v string) *FieldUsageStats {
-	r.values.Set("wait_for_active_shards", v)
+func (r *FieldUsageStats) WaitForActiveShards(waitforactiveshards string) *FieldUsageStats {
+	r.values.Set("wait_for_active_shards", waitforactiveshards)
 
 	return r
 }

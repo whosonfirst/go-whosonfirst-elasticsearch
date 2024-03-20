@@ -16,13 +16,12 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Gets configuration and usage information about inference trained models.
 package mltrainedmodels
 
 import (
-	gobytes "bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -36,8 +35,8 @@ import (
 
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
-
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/bytes"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/cattrainedmodelscolumn"
 )
 
 const (
@@ -54,11 +53,15 @@ type MlTrainedModels struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	modelid string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewMlTrainedModels type alias for index.
@@ -76,13 +79,18 @@ func NewMlTrainedModelsFunc(tp elastictransport.Interface) NewMlTrainedModels {
 
 // Gets configuration and usage information about inference trained models.
 //
-// https://www.elastic.co/guide/en/elasticsearch/reference/{branch}/cat-trained-model.html
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/cat-trained-model.html
 func New(tp elastictransport.Interface) *MlTrainedModels {
 	r := &MlTrainedModels{
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -118,6 +126,9 @@ func (r *MlTrainedModels) HttpRequest(ctx context.Context) (*http.Request, error
 		path.WriteString("trained_models")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "modelid", r.modelid)
+		}
 		path.WriteString(r.modelid)
 
 		method = http.MethodGet
@@ -131,9 +142,9 @@ func (r *MlTrainedModels) HttpRequest(ctx context.Context) (*http.Request, error
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
@@ -150,27 +161,66 @@ func (r *MlTrainedModels) HttpRequest(ctx context.Context) (*http.Request, error
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r MlTrainedModels) Perform(ctx context.Context) (*http.Response, error) {
+func (r MlTrainedModels) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "cat.ml_trained_models")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "cat.ml_trained_models")
+		if reader := instrument.RecordRequestBody(ctx, "cat.ml_trained_models", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "cat.ml_trained_models")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the MlTrainedModels query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the MlTrainedModels query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a mltrainedmodels.Response
-func (r MlTrainedModels) Do(ctx context.Context) (Response, error) {
+func (r MlTrainedModels) Do(providedCtx context.Context) (Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "cat.ml_trained_models")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -178,6 +228,9 @@ func (r MlTrainedModels) Do(ctx context.Context) (Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(&response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -187,15 +240,35 @@ func (r MlTrainedModels) Do(ctx context.Context) (Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r MlTrainedModels) IsSuccess(ctx context.Context) (bool, error) {
+func (r MlTrainedModels) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "cat.ml_trained_models")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -211,6 +284,14 @@ func (r MlTrainedModels) IsSuccess(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the MlTrainedModels query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -221,60 +302,74 @@ func (r *MlTrainedModels) Header(key, value string) *MlTrainedModels {
 	return r
 }
 
-// ModelId The ID of the trained models stats to fetch
+// ModelId A unique identifier for the trained model.
 // API Name: modelid
-func (r *MlTrainedModels) ModelId(v string) *MlTrainedModels {
+func (r *MlTrainedModels) ModelId(modelid string) *MlTrainedModels {
 	r.paramSet |= modelidMask
-	r.modelid = v
+	r.modelid = modelid
 
 	return r
 }
 
-// AllowNoMatch Whether to ignore if a wildcard expression matches no trained models. (This
-// includes `_all` string or when no trained models have been specified)
+// AllowNoMatch Specifies what to do when the request: contains wildcard expressions and
+// there are no models that match; contains the `_all` string or no identifiers
+// and there are no matches; contains wildcard expressions and there are only
+// partial matches.
+// If `true`, the API returns an empty array when there are no matches and the
+// subset of results when there are partial matches.
+// If `false`, the API returns a 404 status code when there are no matches or
+// only partial matches.
 // API name: allow_no_match
-func (r *MlTrainedModels) AllowNoMatch(b bool) *MlTrainedModels {
-	r.values.Set("allow_no_match", strconv.FormatBool(b))
+func (r *MlTrainedModels) AllowNoMatch(allownomatch bool) *MlTrainedModels {
+	r.values.Set("allow_no_match", strconv.FormatBool(allownomatch))
 
 	return r
 }
 
-// Bytes The unit in which to display byte values
+// Bytes The unit used to display byte values.
 // API name: bytes
-func (r *MlTrainedModels) Bytes(enum bytes.Bytes) *MlTrainedModels {
-	r.values.Set("bytes", enum.String())
+func (r *MlTrainedModels) Bytes(bytes bytes.Bytes) *MlTrainedModels {
+	r.values.Set("bytes", bytes.String())
 
 	return r
 }
 
-// H Comma-separated list of column names to display
+// H A comma-separated list of column names to display.
 // API name: h
-func (r *MlTrainedModels) H(v string) *MlTrainedModels {
-	r.values.Set("h", v)
+func (r *MlTrainedModels) H(cattrainedmodelscolumns ...cattrainedmodelscolumn.CatTrainedModelsColumn) *MlTrainedModels {
+	tmp := []string{}
+	for _, item := range cattrainedmodelscolumns {
+		tmp = append(tmp, item.String())
+	}
+	r.values.Set("expand_wildcards", strings.Join(tmp, ","))
 
 	return r
 }
 
-// S Comma-separated list of column names or column aliases to sort by
+// S A comma-separated list of column names or aliases used to sort the response.
 // API name: s
-func (r *MlTrainedModels) S(v string) *MlTrainedModels {
-	r.values.Set("s", v)
+func (r *MlTrainedModels) S(cattrainedmodelscolumns ...cattrainedmodelscolumn.CatTrainedModelsColumn) *MlTrainedModels {
+	tmp := []string{}
+	for _, item := range cattrainedmodelscolumns {
+		tmp = append(tmp, item.String())
+	}
+	r.values.Set("expand_wildcards", strings.Join(tmp, ","))
 
 	return r
 }
 
-// From skips a number of trained models
+// From Skips the specified number of transforms.
 // API name: from
-func (r *MlTrainedModels) From(i int) *MlTrainedModels {
-	r.values.Set("from", strconv.Itoa(i))
+func (r *MlTrainedModels) From(from int) *MlTrainedModels {
+	r.values.Set("from", strconv.Itoa(from))
 
 	return r
 }
 
-// Size specifies a max number of trained models to get
+// Size The maximum number of transforms to display.
 // API name: size
-func (r *MlTrainedModels) Size(i int) *MlTrainedModels {
-	r.values.Set("size", strconv.Itoa(i))
+func (r *MlTrainedModels) Size(size int) *MlTrainedModels {
+	r.values.Set("size", strconv.Itoa(size))
 
 	return r
 }

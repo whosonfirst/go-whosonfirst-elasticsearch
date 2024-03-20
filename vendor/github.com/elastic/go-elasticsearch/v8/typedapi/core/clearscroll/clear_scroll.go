@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Explicitly clears the search context for a scroll.
 package clearscroll
@@ -28,16 +28,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
-)
-
-const (
-	scrollidMask = iota + 1
 )
 
 // ErrBuildPath is returned in case of missing parameters within the build of the request.
@@ -50,14 +47,19 @@ type ClearScroll struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
-
-	req *Request
 	raw io.Reader
+
+	req      *Request
+	deferred []func(request *Request) error
+	buf      *gobytes.Buffer
 
 	paramSet int
 
 	scrollid string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewClearScroll type alias for index.
@@ -75,13 +77,22 @@ func NewClearScrollFunc(tp elastictransport.Interface) NewClearScroll {
 
 // Explicitly clears the search context for a scroll.
 //
-// https://www.elastic.co/guide/en/elasticsearch/reference/{branch}/clear-scroll-api.html
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/clear-scroll-api.html
 func New(tp elastictransport.Interface) *ClearScroll {
 	r := &ClearScroll{
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+
+		buf: gobytes.NewBuffer(nil),
+
+		req: NewRequest(),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -111,9 +122,17 @@ func (r *ClearScroll) HttpRequest(ctx context.Context) (*http.Request, error) {
 
 	var err error
 
-	if r.raw != nil {
-		r.buf.ReadFrom(r.raw)
-	} else if r.req != nil {
+	if len(r.deferred) > 0 {
+		for _, f := range r.deferred {
+			deferredErr := f(r.req)
+			if deferredErr != nil {
+				return nil, deferredErr
+			}
+		}
+	}
+
+	if r.raw == nil && r.req != nil {
+
 		data, err := json.Marshal(r.req)
 
 		if err != nil {
@@ -121,6 +140,11 @@ func (r *ClearScroll) HttpRequest(ctx context.Context) (*http.Request, error) {
 		}
 
 		r.buf.Write(data)
+
+	}
+
+	if r.buf.Len() > 0 {
+		r.raw = r.buf
 	}
 
 	r.path.Scheme = "http"
@@ -133,16 +157,6 @@ func (r *ClearScroll) HttpRequest(ctx context.Context) (*http.Request, error) {
 		path.WriteString("scroll")
 
 		method = http.MethodDelete
-	case r.paramSet == scrollidMask:
-		path.WriteString("/")
-		path.WriteString("_search")
-		path.WriteString("/")
-		path.WriteString("scroll")
-		path.WriteString("/")
-
-		path.WriteString(r.scrollid)
-
-		method = http.MethodDelete
 	}
 
 	r.path.Path = path.String()
@@ -153,15 +167,15 @@ func (r *ClearScroll) HttpRequest(ctx context.Context) (*http.Request, error) {
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
 
 	if req.Header.Get("Content-Type") == "" {
-		if r.buf.Len() > 0 {
+		if r.raw != nil {
 			req.Header.Set("Content-Type", "application/vnd.elasticsearch+json;compatible-with=8")
 		}
 	}
@@ -178,46 +192,134 @@ func (r *ClearScroll) HttpRequest(ctx context.Context) (*http.Request, error) {
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r ClearScroll) Perform(ctx context.Context) (*http.Response, error) {
+func (r ClearScroll) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "clear_scroll")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "clear_scroll")
+		if reader := instrument.RecordRequestBody(ctx, "clear_scroll", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "clear_scroll")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the ClearScroll query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the ClearScroll query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a clearscroll.Response
-func (r ClearScroll) Do(ctx context.Context) (*Response, error) {
+func (r ClearScroll) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "clear_scroll")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
 
-	if res.StatusCode < 299 || res.StatusCode == 404 {
+	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
 		return response, nil
 	}
 
+	if res.StatusCode == 404 {
+		data, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
+			return nil, err
+		}
+
+		errorResponse := types.NewElasticsearchError()
+		err = json.NewDecoder(gobytes.NewReader(data)).Decode(&errorResponse)
+		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
+			return nil, err
+		}
+
+		if errorResponse.Status == 0 {
+			err = json.NewDecoder(gobytes.NewReader(data)).Decode(&response)
+			if err != nil {
+				if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+					instrument.RecordError(ctx, err)
+				}
+				return nil, err
+			}
+
+			return response, nil
+		}
+
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, errorResponse)
+		}
+		return nil, errorResponse
+	}
+
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
@@ -228,11 +330,11 @@ func (r *ClearScroll) Header(key, value string) *ClearScroll {
 	return r
 }
 
-// ScrollId A comma-separated list of scroll IDs to clear
-// API Name: scrollid
-func (r *ClearScroll) ScrollId(v string) *ClearScroll {
-	r.paramSet |= scrollidMask
-	r.scrollid = v
+// ScrollId Scroll IDs to clear.
+// To clear all scroll IDs, use `_all`.
+// API name: scroll_id
+func (r *ClearScroll) ScrollId(scrollids ...string) *ClearScroll {
+	r.req.ScrollId = scrollids
 
 	return r
 }

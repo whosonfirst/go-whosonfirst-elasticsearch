@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Creates or updates a snapshot lifecycle policy.
 package putlifecycle
@@ -50,14 +50,19 @@ type PutLifecycle struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
-
-	req *Request
 	raw io.Reader
+
+	req      *Request
+	deferred []func(request *Request) error
+	buf      *gobytes.Buffer
 
 	paramSet int
 
 	policyid string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewPutLifecycle type alias for index.
@@ -69,7 +74,7 @@ func NewPutLifecycleFunc(tp elastictransport.Interface) NewPutLifecycle {
 	return func(policyid string) *PutLifecycle {
 		n := New(tp)
 
-		n.PolicyId(policyid)
+		n._policyid(policyid)
 
 		return n
 	}
@@ -83,7 +88,16 @@ func New(tp elastictransport.Interface) *PutLifecycle {
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+
+		buf: gobytes.NewBuffer(nil),
+
+		req: NewRequest(),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -113,9 +127,17 @@ func (r *PutLifecycle) HttpRequest(ctx context.Context) (*http.Request, error) {
 
 	var err error
 
-	if r.raw != nil {
-		r.buf.ReadFrom(r.raw)
-	} else if r.req != nil {
+	if len(r.deferred) > 0 {
+		for _, f := range r.deferred {
+			deferredErr := f(r.req)
+			if deferredErr != nil {
+				return nil, deferredErr
+			}
+		}
+	}
+
+	if r.raw == nil && r.req != nil {
+
 		data, err := json.Marshal(r.req)
 
 		if err != nil {
@@ -123,6 +145,11 @@ func (r *PutLifecycle) HttpRequest(ctx context.Context) (*http.Request, error) {
 		}
 
 		r.buf.Write(data)
+
+	}
+
+	if r.buf.Len() > 0 {
+		r.raw = r.buf
 	}
 
 	r.path.Scheme = "http"
@@ -135,6 +162,9 @@ func (r *PutLifecycle) HttpRequest(ctx context.Context) (*http.Request, error) {
 		path.WriteString("policy")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "policyid", r.policyid)
+		}
 		path.WriteString(r.policyid)
 
 		method = http.MethodPut
@@ -148,15 +178,15 @@ func (r *PutLifecycle) HttpRequest(ctx context.Context) (*http.Request, error) {
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
 
 	if req.Header.Get("Content-Type") == "" {
-		if r.buf.Len() > 0 {
+		if r.raw != nil {
 			req.Header.Set("Content-Type", "application/vnd.elasticsearch+json;compatible-with=8")
 		}
 	}
@@ -173,27 +203,66 @@ func (r *PutLifecycle) HttpRequest(ctx context.Context) (*http.Request, error) {
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r PutLifecycle) Perform(ctx context.Context) (*http.Response, error) {
+func (r PutLifecycle) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "slm.put_lifecycle")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "slm.put_lifecycle")
+		if reader := instrument.RecordRequestBody(ctx, "slm.put_lifecycle", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "slm.put_lifecycle")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the PutLifecycle query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the PutLifecycle query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a putlifecycle.Response
-func (r PutLifecycle) Do(ctx context.Context) (*Response, error) {
+func (r PutLifecycle) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "slm.put_lifecycle")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -201,6 +270,9 @@ func (r PutLifecycle) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -210,9 +282,19 @@ func (r PutLifecycle) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
@@ -225,9 +307,9 @@ func (r *PutLifecycle) Header(key, value string) *PutLifecycle {
 
 // PolicyId ID for the snapshot lifecycle policy you want to create or update.
 // API Name: policyid
-func (r *PutLifecycle) PolicyId(v string) *PutLifecycle {
+func (r *PutLifecycle) _policyid(policyid string) *PutLifecycle {
 	r.paramSet |= policyidMask
-	r.policyid = v
+	r.policyid = policyid
 
 	return r
 }
@@ -235,8 +317,8 @@ func (r *PutLifecycle) PolicyId(v string) *PutLifecycle {
 // MasterTimeout Period to wait for a connection to the master node. If no response is
 // received before the timeout expires, the request fails and returns an error.
 // API name: master_timeout
-func (r *PutLifecycle) MasterTimeout(v string) *PutLifecycle {
-	r.values.Set("master_timeout", v)
+func (r *PutLifecycle) MasterTimeout(duration string) *PutLifecycle {
+	r.values.Set("master_timeout", duration)
 
 	return r
 }
@@ -244,8 +326,56 @@ func (r *PutLifecycle) MasterTimeout(v string) *PutLifecycle {
 // Timeout Period to wait for a response. If no response is received before the timeout
 // expires, the request fails and returns an error.
 // API name: timeout
-func (r *PutLifecycle) Timeout(v string) *PutLifecycle {
-	r.values.Set("timeout", v)
+func (r *PutLifecycle) Timeout(duration string) *PutLifecycle {
+	r.values.Set("timeout", duration)
+
+	return r
+}
+
+// Config Configuration for each snapshot created by the policy.
+// API name: config
+func (r *PutLifecycle) Config(config *types.Configuration) *PutLifecycle {
+
+	r.req.Config = config
+
+	return r
+}
+
+// Name Name automatically assigned to each snapshot created by the policy. Date math
+// is supported. To prevent conflicting snapshot names, a UUID is automatically
+// appended to each snapshot name.
+// API name: name
+func (r *PutLifecycle) Name(name string) *PutLifecycle {
+	r.req.Name = &name
+
+	return r
+}
+
+// Repository Repository used to store snapshots created by this policy. This repository
+// must exist prior to the policy’s creation. You can create a repository using
+// the snapshot repository API.
+// API name: repository
+func (r *PutLifecycle) Repository(repository string) *PutLifecycle {
+
+	r.req.Repository = &repository
+
+	return r
+}
+
+// Retention Retention rules used to retain and delete snapshots created by the policy.
+// API name: retention
+func (r *PutLifecycle) Retention(retention *types.Retention) *PutLifecycle {
+
+	r.req.Retention = retention
+
+	return r
+}
+
+// Schedule Periodic or absolute schedule at which the policy creates snapshots. SLM
+// applies schedule changes immediately.
+// API name: schedule
+func (r *PutLifecycle) Schedule(cronexpression string) *PutLifecycle {
+	r.req.Schedule = &cronexpression
 
 	return r
 }

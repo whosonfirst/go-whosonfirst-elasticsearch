@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Adds a node to be shut down. Designed for indirect use by ECE/ESS and ECK.
 // Direct use is not supported.
@@ -35,8 +35,8 @@ import (
 
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
-
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/timeunit"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/type_"
 )
 
 const (
@@ -53,14 +53,19 @@ type PutNode struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
-
-	req *Request
 	raw io.Reader
+
+	req      *Request
+	deferred []func(request *Request) error
+	buf      *gobytes.Buffer
 
 	paramSet int
 
 	nodeid string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewPutNode type alias for index.
@@ -72,7 +77,7 @@ func NewPutNodeFunc(tp elastictransport.Interface) NewPutNode {
 	return func(nodeid string) *PutNode {
 		n := New(tp)
 
-		n.NodeId(nodeid)
+		n._nodeid(nodeid)
 
 		return n
 	}
@@ -87,7 +92,16 @@ func New(tp elastictransport.Interface) *PutNode {
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+
+		buf: gobytes.NewBuffer(nil),
+
+		req: NewRequest(),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -117,9 +131,17 @@ func (r *PutNode) HttpRequest(ctx context.Context) (*http.Request, error) {
 
 	var err error
 
-	if r.raw != nil {
-		r.buf.ReadFrom(r.raw)
-	} else if r.req != nil {
+	if len(r.deferred) > 0 {
+		for _, f := range r.deferred {
+			deferredErr := f(r.req)
+			if deferredErr != nil {
+				return nil, deferredErr
+			}
+		}
+	}
+
+	if r.raw == nil && r.req != nil {
+
 		data, err := json.Marshal(r.req)
 
 		if err != nil {
@@ -127,6 +149,11 @@ func (r *PutNode) HttpRequest(ctx context.Context) (*http.Request, error) {
 		}
 
 		r.buf.Write(data)
+
+	}
+
+	if r.buf.Len() > 0 {
+		r.raw = r.buf
 	}
 
 	r.path.Scheme = "http"
@@ -137,6 +164,9 @@ func (r *PutNode) HttpRequest(ctx context.Context) (*http.Request, error) {
 		path.WriteString("_nodes")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "nodeid", r.nodeid)
+		}
 		path.WriteString(r.nodeid)
 		path.WriteString("/")
 		path.WriteString("shutdown")
@@ -152,15 +182,15 @@ func (r *PutNode) HttpRequest(ctx context.Context) (*http.Request, error) {
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
 
 	if req.Header.Get("Content-Type") == "" {
-		if r.buf.Len() > 0 {
+		if r.raw != nil {
 			req.Header.Set("Content-Type", "application/vnd.elasticsearch+json;compatible-with=8")
 		}
 	}
@@ -177,27 +207,66 @@ func (r *PutNode) HttpRequest(ctx context.Context) (*http.Request, error) {
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r PutNode) Perform(ctx context.Context) (*http.Response, error) {
+func (r PutNode) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "shutdown.put_node")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "shutdown.put_node")
+		if reader := instrument.RecordRequestBody(ctx, "shutdown.put_node", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "shutdown.put_node")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the PutNode query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the PutNode query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a putnode.Response
-func (r PutNode) Do(ctx context.Context) (*Response, error) {
+func (r PutNode) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "shutdown.put_node")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -205,6 +274,9 @@ func (r PutNode) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -214,9 +286,19 @@ func (r PutNode) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
@@ -229,9 +311,9 @@ func (r *PutNode) Header(key, value string) *PutNode {
 
 // NodeId The node id of node to be shut down
 // API Name: nodeid
-func (r *PutNode) NodeId(v string) *PutNode {
+func (r *PutNode) _nodeid(nodeid string) *PutNode {
 	r.paramSet |= nodeidMask
-	r.nodeid = v
+	r.nodeid = nodeid
 
 	return r
 }
@@ -239,8 +321,8 @@ func (r *PutNode) NodeId(v string) *PutNode {
 // MasterTimeout Period to wait for a connection to the master node. If no response is
 // received before the timeout expires, the request fails and returns an error.
 // API name: master_timeout
-func (r *PutNode) MasterTimeout(enum timeunit.TimeUnit) *PutNode {
-	r.values.Set("master_timeout", enum.String())
+func (r *PutNode) MasterTimeout(mastertimeout timeunit.TimeUnit) *PutNode {
+	r.values.Set("master_timeout", mastertimeout.String())
 
 	return r
 }
@@ -248,8 +330,67 @@ func (r *PutNode) MasterTimeout(enum timeunit.TimeUnit) *PutNode {
 // Timeout Period to wait for a response. If no response is received before the timeout
 // expires, the request fails and returns an error.
 // API name: timeout
-func (r *PutNode) Timeout(enum timeunit.TimeUnit) *PutNode {
-	r.values.Set("timeout", enum.String())
+func (r *PutNode) Timeout(timeout timeunit.TimeUnit) *PutNode {
+	r.values.Set("timeout", timeout.String())
+
+	return r
+}
+
+// AllocationDelay Only valid if type is restart.
+// Controls how long Elasticsearch will wait for the node to restart and join
+// the cluster before reassigning its shards to other nodes.
+// This works the same as delaying allocation with the
+// index.unassigned.node_left.delayed_timeout setting.
+// If you specify both a restart allocation delay and an index-level allocation
+// delay, the longer of the two is used.
+// API name: allocation_delay
+func (r *PutNode) AllocationDelay(allocationdelay string) *PutNode {
+
+	r.req.AllocationDelay = &allocationdelay
+
+	return r
+}
+
+// Reason A human-readable reason that the node is being shut down.
+// This field provides information for other cluster operators; it does not
+// affect the shut down process.
+// API name: reason
+func (r *PutNode) Reason(reason string) *PutNode {
+
+	r.req.Reason = reason
+
+	return r
+}
+
+// TargetNodeName Only valid if type is replace.
+// Specifies the name of the node that is replacing the node being shut down.
+// Shards from the shut down node are only allowed to be allocated to the target
+// node, and no other data will be allocated to the target node.
+// During relocation of data certain allocation rules are ignored, such as disk
+// watermarks or user attribute filtering rules.
+// API name: target_node_name
+func (r *PutNode) TargetNodeName(targetnodename string) *PutNode {
+
+	r.req.TargetNodeName = &targetnodename
+
+	return r
+}
+
+// Type Valid values are restart, remove, or replace.
+// Use restart when you need to temporarily shut down a node to perform an
+// upgrade, make configuration changes, or perform other maintenance.
+// Because the node is expected to rejoin the cluster, data is not migrated off
+// of the node.
+// Use remove when you need to permanently remove a node from the cluster.
+// The node is not marked ready for shutdown until data is migrated off of the
+// node Use replace to do a 1:1 replacement of a node with another node.
+// Certain allocation decisions will be ignored (such as disk watermarks) in the
+// interest of true replacement of the source node with the target node.
+// During a replace-type shutdown, rollover and index creation may result in
+// unassigned shards, and shrink may fail until the replacement is complete.
+// API name: type
+func (r *PutNode) Type(type_ type_.Type) *PutNode {
+	r.req.Type = type_
 
 	return r
 }

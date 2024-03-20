@@ -16,13 +16,12 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Gets configuration and usage information about data frame analytics jobs.
 package mldataframeanalytics
 
 import (
-	gobytes "bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -36,8 +35,8 @@ import (
 
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
-
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/bytes"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/catdfacolumn"
 )
 
 const (
@@ -54,11 +53,15 @@ type MlDataFrameAnalytics struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	id string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewMlDataFrameAnalytics type alias for index.
@@ -76,13 +79,18 @@ func NewMlDataFrameAnalyticsFunc(tp elastictransport.Interface) NewMlDataFrameAn
 
 // Gets configuration and usage information about data frame analytics jobs.
 //
-// https://www.elastic.co/guide/en/elasticsearch/reference/{branch}/cat-dfanalytics.html
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/cat-dfanalytics.html
 func New(tp elastictransport.Interface) *MlDataFrameAnalytics {
 	r := &MlDataFrameAnalytics{
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -122,6 +130,9 @@ func (r *MlDataFrameAnalytics) HttpRequest(ctx context.Context) (*http.Request, 
 		path.WriteString("analytics")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "id", r.id)
+		}
 		path.WriteString(r.id)
 
 		method = http.MethodGet
@@ -135,9 +146,9 @@ func (r *MlDataFrameAnalytics) HttpRequest(ctx context.Context) (*http.Request, 
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
@@ -154,27 +165,66 @@ func (r *MlDataFrameAnalytics) HttpRequest(ctx context.Context) (*http.Request, 
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r MlDataFrameAnalytics) Perform(ctx context.Context) (*http.Response, error) {
+func (r MlDataFrameAnalytics) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "cat.ml_data_frame_analytics")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "cat.ml_data_frame_analytics")
+		if reader := instrument.RecordRequestBody(ctx, "cat.ml_data_frame_analytics", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "cat.ml_data_frame_analytics")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the MlDataFrameAnalytics query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the MlDataFrameAnalytics query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a mldataframeanalytics.Response
-func (r MlDataFrameAnalytics) Do(ctx context.Context) (Response, error) {
+func (r MlDataFrameAnalytics) Do(providedCtx context.Context) (Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "cat.ml_data_frame_analytics")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -182,6 +232,9 @@ func (r MlDataFrameAnalytics) Do(ctx context.Context) (Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(&response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -191,15 +244,35 @@ func (r MlDataFrameAnalytics) Do(ctx context.Context) (Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r MlDataFrameAnalytics) IsSuccess(ctx context.Context) (bool, error) {
+func (r MlDataFrameAnalytics) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "cat.ml_data_frame_analytics")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -215,6 +288,14 @@ func (r MlDataFrameAnalytics) IsSuccess(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the MlDataFrameAnalytics query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -227,9 +308,9 @@ func (r *MlDataFrameAnalytics) Header(key, value string) *MlDataFrameAnalytics {
 
 // Id The ID of the data frame analytics to fetch
 // API Name: id
-func (r *MlDataFrameAnalytics) Id(v string) *MlDataFrameAnalytics {
+func (r *MlDataFrameAnalytics) Id(id string) *MlDataFrameAnalytics {
 	r.paramSet |= idMask
-	r.id = v
+	r.id = id
 
 	return r
 }
@@ -237,24 +318,28 @@ func (r *MlDataFrameAnalytics) Id(v string) *MlDataFrameAnalytics {
 // AllowNoMatch Whether to ignore if a wildcard expression matches no configs. (This includes
 // `_all` string or when no configs have been specified)
 // API name: allow_no_match
-func (r *MlDataFrameAnalytics) AllowNoMatch(b bool) *MlDataFrameAnalytics {
-	r.values.Set("allow_no_match", strconv.FormatBool(b))
+func (r *MlDataFrameAnalytics) AllowNoMatch(allownomatch bool) *MlDataFrameAnalytics {
+	r.values.Set("allow_no_match", strconv.FormatBool(allownomatch))
 
 	return r
 }
 
 // Bytes The unit in which to display byte values
 // API name: bytes
-func (r *MlDataFrameAnalytics) Bytes(enum bytes.Bytes) *MlDataFrameAnalytics {
-	r.values.Set("bytes", enum.String())
+func (r *MlDataFrameAnalytics) Bytes(bytes bytes.Bytes) *MlDataFrameAnalytics {
+	r.values.Set("bytes", bytes.String())
 
 	return r
 }
 
 // H Comma-separated list of column names to display.
 // API name: h
-func (r *MlDataFrameAnalytics) H(v string) *MlDataFrameAnalytics {
-	r.values.Set("h", v)
+func (r *MlDataFrameAnalytics) H(catdfacolumns ...catdfacolumn.CatDfaColumn) *MlDataFrameAnalytics {
+	tmp := []string{}
+	for _, item := range catdfacolumns {
+		tmp = append(tmp, item.String())
+	}
+	r.values.Set("expand_wildcards", strings.Join(tmp, ","))
 
 	return r
 }
@@ -262,16 +347,20 @@ func (r *MlDataFrameAnalytics) H(v string) *MlDataFrameAnalytics {
 // S Comma-separated list of column names or column aliases used to sort the
 // response.
 // API name: s
-func (r *MlDataFrameAnalytics) S(v string) *MlDataFrameAnalytics {
-	r.values.Set("s", v)
+func (r *MlDataFrameAnalytics) S(catdfacolumns ...catdfacolumn.CatDfaColumn) *MlDataFrameAnalytics {
+	tmp := []string{}
+	for _, item := range catdfacolumns {
+		tmp = append(tmp, item.String())
+	}
+	r.values.Set("expand_wildcards", strings.Join(tmp, ","))
 
 	return r
 }
 
 // Time Unit used to display time values.
 // API name: time
-func (r *MlDataFrameAnalytics) Time(v string) *MlDataFrameAnalytics {
-	r.values.Set("time", v)
+func (r *MlDataFrameAnalytics) Time(duration string) *MlDataFrameAnalytics {
+	r.values.Set("time", duration)
 
 	return r
 }

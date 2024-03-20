@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Updates certain properties of a transform.
 package updatetransform
@@ -51,14 +51,19 @@ type UpdateTransform struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
-
-	req *Request
 	raw io.Reader
+
+	req      *Request
+	deferred []func(request *Request) error
+	buf      *gobytes.Buffer
 
 	paramSet int
 
 	transformid string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewUpdateTransform type alias for index.
@@ -70,7 +75,7 @@ func NewUpdateTransformFunc(tp elastictransport.Interface) NewUpdateTransform {
 	return func(transformid string) *UpdateTransform {
 		n := New(tp)
 
-		n.TransformId(transformid)
+		n._transformid(transformid)
 
 		return n
 	}
@@ -84,7 +89,16 @@ func New(tp elastictransport.Interface) *UpdateTransform {
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+
+		buf: gobytes.NewBuffer(nil),
+
+		req: NewRequest(),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -114,9 +128,17 @@ func (r *UpdateTransform) HttpRequest(ctx context.Context) (*http.Request, error
 
 	var err error
 
-	if r.raw != nil {
-		r.buf.ReadFrom(r.raw)
-	} else if r.req != nil {
+	if len(r.deferred) > 0 {
+		for _, f := range r.deferred {
+			deferredErr := f(r.req)
+			if deferredErr != nil {
+				return nil, deferredErr
+			}
+		}
+	}
+
+	if r.raw == nil && r.req != nil {
+
 		data, err := json.Marshal(r.req)
 
 		if err != nil {
@@ -124,6 +146,11 @@ func (r *UpdateTransform) HttpRequest(ctx context.Context) (*http.Request, error
 		}
 
 		r.buf.Write(data)
+
+	}
+
+	if r.buf.Len() > 0 {
+		r.raw = r.buf
 	}
 
 	r.path.Scheme = "http"
@@ -134,6 +161,9 @@ func (r *UpdateTransform) HttpRequest(ctx context.Context) (*http.Request, error
 		path.WriteString("_transform")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "transformid", r.transformid)
+		}
 		path.WriteString(r.transformid)
 		path.WriteString("/")
 		path.WriteString("_update")
@@ -149,15 +179,15 @@ func (r *UpdateTransform) HttpRequest(ctx context.Context) (*http.Request, error
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
 
 	if req.Header.Get("Content-Type") == "" {
-		if r.buf.Len() > 0 {
+		if r.raw != nil {
 			req.Header.Set("Content-Type", "application/vnd.elasticsearch+json;compatible-with=8")
 		}
 	}
@@ -174,27 +204,66 @@ func (r *UpdateTransform) HttpRequest(ctx context.Context) (*http.Request, error
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r UpdateTransform) Perform(ctx context.Context) (*http.Response, error) {
+func (r UpdateTransform) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "transform.update_transform")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "transform.update_transform")
+		if reader := instrument.RecordRequestBody(ctx, "transform.update_transform", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "transform.update_transform")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the UpdateTransform query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the UpdateTransform query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a updatetransform.Response
-func (r UpdateTransform) Do(ctx context.Context) (*Response, error) {
+func (r UpdateTransform) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "transform.update_transform")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -202,6 +271,9 @@ func (r UpdateTransform) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -211,9 +283,19 @@ func (r UpdateTransform) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
@@ -226,9 +308,9 @@ func (r *UpdateTransform) Header(key, value string) *UpdateTransform {
 
 // TransformId Identifier for the transform.
 // API Name: transformid
-func (r *UpdateTransform) TransformId(v string) *UpdateTransform {
+func (r *UpdateTransform) _transformid(transformid string) *UpdateTransform {
 	r.paramSet |= transformidMask
-	r.transformid = v
+	r.transformid = transformid
 
 	return r
 }
@@ -237,8 +319,8 @@ func (r *UpdateTransform) TransformId(v string) *UpdateTransform {
 // desired if the source index does not exist until after the transform is
 // created.
 // API name: defer_validation
-func (r *UpdateTransform) DeferValidation(b bool) *UpdateTransform {
-	r.values.Set("defer_validation", strconv.FormatBool(b))
+func (r *UpdateTransform) DeferValidation(defervalidation bool) *UpdateTransform {
+	r.values.Set("defer_validation", strconv.FormatBool(defervalidation))
 
 	return r
 }
@@ -246,8 +328,81 @@ func (r *UpdateTransform) DeferValidation(b bool) *UpdateTransform {
 // Timeout Period to wait for a response. If no response is received before the
 // timeout expires, the request fails and returns an error.
 // API name: timeout
-func (r *UpdateTransform) Timeout(v string) *UpdateTransform {
-	r.values.Set("timeout", v)
+func (r *UpdateTransform) Timeout(duration string) *UpdateTransform {
+	r.values.Set("timeout", duration)
+
+	return r
+}
+
+// Description Free text description of the transform.
+// API name: description
+func (r *UpdateTransform) Description(description string) *UpdateTransform {
+
+	r.req.Description = &description
+
+	return r
+}
+
+// Dest The destination for the transform.
+// API name: dest
+func (r *UpdateTransform) Dest(dest *types.TransformDestination) *UpdateTransform {
+
+	r.req.Dest = dest
+
+	return r
+}
+
+// Frequency The interval between checks for changes in the source indices when the
+// transform is running continuously. Also determines the retry interval in
+// the event of transient failures while the transform is searching or
+// indexing. The minimum value is 1s and the maximum is 1h.
+// API name: frequency
+func (r *UpdateTransform) Frequency(duration types.Duration) *UpdateTransform {
+	r.req.Frequency = duration
+
+	return r
+}
+
+// Meta_ Defines optional transform metadata.
+// API name: _meta
+func (r *UpdateTransform) Meta_(metadata types.Metadata) *UpdateTransform {
+	r.req.Meta_ = metadata
+
+	return r
+}
+
+// RetentionPolicy Defines a retention policy for the transform. Data that meets the defined
+// criteria is deleted from the destination index.
+// API name: retention_policy
+func (r *UpdateTransform) RetentionPolicy(retentionpolicy types.RetentionPolicyContainer) *UpdateTransform {
+	r.req.RetentionPolicy = retentionpolicy
+
+	return r
+}
+
+// Settings Defines optional transform settings.
+// API name: settings
+func (r *UpdateTransform) Settings(settings *types.Settings) *UpdateTransform {
+
+	r.req.Settings = settings
+
+	return r
+}
+
+// Source The source of the data for the transform.
+// API name: source
+func (r *UpdateTransform) Source(source *types.TransformSource) *UpdateTransform {
+
+	r.req.Source = source
+
+	return r
+}
+
+// Sync Defines the properties transforms require to run continuously.
+// API name: sync
+func (r *UpdateTransform) Sync(sync *types.SyncContainer) *UpdateTransform {
+
+	r.req.Sync = sync
 
 	return r
 }

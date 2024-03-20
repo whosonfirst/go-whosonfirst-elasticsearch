@@ -16,13 +16,12 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Returns information about whether a particular index template exists.
 package existstemplate
 
 import (
-	gobytes "bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -50,11 +49,15 @@ type ExistsTemplate struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	name string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewExistsTemplate type alias for index.
@@ -66,7 +69,7 @@ func NewExistsTemplateFunc(tp elastictransport.Interface) NewExistsTemplate {
 	return func(name string) *ExistsTemplate {
 		n := New(tp)
 
-		n.Name(name)
+		n._name(name)
 
 		return n
 	}
@@ -74,13 +77,18 @@ func NewExistsTemplateFunc(tp elastictransport.Interface) NewExistsTemplate {
 
 // Returns information about whether a particular index template exists.
 //
-// https://www.elastic.co/guide/en/elasticsearch/reference/master/indices-templates.html
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-template-exists-v1.html
 func New(tp elastictransport.Interface) *ExistsTemplate {
 	r := &ExistsTemplate{
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -103,6 +111,9 @@ func (r *ExistsTemplate) HttpRequest(ctx context.Context) (*http.Request, error)
 		path.WriteString("_template")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "name", r.name)
+		}
 		path.WriteString(r.name)
 
 		method = http.MethodHead
@@ -116,9 +127,9 @@ func (r *ExistsTemplate) HttpRequest(ctx context.Context) (*http.Request, error)
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
@@ -135,23 +146,65 @@ func (r *ExistsTemplate) HttpRequest(ctx context.Context) (*http.Request, error)
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r ExistsTemplate) Perform(ctx context.Context) (*http.Response, error) {
+func (r ExistsTemplate) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "indices.exists_template")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "indices.exists_template")
+		if reader := instrument.RecordRequestBody(ctx, "indices.exists_template", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "indices.exists_template")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the ExistsTemplate query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the ExistsTemplate query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
+// Do runs the request through the transport, handle the response and returns a existstemplate.Response
+func (r ExistsTemplate) Do(ctx context.Context) (bool, error) {
+	return r.IsSuccess(ctx)
+}
+
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r ExistsTemplate) IsSuccess(ctx context.Context) (bool, error) {
+func (r ExistsTemplate) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "indices.exists_template")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -167,6 +220,14 @@ func (r ExistsTemplate) IsSuccess(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the ExistsTemplate query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -179,17 +240,17 @@ func (r *ExistsTemplate) Header(key, value string) *ExistsTemplate {
 
 // Name The comma separated names of the index templates
 // API Name: name
-func (r *ExistsTemplate) Name(v string) *ExistsTemplate {
+func (r *ExistsTemplate) _name(name string) *ExistsTemplate {
 	r.paramSet |= nameMask
-	r.name = v
+	r.name = name
 
 	return r
 }
 
 // FlatSettings Return settings in flat format (default: false)
 // API name: flat_settings
-func (r *ExistsTemplate) FlatSettings(b bool) *ExistsTemplate {
-	r.values.Set("flat_settings", strconv.FormatBool(b))
+func (r *ExistsTemplate) FlatSettings(flatsettings bool) *ExistsTemplate {
+	r.values.Set("flat_settings", strconv.FormatBool(flatsettings))
 
 	return r
 }
@@ -197,16 +258,16 @@ func (r *ExistsTemplate) FlatSettings(b bool) *ExistsTemplate {
 // Local Return local information, do not retrieve the state from master node
 // (default: false)
 // API name: local
-func (r *ExistsTemplate) Local(b bool) *ExistsTemplate {
-	r.values.Set("local", strconv.FormatBool(b))
+func (r *ExistsTemplate) Local(local bool) *ExistsTemplate {
+	r.values.Set("local", strconv.FormatBool(local))
 
 	return r
 }
 
 // MasterTimeout Explicit operation timeout for connection to master node
 // API name: master_timeout
-func (r *ExistsTemplate) MasterTimeout(v string) *ExistsTemplate {
-	r.values.Set("master_timeout", v)
+func (r *ExistsTemplate) MasterTimeout(duration string) *ExistsTemplate {
+	r.values.Set("master_timeout", duration)
 
 	return r
 }

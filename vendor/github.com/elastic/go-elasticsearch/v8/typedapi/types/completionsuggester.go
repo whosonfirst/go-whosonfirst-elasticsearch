@@ -16,31 +16,40 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // CompletionSuggester type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_global/search/_types/suggester.ts#L130-L135
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_global/search/_types/suggester.ts#L160-L178
 type CompletionSuggester struct {
-	Analyzer       *string                        `json:"analyzer,omitempty"`
-	Contexts       map[string][]CompletionContext `json:"contexts,omitempty"`
-	Field          string                         `json:"field"`
-	Fuzzy          *SuggestFuzziness              `json:"fuzzy,omitempty"`
-	Regex          *RegexOptions                  `json:"regex,omitempty"`
-	Size           *int                           `json:"size,omitempty"`
-	SkipDuplicates *bool                          `json:"skip_duplicates,omitempty"`
+	// Analyzer The analyzer to analyze the suggest text with.
+	// Defaults to the search analyzer of the suggest field.
+	Analyzer *string `json:"analyzer,omitempty"`
+	// Contexts A value, geo point object, or a geo hash string to filter or boost the
+	// suggestion on.
+	Contexts map[string][]CompletionContext `json:"contexts,omitempty"`
+	// Field The field to fetch the candidate suggestions from.
+	// Needs to be set globally or per suggestion.
+	Field string `json:"field"`
+	// Fuzzy Enables fuzziness, meaning you can have a typo in your search and still get
+	// results back.
+	Fuzzy *SuggestFuzziness `json:"fuzzy,omitempty"`
+	// Regex A regex query that expresses a prefix as a regular expression.
+	Regex *RegexOptions `json:"regex,omitempty"`
+	// Size The maximum corrections to be returned per suggest text token.
+	Size *int `json:"size,omitempty"`
+	// SkipDuplicates Whether duplicate suggestions should be filtered out.
+	SkipDuplicates *bool `json:"skip_duplicates,omitempty"`
 }
 
 func (s *CompletionSuggester) UnmarshalJSON(data []byte) error {
@@ -63,7 +72,11 @@ func (s *CompletionSuggester) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Analyzer = &o
 
 		case "contexts":

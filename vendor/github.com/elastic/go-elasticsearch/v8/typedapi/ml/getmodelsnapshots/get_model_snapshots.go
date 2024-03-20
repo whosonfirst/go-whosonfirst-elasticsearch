@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Retrieves information about model snapshots.
 package getmodelsnapshots
@@ -53,15 +53,20 @@ type GetModelSnapshots struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
-
-	req *Request
 	raw io.Reader
+
+	req      *Request
+	deferred []func(request *Request) error
+	buf      *gobytes.Buffer
 
 	paramSet int
 
 	jobid      string
 	snapshotid string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewGetModelSnapshots type alias for index.
@@ -73,7 +78,7 @@ func NewGetModelSnapshotsFunc(tp elastictransport.Interface) NewGetModelSnapshot
 	return func(jobid string) *GetModelSnapshots {
 		n := New(tp)
 
-		n.JobId(jobid)
+		n._jobid(jobid)
 
 		return n
 	}
@@ -87,7 +92,16 @@ func New(tp elastictransport.Interface) *GetModelSnapshots {
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+
+		buf: gobytes.NewBuffer(nil),
+
+		req: NewRequest(),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -117,9 +131,17 @@ func (r *GetModelSnapshots) HttpRequest(ctx context.Context) (*http.Request, err
 
 	var err error
 
-	if r.raw != nil {
-		r.buf.ReadFrom(r.raw)
-	} else if r.req != nil {
+	if len(r.deferred) > 0 {
+		for _, f := range r.deferred {
+			deferredErr := f(r.req)
+			if deferredErr != nil {
+				return nil, deferredErr
+			}
+		}
+	}
+
+	if r.raw == nil && r.req != nil {
+
 		data, err := json.Marshal(r.req)
 
 		if err != nil {
@@ -127,6 +149,11 @@ func (r *GetModelSnapshots) HttpRequest(ctx context.Context) (*http.Request, err
 		}
 
 		r.buf.Write(data)
+
+	}
+
+	if r.buf.Len() > 0 {
+		r.raw = r.buf
 	}
 
 	r.path.Scheme = "http"
@@ -139,11 +166,17 @@ func (r *GetModelSnapshots) HttpRequest(ctx context.Context) (*http.Request, err
 		path.WriteString("anomaly_detectors")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "jobid", r.jobid)
+		}
 		path.WriteString(r.jobid)
 		path.WriteString("/")
 		path.WriteString("model_snapshots")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "snapshotid", r.snapshotid)
+		}
 		path.WriteString(r.snapshotid)
 
 		method = http.MethodPost
@@ -154,6 +187,9 @@ func (r *GetModelSnapshots) HttpRequest(ctx context.Context) (*http.Request, err
 		path.WriteString("anomaly_detectors")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "jobid", r.jobid)
+		}
 		path.WriteString(r.jobid)
 		path.WriteString("/")
 		path.WriteString("model_snapshots")
@@ -169,15 +205,15 @@ func (r *GetModelSnapshots) HttpRequest(ctx context.Context) (*http.Request, err
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
 
 	if req.Header.Get("Content-Type") == "" {
-		if r.buf.Len() > 0 {
+		if r.raw != nil {
 			req.Header.Set("Content-Type", "application/vnd.elasticsearch+json;compatible-with=8")
 		}
 	}
@@ -194,27 +230,66 @@ func (r *GetModelSnapshots) HttpRequest(ctx context.Context) (*http.Request, err
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r GetModelSnapshots) Perform(ctx context.Context) (*http.Response, error) {
+func (r GetModelSnapshots) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "ml.get_model_snapshots")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "ml.get_model_snapshots")
+		if reader := instrument.RecordRequestBody(ctx, "ml.get_model_snapshots", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "ml.get_model_snapshots")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the GetModelSnapshots query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the GetModelSnapshots query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a getmodelsnapshots.Response
-func (r GetModelSnapshots) Do(ctx context.Context) (*Response, error) {
+func (r GetModelSnapshots) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "ml.get_model_snapshots")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -222,6 +297,9 @@ func (r GetModelSnapshots) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -231,9 +309,19 @@ func (r GetModelSnapshots) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
@@ -246,9 +334,9 @@ func (r *GetModelSnapshots) Header(key, value string) *GetModelSnapshots {
 
 // JobId Identifier for the anomaly detection job.
 // API Name: jobid
-func (r *GetModelSnapshots) JobId(v string) *GetModelSnapshots {
+func (r *GetModelSnapshots) _jobid(jobid string) *GetModelSnapshots {
 	r.paramSet |= jobidMask
-	r.jobid = v
+	r.jobid = jobid
 
 	return r
 }
@@ -259,58 +347,65 @@ func (r *GetModelSnapshots) JobId(v string) *GetModelSnapshots {
 // get all snapshots by using `_all`,
 // by specifying `*` as the snapshot ID, or by omitting the snapshot ID.
 // API Name: snapshotid
-func (r *GetModelSnapshots) SnapshotId(v string) *GetModelSnapshots {
+func (r *GetModelSnapshots) SnapshotId(snapshotid string) *GetModelSnapshots {
 	r.paramSet |= snapshotidMask
-	r.snapshotid = v
-
-	return r
-}
-
-// Desc If true, the results are sorted in descending order.
-// API name: desc
-func (r *GetModelSnapshots) Desc(b bool) *GetModelSnapshots {
-	r.values.Set("desc", strconv.FormatBool(b))
-
-	return r
-}
-
-// End Returns snapshots with timestamps earlier than this time.
-// API name: end
-func (r *GetModelSnapshots) End(v string) *GetModelSnapshots {
-	r.values.Set("end", v)
+	r.snapshotid = snapshotid
 
 	return r
 }
 
 // From Skips the specified number of snapshots.
 // API name: from
-func (r *GetModelSnapshots) From(i int) *GetModelSnapshots {
-	r.values.Set("from", strconv.Itoa(i))
+func (r *GetModelSnapshots) From(from int) *GetModelSnapshots {
+	r.values.Set("from", strconv.Itoa(from))
 
 	return r
 }
 
 // Size Specifies the maximum number of snapshots to obtain.
 // API name: size
-func (r *GetModelSnapshots) Size(i int) *GetModelSnapshots {
-	r.values.Set("size", strconv.Itoa(i))
+func (r *GetModelSnapshots) Size(size int) *GetModelSnapshots {
+	r.values.Set("size", strconv.Itoa(size))
 
 	return r
 }
 
-// Sort Specifies the sort field for the requested snapshots. By default, the
-// snapshots are sorted by their timestamp.
+// Desc Refer to the description for the `desc` query parameter.
+// API name: desc
+func (r *GetModelSnapshots) Desc(desc bool) *GetModelSnapshots {
+	r.req.Desc = &desc
+
+	return r
+}
+
+// End Refer to the description for the `end` query parameter.
+// API name: end
+func (r *GetModelSnapshots) End(datetime types.DateTime) *GetModelSnapshots {
+	r.req.End = datetime
+
+	return r
+}
+
+// API name: page
+func (r *GetModelSnapshots) Page(page *types.Page) *GetModelSnapshots {
+
+	r.req.Page = page
+
+	return r
+}
+
+// Sort Refer to the description for the `sort` query parameter.
 // API name: sort
-func (r *GetModelSnapshots) Sort(v string) *GetModelSnapshots {
-	r.values.Set("sort", v)
+func (r *GetModelSnapshots) Sort(field string) *GetModelSnapshots {
+	r.req.Sort = &field
 
 	return r
 }
 
-// Start Returns snapshots with timestamps after this time.
+// Start Refer to the description for the `start` query parameter.
 // API name: start
-func (r *GetModelSnapshots) Start(v string) *GetModelSnapshots {
-	r.values.Set("start", v)
+func (r *GetModelSnapshots) Start(datetime types.DateTime) *GetModelSnapshots {
+	r.req.Start = datetime
 
 	return r
 }

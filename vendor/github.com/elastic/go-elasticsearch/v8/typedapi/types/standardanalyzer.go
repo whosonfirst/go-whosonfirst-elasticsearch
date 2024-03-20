@@ -16,23 +16,21 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // StandardAnalyzer type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/analyzers.ts#L95-L99
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/analyzers.ts#L95-L99
 type StandardAnalyzer struct {
 	MaxTokenLength *int     `json:"max_token_length,omitempty"`
 	Stopwords      []string `json:"stopwords,omitempty"`
@@ -96,11 +94,23 @@ func (s *StandardAnalyzer) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s StandardAnalyzer) MarshalJSON() ([]byte, error) {
+	type innerStandardAnalyzer StandardAnalyzer
+	tmp := innerStandardAnalyzer{
+		MaxTokenLength: s.MaxTokenLength,
+		Stopwords:      s.Stopwords,
+		Type:           s.Type,
+	}
+
+	tmp.Type = "standard"
+
+	return json.Marshal(tmp)
+}
+
 // NewStandardAnalyzer returns a StandardAnalyzer.
 func NewStandardAnalyzer() *StandardAnalyzer {
 	r := &StandardAnalyzer{}
-
-	r.Type = "standard"
 
 	return r
 }

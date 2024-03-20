@@ -16,32 +16,38 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/gappolicy"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
+	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/gappolicy"
 )
 
 // InferenceAggregation type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/aggregations/pipeline.ts#L171-L174
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/aggregations/pipeline.ts#L205-L214
 type InferenceAggregation struct {
 	// BucketsPath Path to the buckets that contain one set of values to correlate.
-	BucketsPath     BucketsPath               `json:"buckets_path,omitempty"`
-	Format          *string                   `json:"format,omitempty"`
-	GapPolicy       *gappolicy.GapPolicy      `json:"gap_policy,omitempty"`
+	BucketsPath BucketsPath `json:"buckets_path,omitempty"`
+	// Format `DecimalFormat` pattern for the output value.
+	// If specified, the formatted value is returned in the aggregation’s
+	// `value_as_string` property.
+	Format *string `json:"format,omitempty"`
+	// GapPolicy Policy to apply when gaps are found in the data.
+	GapPolicy *gappolicy.GapPolicy `json:"gap_policy,omitempty"`
+	// InferenceConfig Contains the inference type and its options.
 	InferenceConfig *InferenceConfigContainer `json:"inference_config,omitempty"`
 	Meta            Metadata                  `json:"meta,omitempty"`
-	ModelId         string                    `json:"model_id"`
-	Name            *string                   `json:"name,omitempty"`
+	// ModelId The ID or alias for the trained model.
+	ModelId string  `json:"model_id"`
+	Name    *string `json:"name,omitempty"`
 }
 
 func (s *InferenceAggregation) UnmarshalJSON(data []byte) error {
@@ -69,7 +75,11 @@ func (s *InferenceAggregation) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Format = &o
 
 		case "gap_policy":
@@ -97,7 +107,11 @@ func (s *InferenceAggregation) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Name = &o
 
 		}

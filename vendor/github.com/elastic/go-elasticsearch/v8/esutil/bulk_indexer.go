@@ -76,6 +76,7 @@ type BulkIndexerConfig struct {
 	Pretty              bool
 	Refresh             string
 	Routing             string
+	RequireAlias        bool
 	Source              []string
 	SourceExcludes      []string
 	SourceIncludes      []string
@@ -101,10 +102,13 @@ type BulkIndexerItem struct {
 	Action          string
 	DocumentID      string
 	Routing         string
+	RequireAlias    bool
 	Version         *int64
 	VersionType     string
 	Body            io.ReadSeeker
 	RetryOnConflict *int
+	IfSeqNo         *int64
+	IfPrimaryTerm   *int64
 	meta            bytes.Buffer // Item metadata header
 	payloadLength   int          // Item payload total length metadata+newline+body length
 
@@ -166,6 +170,24 @@ func (item *BulkIndexerItem) marshallMeta() {
 		item.meta.Write(strconv.AppendInt(aux, int64(*item.RetryOnConflict), 10))
 		aux = aux[:0]
 	}
+	if item.RequireAlias {
+		if item.DocumentID != "" || item.Routing != "" || item.Index != "" || item.RetryOnConflict != nil {
+			item.meta.WriteString(",")
+		}
+		item.meta.WriteString(`"require_alias":`)
+		item.meta.Write(strconv.AppendBool(aux, item.RequireAlias))
+		aux = aux[:0]
+	}
+
+	if item.DocumentID != "" && item.IfSeqNo != nil && item.IfPrimaryTerm != nil {
+		item.meta.WriteRune(',')
+		item.meta.WriteString(`"if_seq_no":`)
+		item.meta.WriteString(strconv.FormatInt(*item.IfSeqNo, 10))
+		item.meta.WriteRune(',')
+		item.meta.WriteString(`"if_primary_term":`)
+		item.meta.WriteString(strconv.FormatInt(*item.IfPrimaryTerm, 10))
+	}
+
 	item.meta.WriteRune('}')
 	item.meta.WriteRune('}')
 	item.meta.WriteRune('\n')
@@ -238,8 +260,6 @@ type bulkIndexer struct {
 	wg      sync.WaitGroup
 	queue   chan BulkIndexerItem
 	workers []*worker
-	ticker  *time.Ticker
-	done    chan bool
 	stats   *bulkIndexerStats
 
 	config BulkIndexerConfig
@@ -280,7 +300,6 @@ func NewBulkIndexer(cfg BulkIndexerConfig) (BulkIndexer, error) {
 
 	bi := bulkIndexer{
 		config: cfg,
-		done:   make(chan bool),
 		stats:  &bulkIndexerStats{},
 	}
 
@@ -315,11 +334,9 @@ func (bi *bulkIndexer) Add(ctx context.Context, item BulkIndexerItem) error {
 }
 
 // Close stops the periodic flush, closes the indexer queue channel,
-// notifies the done channel and calls flush on all writers.
+// which triggers the workers to flush and stop.
 func (bi *bulkIndexer) Close(ctx context.Context) error {
-	bi.ticker.Stop()
 	close(bi.queue)
-	bi.done <- true
 
 	select {
 	case <-ctx.Done():
@@ -331,19 +348,6 @@ func (bi *bulkIndexer) Close(ctx context.Context) error {
 		bi.wg.Wait()
 	}
 
-	for _, w := range bi.workers {
-		w.mu.Lock()
-		if w.buf.Len() > 0 {
-			if err := w.flush(ctx); err != nil {
-				w.mu.Unlock()
-				if bi.config.OnError != nil {
-					bi.config.OnError(ctx, err)
-				}
-				continue
-			}
-		}
-		w.mu.Unlock()
-	}
 	return nil
 }
 
@@ -367,54 +371,26 @@ func (bi *bulkIndexer) init() {
 
 	for i := 1; i <= bi.config.NumWorkers; i++ {
 		w := worker{
-			id:  i,
-			ch:  bi.queue,
-			bi:  bi,
-			buf: bytes.NewBuffer(make([]byte, 0, bi.config.FlushBytes)),
-			aux: make([]byte, 0, 512)}
+			id:     i,
+			ch:     bi.queue,
+			bi:     bi,
+			buf:    bytes.NewBuffer(make([]byte, 0, bi.config.FlushBytes)),
+			ticker: time.NewTicker(bi.config.FlushInterval),
+		}
 		w.run()
 		bi.workers = append(bi.workers, &w)
 	}
 	bi.wg.Add(bi.config.NumWorkers)
-
-	bi.ticker = time.NewTicker(bi.config.FlushInterval)
-	go func() {
-		ctx := context.Background()
-		for {
-			select {
-			case <-bi.done:
-				return
-			case <-bi.ticker.C:
-				if bi.config.DebugLogger != nil {
-					bi.config.DebugLogger.Printf("[indexer] Auto-flushing workers after %s\n", bi.config.FlushInterval)
-				}
-				for _, w := range bi.workers {
-					w.mu.Lock()
-					if w.buf.Len() > 0 {
-						if err := w.flush(ctx); err != nil {
-							w.mu.Unlock()
-							if bi.config.OnError != nil {
-								bi.config.OnError(ctx, err)
-							}
-							continue
-						}
-					}
-					w.mu.Unlock()
-				}
-			}
-		}
-	}()
 }
 
 // worker represents an indexer worker.
 type worker struct {
-	id    int
-	ch    <-chan BulkIndexerItem
-	mu    sync.Mutex
-	bi    *bulkIndexer
-	buf   *bytes.Buffer
-	aux   []byte
-	items []BulkIndexerItem
+	id     int
+	ch     <-chan BulkIndexerItem
+	bi     *bulkIndexer
+	buf    *bytes.Buffer
+	items  []BulkIndexerItem
+	ticker *time.Ticker
 }
 
 // run launches the worker in a goroutine.
@@ -425,65 +401,66 @@ func (w *worker) run() {
 		if w.bi.config.DebugLogger != nil {
 			w.bi.config.DebugLogger.Printf("[worker-%03d] Started\n", w.id)
 		}
-		defer w.bi.wg.Done()
+		defer func() {
+			w.flush(ctx)
+			w.ticker.Stop()
+			w.bi.wg.Done()
+		}()
 
-		for item := range w.ch {
-			w.mu.Lock()
-
-			if w.bi.config.DebugLogger != nil {
-				w.bi.config.DebugLogger.Printf("[worker-%03d] Received item [%s:%s]\n", w.id, item.Action, item.DocumentID)
-			}
-
-			oversizePayload := w.bi.config.FlushBytes <= item.payloadLength
-			if !oversizePayload && w.buf.Len() > 0 && w.buf.Len()+item.payloadLength >= w.bi.config.FlushBytes {
-				if err := w.flush(ctx); err != nil {
-					w.mu.Unlock()
-					if w.bi.config.OnError != nil {
-						w.bi.config.OnError(ctx, err)
-					}
-					w.mu.Lock()
-					// continue with 'item' even when flush failed
-				}
-			}
-
-			if err := w.writeMeta(&item); err != nil {
-				if item.OnFailure != nil {
-					item.OnFailure(ctx, item, BulkIndexerResponseItem{}, err)
-				}
-				atomic.AddUint64(&w.bi.stats.numFailed, 1)
-				w.mu.Unlock()
-				continue
-			}
-
-			if err := w.writeBody(&item); err != nil {
-				if item.OnFailure != nil {
-					item.OnFailure(ctx, item, BulkIndexerResponseItem{}, err)
-				}
-				atomic.AddUint64(&w.bi.stats.numFailed, 1)
-				w.mu.Unlock()
-				continue
-			}
-
-			w.items = append(w.items, item)
-			// Should the item payload exceed the configured FlushBytes flush happens instantly.
-			if oversizePayload {
+		for {
+			select {
+			case <-w.ticker.C:
 				if w.bi.config.DebugLogger != nil {
-					w.bi.config.DebugLogger.Printf("[worker-%03d] Oversize Payload in item [%s:%s]\n", w.id, item.Action, item.DocumentID)
+					w.bi.config.DebugLogger.Printf("[worker-%03d] Auto-flushing after %s\n",
+						w.id, w.bi.config.FlushInterval)
 				}
-				if err := w.flush(ctx); err != nil {
-					w.mu.Unlock()
-					if w.bi.config.OnError != nil {
-						w.bi.config.OnError(ctx, err)
+				w.flush(ctx)
+			case item, ok := <-w.ch:
+				if !ok {
+					return
+				}
+
+				if w.bi.config.DebugLogger != nil {
+					w.bi.config.DebugLogger.Printf("[worker-%03d] Received item [%s:%s]\n", w.id, item.Action, item.DocumentID)
+				}
+
+				oversizePayload := w.bi.config.FlushBytes <= item.payloadLength
+				if !oversizePayload && w.buf.Len() > 0 && w.buf.Len()+item.payloadLength >= w.bi.config.FlushBytes {
+					if !w.flush(ctx) {
+						continue
 					}
+				}
+
+				if err := w.writeMeta(&item); err != nil {
+					if item.OnFailure != nil {
+						item.OnFailure(ctx, item, BulkIndexerResponseItem{}, err)
+					}
+					atomic.AddUint64(&w.bi.stats.numFailed, 1)
 					continue
 				}
+
+				if err := w.writeBody(&item); err != nil {
+					if item.OnFailure != nil {
+						item.OnFailure(ctx, item, BulkIndexerResponseItem{}, err)
+					}
+					atomic.AddUint64(&w.bi.stats.numFailed, 1)
+					continue
+				}
+
+				w.items = append(w.items, item)
+				// Should the item payload exceed the configured FlushBytes flush happens instantly.
+				if oversizePayload {
+					if w.bi.config.DebugLogger != nil {
+						w.bi.config.DebugLogger.Printf("[worker-%03d] Oversize Payload in item [%s:%s]\n", w.id, item.Action, item.DocumentID)
+					}
+					w.flush(ctx)
+				}
 			}
-			w.mu.Unlock()
 		}
 	}()
 }
 
-// writeMeta writes the item metadata to the buffer; it must be called under a lock.
+// writeMeta writes the item metadata to the buffer.
 func (w *worker) writeMeta(item *BulkIndexerItem) error {
 	if _, err := w.buf.Write(item.meta.Bytes()); err != nil {
 		return err
@@ -491,7 +468,7 @@ func (w *worker) writeMeta(item *BulkIndexerItem) error {
 	return nil
 }
 
-// writeBody writes the item body to the buffer; it must be called under a lock.
+// writeBody writes the item body to the buffer.
 func (w *worker) writeBody(item *BulkIndexerItem) error {
 	if item.Body != nil {
 		if _, err := w.buf.ReadFrom(item.Body); err != nil {
@@ -506,8 +483,23 @@ func (w *worker) writeBody(item *BulkIndexerItem) error {
 	return nil
 }
 
-// flush writes out the worker buffer; it must be called under a lock.
-func (w *worker) flush(ctx context.Context) error {
+// flush writes out the worker buffer and handles errors.
+// It also restarts the ticker.
+// Returns true to indicate success.
+func (w *worker) flush(ctx context.Context) bool {
+	ok := true
+	if err := w.flushBuffer(ctx); err != nil {
+		if w.bi.config.OnError != nil {
+			w.bi.config.OnError(ctx, err)
+		}
+		ok = false
+	}
+	w.ticker.Reset(w.bi.config.FlushInterval)
+	return ok
+}
+
+// flushBuffer writes out the worker buffer.
+func (w *worker) flushBuffer(ctx context.Context) error {
 	if w.bi.config.OnFlushStart != nil {
 		ctx = w.bi.config.OnFlushStart(ctx)
 	}
@@ -560,6 +552,9 @@ func (w *worker) flush(ctx context.Context) error {
 		ErrorTrace: w.bi.config.ErrorTrace,
 		FilterPath: w.bi.config.FilterPath,
 		Header:     w.bi.config.Header.Clone(),
+	}
+	if w.bi.config.RequireAlias {
+		req.RequireAlias = &w.bi.config.RequireAlias
 	}
 
 	// Add Header and MetaHeader to config if not already set

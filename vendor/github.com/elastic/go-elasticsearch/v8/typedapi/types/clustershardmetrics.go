@@ -16,26 +16,30 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // ClusterShardMetrics type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/cluster/stats/types.ts#L277-L281
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/cluster/stats/types.ts#L511-L524
 type ClusterShardMetrics struct {
+	// Avg Mean number of shards in an index, counting only shards assigned to selected
+	// nodes.
 	Avg Float64 `json:"avg"`
+	// Max Maximum number of shards in an index, counting only shards assigned to
+	// selected nodes.
 	Max Float64 `json:"max"`
+	// Min Minimum number of shards in an index, counting only shards assigned to
+	// selected nodes.
 	Min Float64 `json:"min"`
 }
 

@@ -16,25 +16,23 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/dynamicmapping"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/dynamicmapping"
 )
 
 // ConstantKeywordProperty type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/mapping/specialized.ts#L44-L47
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/mapping/specialized.ts#L44-L47
 type ConstantKeywordProperty struct {
 	Dynamic     *dynamicmapping.DynamicMapping `json:"dynamic,omitempty"`
 	Fields      map[string]Property            `json:"fields,omitempty"`
@@ -78,7 +76,9 @@ func (s *ConstantKeywordProperty) UnmarshalJSON(data []byte) error {
 				localDec := json.NewDecoder(buf)
 				localDec.Decode(&kind)
 				buf.Seek(0, io.SeekStart)
-
+				if _, ok := kind["type"]; !ok {
+					kind["type"] = "object"
+				}
 				switch kind["type"] {
 				case "binary":
 					oo := NewBinaryProperty()
@@ -178,6 +178,12 @@ func (s *ConstantKeywordProperty) UnmarshalJSON(data []byte) error {
 					s.Fields[key] = oo
 				case "dense_vector":
 					oo := NewDenseVectorProperty()
+					if err := localDec.Decode(&oo); err != nil {
+						return err
+					}
+					s.Fields[key] = oo
+				case "sparse_vector":
+					oo := NewSparseVectorProperty()
 					if err := localDec.Decode(&oo); err != nil {
 						return err
 					}
@@ -357,9 +363,11 @@ func (s *ConstantKeywordProperty) UnmarshalJSON(data []byte) error {
 					}
 					s.Fields[key] = oo
 				default:
-					if err := localDec.Decode(&s.Fields); err != nil {
+					oo := new(Property)
+					if err := localDec.Decode(&oo); err != nil {
 						return err
 					}
+					s.Fields[key] = oo
 				}
 			}
 
@@ -399,7 +407,9 @@ func (s *ConstantKeywordProperty) UnmarshalJSON(data []byte) error {
 				localDec := json.NewDecoder(buf)
 				localDec.Decode(&kind)
 				buf.Seek(0, io.SeekStart)
-
+				if _, ok := kind["type"]; !ok {
+					kind["type"] = "object"
+				}
 				switch kind["type"] {
 				case "binary":
 					oo := NewBinaryProperty()
@@ -499,6 +509,12 @@ func (s *ConstantKeywordProperty) UnmarshalJSON(data []byte) error {
 					s.Properties[key] = oo
 				case "dense_vector":
 					oo := NewDenseVectorProperty()
+					if err := localDec.Decode(&oo); err != nil {
+						return err
+					}
+					s.Properties[key] = oo
+				case "sparse_vector":
+					oo := NewSparseVectorProperty()
 					if err := localDec.Decode(&oo); err != nil {
 						return err
 					}
@@ -678,9 +694,11 @@ func (s *ConstantKeywordProperty) UnmarshalJSON(data []byte) error {
 					}
 					s.Properties[key] = oo
 				default:
-					if err := localDec.Decode(&s.Properties); err != nil {
+					oo := new(Property)
+					if err := localDec.Decode(&oo); err != nil {
 						return err
 					}
+					s.Properties[key] = oo
 				}
 			}
 
@@ -699,6 +717,24 @@ func (s *ConstantKeywordProperty) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s ConstantKeywordProperty) MarshalJSON() ([]byte, error) {
+	type innerConstantKeywordProperty ConstantKeywordProperty
+	tmp := innerConstantKeywordProperty{
+		Dynamic:     s.Dynamic,
+		Fields:      s.Fields,
+		IgnoreAbove: s.IgnoreAbove,
+		Meta:        s.Meta,
+		Properties:  s.Properties,
+		Type:        s.Type,
+		Value:       s.Value,
+	}
+
+	tmp.Type = "constant_keyword"
+
+	return json.Marshal(tmp)
+}
+
 // NewConstantKeywordProperty returns a ConstantKeywordProperty.
 func NewConstantKeywordProperty() *ConstantKeywordProperty {
 	r := &ConstantKeywordProperty{
@@ -706,8 +742,6 @@ func NewConstantKeywordProperty() *ConstantKeywordProperty {
 		Meta:       make(map[string]string, 0),
 		Properties: make(map[string]Property, 0),
 	}
-
-	r.Type = "constant_keyword"
 
 	return r
 }

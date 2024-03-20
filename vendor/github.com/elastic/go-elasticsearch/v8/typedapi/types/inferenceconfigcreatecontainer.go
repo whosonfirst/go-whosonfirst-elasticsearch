@@ -16,13 +16,13 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 // InferenceConfigCreateContainer type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ml/_types/inference.ts#L23-L67
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ml/_types/inference.ts#L23-L80
 type InferenceConfigCreateContainer struct {
 	// Classification Classification configuration for inference.
 	Classification *ClassificationInferenceOptions `json:"classification,omitempty"`
@@ -40,6 +40,8 @@ type InferenceConfigCreateContainer struct {
 	TextClassification *TextClassificationInferenceOptions `json:"text_classification,omitempty"`
 	// TextEmbedding Text embedding configuration for inference.
 	TextEmbedding *TextEmbeddingInferenceOptions `json:"text_embedding,omitempty"`
+	// TextExpansion Text expansion configuration for inference.
+	TextExpansion *TextExpansionInferenceOptions `json:"text_expansion,omitempty"`
 	// ZeroShotClassification Zeroshot classification configuration for inference.
 	ZeroShotClassification *ZeroShotClassificationInferenceOptions `json:"zero_shot_classification,omitempty"`
 }

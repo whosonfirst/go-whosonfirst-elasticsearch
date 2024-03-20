@@ -16,13 +16,17 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package grantapikey
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"strconv"
 
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/apikeygranttype"
@@ -30,14 +34,27 @@ import (
 
 // Request holds the request body struct for the package grantapikey
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/security/grant_api_key/SecurityGrantApiKeyRequest.ts#L24-L38
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/security/grant_api_key/SecurityGrantApiKeyRequest.ts#L24-L75
 type Request struct {
-	AccessToken *string                         `json:"access_token,omitempty"`
-	ApiKey      types.GrantApiKey               `json:"api_key"`
-	GrantType   apikeygranttype.ApiKeyGrantType `json:"grant_type"`
-	Password    *string                         `json:"password,omitempty"`
-	RunAs       *string                         `json:"run_as,omitempty"`
-	Username    *string                         `json:"username,omitempty"`
+
+	// AccessToken The user’s access token.
+	// If you specify the `access_token` grant type, this parameter is required.
+	// It is not valid with other grant types.
+	AccessToken *string `json:"access_token,omitempty"`
+	// ApiKey Defines the API key.
+	ApiKey types.GrantApiKey `json:"api_key"`
+	// GrantType The type of grant. Supported grant types are: `access_token`, `password`.
+	GrantType apikeygranttype.ApiKeyGrantType `json:"grant_type"`
+	// Password The user’s password. If you specify the `password` grant type, this parameter
+	// is required.
+	// It is not valid with other grant types.
+	Password *string `json:"password,omitempty"`
+	// RunAs The name of the user to be impersonated.
+	RunAs *string `json:"run_as,omitempty"`
+	// Username The user name that identifies the user.
+	// If you specify the `password` grant type, this parameter is required.
+	// It is not valid with other grant types.
+	Username *string `json:"username,omitempty"`
 }
 
 // NewRequest returns a Request
@@ -56,4 +73,60 @@ func (r *Request) FromJSON(data string) (*Request, error) {
 	}
 
 	return &req, nil
+}
+
+func (s *Request) UnmarshalJSON(data []byte) error {
+	dec := json.NewDecoder(bytes.NewReader(data))
+
+	for {
+		t, err := dec.Token()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return err
+		}
+
+		switch t {
+
+		case "access_token":
+			var tmp json.RawMessage
+			if err := dec.Decode(&tmp); err != nil {
+				return err
+			}
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
+			s.AccessToken = &o
+
+		case "api_key":
+			if err := dec.Decode(&s.ApiKey); err != nil {
+				return err
+			}
+
+		case "grant_type":
+			if err := dec.Decode(&s.GrantType); err != nil {
+				return err
+			}
+
+		case "password":
+			if err := dec.Decode(&s.Password); err != nil {
+				return err
+			}
+
+		case "run_as":
+			if err := dec.Decode(&s.RunAs); err != nil {
+				return err
+			}
+
+		case "username":
+			if err := dec.Decode(&s.Username); err != nil {
+				return err
+			}
+
+		}
+	}
+	return nil
 }

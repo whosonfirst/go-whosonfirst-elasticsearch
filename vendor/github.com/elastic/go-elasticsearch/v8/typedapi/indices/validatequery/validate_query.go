@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Allows a user to validate a potentially expensive query without executing it.
 package validatequery
@@ -35,7 +35,7 @@ import (
 
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
-
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/expandwildcard"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/operator"
 )
 
@@ -53,14 +53,19 @@ type ValidateQuery struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
-
-	req *Request
 	raw io.Reader
+
+	req      *Request
+	deferred []func(request *Request) error
+	buf      *gobytes.Buffer
 
 	paramSet int
 
 	index string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewValidateQuery type alias for index.
@@ -78,13 +83,22 @@ func NewValidateQueryFunc(tp elastictransport.Interface) NewValidateQuery {
 
 // Allows a user to validate a potentially expensive query without executing it.
 //
-// https://www.elastic.co/guide/en/elasticsearch/reference/master/search-validate.html
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/search-validate.html
 func New(tp elastictransport.Interface) *ValidateQuery {
 	r := &ValidateQuery{
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+
+		buf: gobytes.NewBuffer(nil),
+
+		req: NewRequest(),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -114,9 +128,17 @@ func (r *ValidateQuery) HttpRequest(ctx context.Context) (*http.Request, error) 
 
 	var err error
 
-	if r.raw != nil {
-		r.buf.ReadFrom(r.raw)
-	} else if r.req != nil {
+	if len(r.deferred) > 0 {
+		for _, f := range r.deferred {
+			deferredErr := f(r.req)
+			if deferredErr != nil {
+				return nil, deferredErr
+			}
+		}
+	}
+
+	if r.raw == nil && r.req != nil {
+
 		data, err := json.Marshal(r.req)
 
 		if err != nil {
@@ -124,6 +146,11 @@ func (r *ValidateQuery) HttpRequest(ctx context.Context) (*http.Request, error) 
 		}
 
 		r.buf.Write(data)
+
+	}
+
+	if r.buf.Len() > 0 {
+		r.raw = r.buf
 	}
 
 	r.path.Scheme = "http"
@@ -139,6 +166,9 @@ func (r *ValidateQuery) HttpRequest(ctx context.Context) (*http.Request, error) 
 	case r.paramSet == indexMask:
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "index", r.index)
+		}
 		path.WriteString(r.index)
 		path.WriteString("/")
 		path.WriteString("_validate")
@@ -156,15 +186,15 @@ func (r *ValidateQuery) HttpRequest(ctx context.Context) (*http.Request, error) 
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
 
 	if req.Header.Get("Content-Type") == "" {
-		if r.buf.Len() > 0 {
+		if r.raw != nil {
 			req.Header.Set("Content-Type", "application/vnd.elasticsearch+json;compatible-with=8")
 		}
 	}
@@ -181,27 +211,66 @@ func (r *ValidateQuery) HttpRequest(ctx context.Context) (*http.Request, error) 
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r ValidateQuery) Perform(ctx context.Context) (*http.Response, error) {
+func (r ValidateQuery) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "indices.validate_query")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "indices.validate_query")
+		if reader := instrument.RecordRequestBody(ctx, "indices.validate_query", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "indices.validate_query")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the ValidateQuery query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the ValidateQuery query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a validatequery.Response
-func (r ValidateQuery) Do(ctx context.Context) (*Response, error) {
+func (r ValidateQuery) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "indices.validate_query")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -209,6 +278,9 @@ func (r ValidateQuery) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -218,9 +290,19 @@ func (r ValidateQuery) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
@@ -231,115 +313,138 @@ func (r *ValidateQuery) Header(key, value string) *ValidateQuery {
 	return r
 }
 
-// Index A comma-separated list of index names to restrict the operation; use `_all`
-// or empty string to perform the operation on all indices
+// Index Comma-separated list of data streams, indices, and aliases to search.
+// Supports wildcards (`*`).
+// To search all data streams or indices, omit this parameter or use `*` or
+// `_all`.
 // API Name: index
-func (r *ValidateQuery) Index(v string) *ValidateQuery {
+func (r *ValidateQuery) Index(index string) *ValidateQuery {
 	r.paramSet |= indexMask
-	r.index = v
+	r.index = index
 
 	return r
 }
 
-// AllowNoIndices Whether to ignore if a wildcard indices expression resolves into no concrete
-// indices. (This includes `_all` string or when no indices have been specified)
+// AllowNoIndices If `false`, the request returns an error if any wildcard expression, index
+// alias, or `_all` value targets only missing or closed indices.
+// This behavior applies even if the request targets other open indices.
 // API name: allow_no_indices
-func (r *ValidateQuery) AllowNoIndices(b bool) *ValidateQuery {
-	r.values.Set("allow_no_indices", strconv.FormatBool(b))
+func (r *ValidateQuery) AllowNoIndices(allownoindices bool) *ValidateQuery {
+	r.values.Set("allow_no_indices", strconv.FormatBool(allownoindices))
 
 	return r
 }
 
-// AllShards Execute validation on all shards instead of one random shard per index
+// AllShards If `true`, the validation is executed on all shards instead of one random
+// shard per index.
 // API name: all_shards
-func (r *ValidateQuery) AllShards(b bool) *ValidateQuery {
-	r.values.Set("all_shards", strconv.FormatBool(b))
+func (r *ValidateQuery) AllShards(allshards bool) *ValidateQuery {
+	r.values.Set("all_shards", strconv.FormatBool(allshards))
 
 	return r
 }
 
-// Analyzer The analyzer to use for the query string
+// Analyzer Analyzer to use for the query string.
+// This parameter can only be used when the `q` query string parameter is
+// specified.
 // API name: analyzer
-func (r *ValidateQuery) Analyzer(v string) *ValidateQuery {
-	r.values.Set("analyzer", v)
+func (r *ValidateQuery) Analyzer(analyzer string) *ValidateQuery {
+	r.values.Set("analyzer", analyzer)
 
 	return r
 }
 
-// AnalyzeWildcard Specify whether wildcard and prefix queries should be analyzed (default:
-// false)
+// AnalyzeWildcard If `true`, wildcard and prefix queries are analyzed.
 // API name: analyze_wildcard
-func (r *ValidateQuery) AnalyzeWildcard(b bool) *ValidateQuery {
-	r.values.Set("analyze_wildcard", strconv.FormatBool(b))
+func (r *ValidateQuery) AnalyzeWildcard(analyzewildcard bool) *ValidateQuery {
+	r.values.Set("analyze_wildcard", strconv.FormatBool(analyzewildcard))
 
 	return r
 }
 
-// DefaultOperator The default operator for query string query (AND or OR)
+// DefaultOperator The default operator for query string query: `AND` or `OR`.
 // API name: default_operator
-func (r *ValidateQuery) DefaultOperator(enum operator.Operator) *ValidateQuery {
-	r.values.Set("default_operator", enum.String())
+func (r *ValidateQuery) DefaultOperator(defaultoperator operator.Operator) *ValidateQuery {
+	r.values.Set("default_operator", defaultoperator.String())
 
 	return r
 }
 
-// Df The field to use as default where no field prefix is given in the query
-// string
+// Df Field to use as default where no field prefix is given in the query string.
+// This parameter can only be used when the `q` query string parameter is
+// specified.
 // API name: df
-func (r *ValidateQuery) Df(v string) *ValidateQuery {
-	r.values.Set("df", v)
+func (r *ValidateQuery) Df(df string) *ValidateQuery {
+	r.values.Set("df", df)
 
 	return r
 }
 
-// ExpandWildcards Whether to expand wildcard expression to concrete indices that are open,
-// closed or both.
+// ExpandWildcards Type of index that wildcard patterns can match.
+// If the request can target data streams, this argument determines whether
+// wildcard expressions match hidden data streams.
+// Supports comma-separated values, such as `open,hidden`.
+// Valid values are: `all`, `open`, `closed`, `hidden`, `none`.
 // API name: expand_wildcards
-func (r *ValidateQuery) ExpandWildcards(v string) *ValidateQuery {
-	r.values.Set("expand_wildcards", v)
+func (r *ValidateQuery) ExpandWildcards(expandwildcards ...expandwildcard.ExpandWildcard) *ValidateQuery {
+	tmp := []string{}
+	for _, item := range expandwildcards {
+		tmp = append(tmp, item.String())
+	}
+	r.values.Set("expand_wildcards", strings.Join(tmp, ","))
 
 	return r
 }
 
-// Explain Return detailed information about the error
+// Explain If `true`, the response returns detailed information if an error has
+// occurred.
 // API name: explain
-func (r *ValidateQuery) Explain(b bool) *ValidateQuery {
-	r.values.Set("explain", strconv.FormatBool(b))
+func (r *ValidateQuery) Explain(explain bool) *ValidateQuery {
+	r.values.Set("explain", strconv.FormatBool(explain))
 
 	return r
 }
 
-// IgnoreUnavailable Whether specified concrete indices should be ignored when unavailable
-// (missing or closed)
+// IgnoreUnavailable If `false`, the request returns an error if it targets a missing or closed
+// index.
 // API name: ignore_unavailable
-func (r *ValidateQuery) IgnoreUnavailable(b bool) *ValidateQuery {
-	r.values.Set("ignore_unavailable", strconv.FormatBool(b))
+func (r *ValidateQuery) IgnoreUnavailable(ignoreunavailable bool) *ValidateQuery {
+	r.values.Set("ignore_unavailable", strconv.FormatBool(ignoreunavailable))
 
 	return r
 }
 
-// Lenient Specify whether format-based query failures (such as providing text to a
-// numeric field) should be ignored
+// Lenient If `true`, format-based query failures (such as providing text to a numeric
+// field) in the query string will be ignored.
 // API name: lenient
-func (r *ValidateQuery) Lenient(b bool) *ValidateQuery {
-	r.values.Set("lenient", strconv.FormatBool(b))
+func (r *ValidateQuery) Lenient(lenient bool) *ValidateQuery {
+	r.values.Set("lenient", strconv.FormatBool(lenient))
 
 	return r
 }
 
-// Rewrite Provide a more detailed explanation showing the actual Lucene query that will
-// be executed.
+// Rewrite If `true`, returns a more detailed explanation showing the actual Lucene
+// query that will be executed.
 // API name: rewrite
-func (r *ValidateQuery) Rewrite(b bool) *ValidateQuery {
-	r.values.Set("rewrite", strconv.FormatBool(b))
+func (r *ValidateQuery) Rewrite(rewrite bool) *ValidateQuery {
+	r.values.Set("rewrite", strconv.FormatBool(rewrite))
 
 	return r
 }
 
-// Q Query in the Lucene query string syntax
+// Q Query in the Lucene query string syntax.
 // API name: q
-func (r *ValidateQuery) Q(v string) *ValidateQuery {
-	r.values.Set("q", v)
+func (r *ValidateQuery) Q(q string) *ValidateQuery {
+	r.values.Set("q", q)
+
+	return r
+}
+
+// Query Query in the Lucene query string syntax.
+// API name: query
+func (r *ValidateQuery) Query(query *types.Query) *ValidateQuery {
+
+	r.req.Query = query
 
 	return r
 }

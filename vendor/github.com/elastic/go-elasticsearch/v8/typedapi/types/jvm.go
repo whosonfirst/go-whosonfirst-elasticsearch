@@ -16,32 +16,39 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // Jvm type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/nodes/_types/Stats.ts#L324-L333
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/nodes/_types/Stats.ts#L811-L845
 type Jvm struct {
-	BufferPools    map[string]NodeBufferPool `json:"buffer_pools,omitempty"`
-	Classes        *JvmClasses               `json:"classes,omitempty"`
-	Gc             *GarbageCollector         `json:"gc,omitempty"`
-	Mem            *JvmMemoryStats           `json:"mem,omitempty"`
-	Threads        *JvmThreads               `json:"threads,omitempty"`
-	Timestamp      *int64                    `json:"timestamp,omitempty"`
-	Uptime         *string                   `json:"uptime,omitempty"`
-	UptimeInMillis *int64                    `json:"uptime_in_millis,omitempty"`
+	// BufferPools Contains statistics about JVM buffer pools for the node.
+	BufferPools map[string]NodeBufferPool `json:"buffer_pools,omitempty"`
+	// Classes Contains statistics about classes loaded by JVM for the node.
+	Classes *JvmClasses `json:"classes,omitempty"`
+	// Gc Contains statistics about JVM garbage collectors for the node.
+	Gc *GarbageCollector `json:"gc,omitempty"`
+	// Mem Contains JVM memory usage statistics for the node.
+	Mem *JvmMemoryStats `json:"mem,omitempty"`
+	// Threads Contains statistics about JVM thread usage for the node.
+	Threads *JvmThreads `json:"threads,omitempty"`
+	// Timestamp Last time JVM statistics were refreshed.
+	Timestamp *int64 `json:"timestamp,omitempty"`
+	// Uptime Human-readable JVM uptime.
+	// Only returned if the `human` query parameter is `true`.
+	Uptime *string `json:"uptime,omitempty"`
+	// UptimeInMillis JVM uptime in milliseconds.
+	UptimeInMillis *int64 `json:"uptime_in_millis,omitempty"`
 }
 
 func (s *Jvm) UnmarshalJSON(data []byte) error {
@@ -107,7 +114,11 @@ func (s *Jvm) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Uptime = &o
 
 		case "uptime_in_millis":

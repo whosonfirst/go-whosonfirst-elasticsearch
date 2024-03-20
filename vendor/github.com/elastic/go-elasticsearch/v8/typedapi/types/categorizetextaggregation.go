@@ -16,23 +16,21 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // CategorizeTextAggregation type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/aggregations/bucket.ts#L437-L501
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/aggregations/bucket.ts#L1037-L1101
 type CategorizeTextAggregation struct {
 	// CategorizationAnalyzer The categorization analyzer specifies how the text is analyzed and tokenized
 	// before being categorized.
@@ -71,10 +69,10 @@ type CategorizeTextAggregation struct {
 	// create narrower categories. Max allowed value is 100.
 	MaxUniqueTokens *int     `json:"max_unique_tokens,omitempty"`
 	Meta            Metadata `json:"meta,omitempty"`
-	// MinDocCount The minimum number of documents for a bucket to be returned to the results.
+	// MinDocCount The minimum number of documents in a bucket to be returned to the results.
 	MinDocCount *int    `json:"min_doc_count,omitempty"`
 	Name        *string `json:"name,omitempty"`
-	// ShardMinDocCount The minimum number of documents for a bucket to be returned from the shard
+	// ShardMinDocCount The minimum number of documents in a bucket to be returned from the shard
 	// before merging.
 	ShardMinDocCount *int `json:"shard_min_doc_count,omitempty"`
 	// ShardSize The number of categorization buckets to return from each shard before merging
@@ -193,7 +191,11 @@ func (s *CategorizeTextAggregation) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Name = &o
 
 		case "shard_min_doc_count":

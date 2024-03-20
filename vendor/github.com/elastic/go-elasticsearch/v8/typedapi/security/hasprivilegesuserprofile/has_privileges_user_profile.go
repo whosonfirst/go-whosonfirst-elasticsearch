@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Determines whether the users associated with the specified profile IDs have
 // all the requested privileges.
@@ -47,12 +47,17 @@ type HasPrivilegesUserProfile struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
-
-	req *Request
 	raw io.Reader
 
+	req      *Request
+	deferred []func(request *Request) error
+	buf      *gobytes.Buffer
+
 	paramSet int
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewHasPrivilegesUserProfile type alias for index.
@@ -77,7 +82,16 @@ func New(tp elastictransport.Interface) *HasPrivilegesUserProfile {
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+
+		buf: gobytes.NewBuffer(nil),
+
+		req: NewRequest(),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -107,9 +121,17 @@ func (r *HasPrivilegesUserProfile) HttpRequest(ctx context.Context) (*http.Reque
 
 	var err error
 
-	if r.raw != nil {
-		r.buf.ReadFrom(r.raw)
-	} else if r.req != nil {
+	if len(r.deferred) > 0 {
+		for _, f := range r.deferred {
+			deferredErr := f(r.req)
+			if deferredErr != nil {
+				return nil, deferredErr
+			}
+		}
+	}
+
+	if r.raw == nil && r.req != nil {
+
 		data, err := json.Marshal(r.req)
 
 		if err != nil {
@@ -117,6 +139,11 @@ func (r *HasPrivilegesUserProfile) HttpRequest(ctx context.Context) (*http.Reque
 		}
 
 		r.buf.Write(data)
+
+	}
+
+	if r.buf.Len() > 0 {
+		r.raw = r.buf
 	}
 
 	r.path.Scheme = "http"
@@ -141,15 +168,15 @@ func (r *HasPrivilegesUserProfile) HttpRequest(ctx context.Context) (*http.Reque
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
 
 	if req.Header.Get("Content-Type") == "" {
-		if r.buf.Len() > 0 {
+		if r.raw != nil {
 			req.Header.Set("Content-Type", "application/vnd.elasticsearch+json;compatible-with=8")
 		}
 	}
@@ -166,27 +193,66 @@ func (r *HasPrivilegesUserProfile) HttpRequest(ctx context.Context) (*http.Reque
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r HasPrivilegesUserProfile) Perform(ctx context.Context) (*http.Response, error) {
+func (r HasPrivilegesUserProfile) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "security.has_privileges_user_profile")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "security.has_privileges_user_profile")
+		if reader := instrument.RecordRequestBody(ctx, "security.has_privileges_user_profile", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "security.has_privileges_user_profile")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the HasPrivilegesUserProfile query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the HasPrivilegesUserProfile query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a hasprivilegesuserprofile.Response
-func (r HasPrivilegesUserProfile) Do(ctx context.Context) (*Response, error) {
+func (r HasPrivilegesUserProfile) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "security.has_privileges_user_profile")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -194,6 +260,9 @@ func (r HasPrivilegesUserProfile) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -203,15 +272,42 @@ func (r HasPrivilegesUserProfile) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // Header set a key, value pair in the HasPrivilegesUserProfile headers map.
 func (r *HasPrivilegesUserProfile) Header(key, value string) *HasPrivilegesUserProfile {
 	r.headers.Set(key, value)
+
+	return r
+}
+
+// API name: privileges
+func (r *HasPrivilegesUserProfile) Privileges(privileges *types.PrivilegesCheck) *HasPrivilegesUserProfile {
+
+	r.req.Privileges = *privileges
+
+	return r
+}
+
+// Uids A list of profile IDs. The privileges are checked for associated users of the
+// profiles.
+// API name: uids
+func (r *HasPrivilegesUserProfile) Uids(uids ...string) *HasPrivilegesUserProfile {
+	r.req.Uids = uids
 
 	return r
 }

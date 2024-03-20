@@ -16,27 +16,25 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"io"
+	"strconv"
+
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/dynamicmapping"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/onscripterror"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/timeseriesmetrictype"
-
-	"bytes"
-	"errors"
-	"io"
-
-	"strconv"
-
-	"encoding/json"
 )
 
 // DoubleNumberProperty type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/mapping/core.ts#L141-L144
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/mapping/core.ts#L144-L147
 type DoubleNumberProperty struct {
 	Boost           *Float64                       `json:"boost,omitempty"`
 	Coerce          *bool                          `json:"coerce,omitempty"`
@@ -156,7 +154,9 @@ func (s *DoubleNumberProperty) UnmarshalJSON(data []byte) error {
 				localDec := json.NewDecoder(buf)
 				localDec.Decode(&kind)
 				buf.Seek(0, io.SeekStart)
-
+				if _, ok := kind["type"]; !ok {
+					kind["type"] = "object"
+				}
 				switch kind["type"] {
 				case "binary":
 					oo := NewBinaryProperty()
@@ -256,6 +256,12 @@ func (s *DoubleNumberProperty) UnmarshalJSON(data []byte) error {
 					s.Fields[key] = oo
 				case "dense_vector":
 					oo := NewDenseVectorProperty()
+					if err := localDec.Decode(&oo); err != nil {
+						return err
+					}
+					s.Fields[key] = oo
+				case "sparse_vector":
+					oo := NewSparseVectorProperty()
 					if err := localDec.Decode(&oo); err != nil {
 						return err
 					}
@@ -435,9 +441,11 @@ func (s *DoubleNumberProperty) UnmarshalJSON(data []byte) error {
 					}
 					s.Fields[key] = oo
 				default:
-					if err := localDec.Decode(&s.Fields); err != nil {
+					oo := new(Property)
+					if err := localDec.Decode(&oo); err != nil {
 						return err
 					}
+					s.Fields[key] = oo
 				}
 			}
 
@@ -526,7 +534,9 @@ func (s *DoubleNumberProperty) UnmarshalJSON(data []byte) error {
 				localDec := json.NewDecoder(buf)
 				localDec.Decode(&kind)
 				buf.Seek(0, io.SeekStart)
-
+				if _, ok := kind["type"]; !ok {
+					kind["type"] = "object"
+				}
 				switch kind["type"] {
 				case "binary":
 					oo := NewBinaryProperty()
@@ -626,6 +636,12 @@ func (s *DoubleNumberProperty) UnmarshalJSON(data []byte) error {
 					s.Properties[key] = oo
 				case "dense_vector":
 					oo := NewDenseVectorProperty()
+					if err := localDec.Decode(&oo); err != nil {
+						return err
+					}
+					s.Properties[key] = oo
+				case "sparse_vector":
+					oo := NewSparseVectorProperty()
 					if err := localDec.Decode(&oo); err != nil {
 						return err
 					}
@@ -805,15 +821,48 @@ func (s *DoubleNumberProperty) UnmarshalJSON(data []byte) error {
 					}
 					s.Properties[key] = oo
 				default:
-					if err := localDec.Decode(&s.Properties); err != nil {
+					oo := new(Property)
+					if err := localDec.Decode(&oo); err != nil {
 						return err
 					}
+					s.Properties[key] = oo
 				}
 			}
 
 		case "script":
-			if err := dec.Decode(&s.Script); err != nil {
+			message := json.RawMessage{}
+			if err := dec.Decode(&message); err != nil {
 				return err
+			}
+			keyDec := json.NewDecoder(bytes.NewReader(message))
+			for {
+				t, err := keyDec.Token()
+				if err != nil {
+					if errors.Is(err, io.EOF) {
+						break
+					}
+					return err
+				}
+
+				switch t {
+
+				case "lang", "options", "source":
+					o := NewInlineScript()
+					localDec := json.NewDecoder(bytes.NewReader(message))
+					if err := localDec.Decode(&o); err != nil {
+						return err
+					}
+					s.Script = o
+
+				case "id":
+					o := NewStoredScriptId()
+					localDec := json.NewDecoder(bytes.NewReader(message))
+					if err := localDec.Decode(&o); err != nil {
+						return err
+					}
+					s.Script = o
+
+				}
 			}
 
 		case "similarity":
@@ -821,7 +870,11 @@ func (s *DoubleNumberProperty) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Similarity = &o
 
 		case "store":
@@ -867,6 +920,36 @@ func (s *DoubleNumberProperty) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s DoubleNumberProperty) MarshalJSON() ([]byte, error) {
+	type innerDoubleNumberProperty DoubleNumberProperty
+	tmp := innerDoubleNumberProperty{
+		Boost:               s.Boost,
+		Coerce:              s.Coerce,
+		CopyTo:              s.CopyTo,
+		DocValues:           s.DocValues,
+		Dynamic:             s.Dynamic,
+		Fields:              s.Fields,
+		IgnoreAbove:         s.IgnoreAbove,
+		IgnoreMalformed:     s.IgnoreMalformed,
+		Index:               s.Index,
+		Meta:                s.Meta,
+		NullValue:           s.NullValue,
+		OnScriptError:       s.OnScriptError,
+		Properties:          s.Properties,
+		Script:              s.Script,
+		Similarity:          s.Similarity,
+		Store:               s.Store,
+		TimeSeriesDimension: s.TimeSeriesDimension,
+		TimeSeriesMetric:    s.TimeSeriesMetric,
+		Type:                s.Type,
+	}
+
+	tmp.Type = "double"
+
+	return json.Marshal(tmp)
+}
+
 // NewDoubleNumberProperty returns a DoubleNumberProperty.
 func NewDoubleNumberProperty() *DoubleNumberProperty {
 	r := &DoubleNumberProperty{
@@ -874,8 +957,6 @@ func NewDoubleNumberProperty() *DoubleNumberProperty {
 		Meta:       make(map[string]string, 0),
 		Properties: make(map[string]Property, 0),
 	}
-
-	r.Type = "double"
 
 	return r
 }

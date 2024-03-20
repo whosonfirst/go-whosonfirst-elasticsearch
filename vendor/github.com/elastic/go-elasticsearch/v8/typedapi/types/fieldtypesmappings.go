@@ -16,30 +16,35 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // FieldTypesMappings type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/cluster/stats/types.ts#L96-L103
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/cluster/stats/types.ts#L109-L134
 type FieldTypesMappings struct {
-	FieldTypes                          []FieldTypes               `json:"field_types"`
-	RuntimeFieldTypes                   []ClusterRuntimeFieldTypes `json:"runtime_field_types,omitempty"`
-	TotalDeduplicatedFieldCount         *int                       `json:"total_deduplicated_field_count,omitempty"`
-	TotalDeduplicatedMappingSize        ByteSize                   `json:"total_deduplicated_mapping_size,omitempty"`
-	TotalDeduplicatedMappingSizeInBytes *int64                     `json:"total_deduplicated_mapping_size_in_bytes,omitempty"`
-	TotalFieldCount                     *int                       `json:"total_field_count,omitempty"`
+	// FieldTypes Contains statistics about field data types used in selected nodes.
+	FieldTypes []FieldTypes `json:"field_types"`
+	// RuntimeFieldTypes Contains statistics about runtime field data types used in selected nodes.
+	RuntimeFieldTypes []ClusterRuntimeFieldTypes `json:"runtime_field_types,omitempty"`
+	// TotalDeduplicatedFieldCount Total number of fields in all non-system indices, accounting for mapping
+	// deduplication.
+	TotalDeduplicatedFieldCount *int `json:"total_deduplicated_field_count,omitempty"`
+	// TotalDeduplicatedMappingSize Total size of all mappings after deduplication and compression.
+	TotalDeduplicatedMappingSize ByteSize `json:"total_deduplicated_mapping_size,omitempty"`
+	// TotalDeduplicatedMappingSizeInBytes Total size of all mappings, in bytes, after deduplication and compression.
+	TotalDeduplicatedMappingSizeInBytes *int64 `json:"total_deduplicated_mapping_size_in_bytes,omitempty"`
+	// TotalFieldCount Total number of fields in all non-system indices.
+	TotalFieldCount *int `json:"total_field_count,omitempty"`
 }
 
 func (s *FieldTypesMappings) UnmarshalJSON(data []byte) error {

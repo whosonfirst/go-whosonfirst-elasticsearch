@@ -16,32 +16,37 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/distanceunit"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/geodistancetype"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
+	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/distanceunit"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/geodistancetype"
 )
 
 // GeoDistanceAggregation type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/aggregations/bucket.ts#L176-L182
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/aggregations/bucket.ts#L380-L403
 type GeoDistanceAggregation struct {
+	// DistanceType The distance calculation type.
 	DistanceType *geodistancetype.GeoDistanceType `json:"distance_type,omitempty"`
-	Field        *string                          `json:"field,omitempty"`
-	Meta         Metadata                         `json:"meta,omitempty"`
-	Name         *string                          `json:"name,omitempty"`
-	Origin       GeoLocation                      `json:"origin,omitempty"`
-	Ranges       []AggregationRange               `json:"ranges,omitempty"`
-	Unit         *distanceunit.DistanceUnit       `json:"unit,omitempty"`
+	// Field A field of type `geo_point` used to evaluate the distance.
+	Field *string  `json:"field,omitempty"`
+	Meta  Metadata `json:"meta,omitempty"`
+	Name  *string  `json:"name,omitempty"`
+	// Origin The origin  used to evaluate the distance.
+	Origin GeoLocation `json:"origin,omitempty"`
+	// Ranges An array of ranges used to bucket documents.
+	Ranges []AggregationRange `json:"ranges,omitempty"`
+	// Unit The distance unit.
+	Unit *distanceunit.DistanceUnit `json:"unit,omitempty"`
 }
 
 func (s *GeoDistanceAggregation) UnmarshalJSON(data []byte) error {
@@ -79,7 +84,11 @@ func (s *GeoDistanceAggregation) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Name = &o
 
 		case "origin":

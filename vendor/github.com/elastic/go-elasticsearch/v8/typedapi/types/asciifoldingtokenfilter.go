@@ -16,27 +16,24 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
-	"strconv"
-
-	"encoding/json"
 )
 
 // AsciiFoldingTokenFilter type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/token_filters.ts#L168-L171
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/token_filters.ts#L168-L171
 type AsciiFoldingTokenFilter struct {
-	PreserveOriginal *bool   `json:"preserve_original,omitempty"`
-	Type             string  `json:"type,omitempty"`
-	Version          *string `json:"version,omitempty"`
+	PreserveOriginal Stringifiedboolean `json:"preserve_original,omitempty"`
+	Type             string             `json:"type,omitempty"`
+	Version          *string            `json:"version,omitempty"`
 }
 
 func (s *AsciiFoldingTokenFilter) UnmarshalJSON(data []byte) error {
@@ -55,17 +52,8 @@ func (s *AsciiFoldingTokenFilter) UnmarshalJSON(data []byte) error {
 		switch t {
 
 		case "preserve_original":
-			var tmp interface{}
-			dec.Decode(&tmp)
-			switch v := tmp.(type) {
-			case string:
-				value, err := strconv.ParseBool(v)
-				if err != nil {
-					return err
-				}
-				s.PreserveOriginal = &value
-			case bool:
-				s.PreserveOriginal = &v
+			if err := dec.Decode(&s.PreserveOriginal); err != nil {
+				return err
 			}
 
 		case "type":
@@ -83,11 +71,23 @@ func (s *AsciiFoldingTokenFilter) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s AsciiFoldingTokenFilter) MarshalJSON() ([]byte, error) {
+	type innerAsciiFoldingTokenFilter AsciiFoldingTokenFilter
+	tmp := innerAsciiFoldingTokenFilter{
+		PreserveOriginal: s.PreserveOriginal,
+		Type:             s.Type,
+		Version:          s.Version,
+	}
+
+	tmp.Type = "asciifolding"
+
+	return json.Marshal(tmp)
+}
+
 // NewAsciiFoldingTokenFilter returns a AsciiFoldingTokenFilter.
 func NewAsciiFoldingTokenFilter() *AsciiFoldingTokenFilter {
 	r := &AsciiFoldingTokenFilter{}
-
-	r.Type = "asciifolding"
 
 	return r
 }

@@ -16,63 +16,28 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
-import (
-	"bytes"
-	"errors"
-	"io"
-
-	"encoding/json"
-)
-
 // IndexTemplateSummary type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/indices/_types/IndexTemplate.ts#L52-L56
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/indices/_types/IndexTemplate.ts#L85-L107
 type IndexTemplateSummary struct {
-	Aliases  map[string]Alias `json:"aliases,omitempty"`
-	Mappings *TypeMapping     `json:"mappings,omitempty"`
-	Settings *IndexSettings   `json:"settings,omitempty"`
-}
-
-func (s *IndexTemplateSummary) UnmarshalJSON(data []byte) error {
-
-	dec := json.NewDecoder(bytes.NewReader(data))
-
-	for {
-		t, err := dec.Token()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			return err
-		}
-
-		switch t {
-
-		case "aliases":
-			if s.Aliases == nil {
-				s.Aliases = make(map[string]Alias, 0)
-			}
-			if err := dec.Decode(&s.Aliases); err != nil {
-				return err
-			}
-
-		case "mappings":
-			if err := dec.Decode(&s.Mappings); err != nil {
-				return err
-			}
-
-		case "settings":
-			if err := dec.Decode(&s.Settings); err != nil {
-				return err
-			}
-
-		}
-	}
-	return nil
+	// Aliases Aliases to add.
+	// If the index template includes a `data_stream` object, these are data stream
+	// aliases.
+	// Otherwise, these are index aliases.
+	// Data stream aliases ignore the `index_routing`, `routing`, and
+	// `search_routing` options.
+	Aliases   map[string]Alias                 `json:"aliases,omitempty"`
+	Lifecycle *DataStreamLifecycleWithRollover `json:"lifecycle,omitempty"`
+	// Mappings Mapping for fields in the index.
+	// If specified, this mapping can include field names, field data types, and
+	// mapping parameters.
+	Mappings *TypeMapping `json:"mappings,omitempty"`
+	// Settings Configuration options for the index.
+	Settings *IndexSettings `json:"settings,omitempty"`
 }
 
 // NewIndexTemplateSummary returns a IndexTemplateSummary.

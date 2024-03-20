@@ -16,22 +16,26 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package puttrainedmodelvocabulary
 
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
 )
 
 // Request holds the request body struct for the package puttrainedmodelvocabulary
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ml/put_trained_model_vocabulary/MlPutTrainedModelVocabularyRequest.ts#L23-L51
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ml/put_trained_model_vocabulary/MlPutTrainedModelVocabularyRequest.ts#L24-L60
 type Request struct {
 
 	// Merges The optional model merges if required by the tokenizer.
 	Merges []string `json:"merges,omitempty"`
+	// Scores The optional vocabulary value scores if required by the tokenizer.
+	Scores []types.Float64 `json:"scores,omitempty"`
 	// Vocabulary The model vocabulary, which must not be empty.
 	Vocabulary []string `json:"vocabulary"`
 }

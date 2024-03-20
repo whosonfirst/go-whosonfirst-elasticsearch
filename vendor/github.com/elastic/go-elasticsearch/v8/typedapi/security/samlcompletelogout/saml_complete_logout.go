@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Verifies the logout response sent from the SAML IdP
 package samlcompletelogout
@@ -45,12 +45,17 @@ type SamlCompleteLogout struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
-
-	req *Request
 	raw io.Reader
 
+	req      *Request
+	deferred []func(request *Request) error
+	buf      *gobytes.Buffer
+
 	paramSet int
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewSamlCompleteLogout type alias for index.
@@ -74,7 +79,16 @@ func New(tp elastictransport.Interface) *SamlCompleteLogout {
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+
+		buf: gobytes.NewBuffer(nil),
+
+		req: NewRequest(),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -104,9 +118,17 @@ func (r *SamlCompleteLogout) HttpRequest(ctx context.Context) (*http.Request, er
 
 	var err error
 
-	if r.raw != nil {
-		r.buf.ReadFrom(r.raw)
-	} else if r.req != nil {
+	if len(r.deferred) > 0 {
+		for _, f := range r.deferred {
+			deferredErr := f(r.req)
+			if deferredErr != nil {
+				return nil, deferredErr
+			}
+		}
+	}
+
+	if r.raw == nil && r.req != nil {
+
 		data, err := json.Marshal(r.req)
 
 		if err != nil {
@@ -114,6 +136,11 @@ func (r *SamlCompleteLogout) HttpRequest(ctx context.Context) (*http.Request, er
 		}
 
 		r.buf.Write(data)
+
+	}
+
+	if r.buf.Len() > 0 {
+		r.raw = r.buf
 	}
 
 	r.path.Scheme = "http"
@@ -138,15 +165,15 @@ func (r *SamlCompleteLogout) HttpRequest(ctx context.Context) (*http.Request, er
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
 
 	if req.Header.Get("Content-Type") == "" {
-		if r.buf.Len() > 0 {
+		if r.raw != nil {
 			req.Header.Set("Content-Type", "application/vnd.elasticsearch+json;compatible-with=8")
 		}
 	}
@@ -163,15 +190,42 @@ func (r *SamlCompleteLogout) HttpRequest(ctx context.Context) (*http.Request, er
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r SamlCompleteLogout) Perform(ctx context.Context) (*http.Response, error) {
+func (r SamlCompleteLogout) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "security.saml_complete_logout")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "security.saml_complete_logout")
+		if reader := instrument.RecordRequestBody(ctx, "security.saml_complete_logout", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "security.saml_complete_logout")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the SamlCompleteLogout query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the SamlCompleteLogout query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
@@ -180,6 +234,46 @@ func (r SamlCompleteLogout) Perform(ctx context.Context) (*http.Response, error)
 // Header set a key, value pair in the SamlCompleteLogout headers map.
 func (r *SamlCompleteLogout) Header(key, value string) *SamlCompleteLogout {
 	r.headers.Set(key, value)
+
+	return r
+}
+
+// Content If the SAML IdP sends the logout response with the HTTP-Post binding, this
+// field must be set to the value of the SAMLResponse form parameter from the
+// logout response.
+// API name: content
+func (r *SamlCompleteLogout) Content(content string) *SamlCompleteLogout {
+
+	r.req.Content = &content
+
+	return r
+}
+
+// Ids A json array with all the valid SAML Request Ids that the caller of the API
+// has for the current user.
+// API name: ids
+func (r *SamlCompleteLogout) Ids(ids ...string) *SamlCompleteLogout {
+	r.req.Ids = ids
+
+	return r
+}
+
+// QueryString If the SAML IdP sends the logout response with the HTTP-Redirect binding,
+// this field must be set to the query string of the redirect URI.
+// API name: query_string
+func (r *SamlCompleteLogout) QueryString(querystring string) *SamlCompleteLogout {
+
+	r.req.QueryString = &querystring
+
+	return r
+}
+
+// Realm The name of the SAML realm in Elasticsearch for which the configuration is
+// used to verify the logout response.
+// API name: realm
+func (r *SamlCompleteLogout) Realm(realm string) *SamlCompleteLogout {
+
+	r.req.Realm = realm
 
 	return r
 }

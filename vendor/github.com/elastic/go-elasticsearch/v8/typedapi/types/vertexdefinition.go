@@ -16,30 +16,38 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // VertexDefinition type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/graph/_types/Vertex.ts#L30-L37
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/graph/_types/Vertex.ts#L30-L59
 type VertexDefinition struct {
-	Exclude          []string        `json:"exclude,omitempty"`
-	Field            string          `json:"field"`
-	Include          []VertexInclude `json:"include,omitempty"`
-	MinDocCount      *int64          `json:"min_doc_count,omitempty"`
-	ShardMinDocCount *int64          `json:"shard_min_doc_count,omitempty"`
-	Size             *int            `json:"size,omitempty"`
+	// Exclude Prevents the specified terms from being included in the results.
+	Exclude []string `json:"exclude,omitempty"`
+	// Field Identifies a field in the documents of interest.
+	Field string `json:"field"`
+	// Include Identifies the terms of interest that form the starting points from which you
+	// want to spider out.
+	Include []VertexInclude `json:"include,omitempty"`
+	// MinDocCount Specifies how many documents must contain a pair of terms before it is
+	// considered to be a useful connection.
+	// This setting acts as a certainty threshold.
+	MinDocCount *int64 `json:"min_doc_count,omitempty"`
+	// ShardMinDocCount Controls how many documents on a particular shard have to contain a pair of
+	// terms before the connection is returned for global consideration.
+	ShardMinDocCount *int64 `json:"shard_min_doc_count,omitempty"`
+	// Size Specifies the maximum number of vertex terms returned for each field.
+	Size *int `json:"size,omitempty"`
 }
 
 func (s *VertexDefinition) UnmarshalJSON(data []byte) error {

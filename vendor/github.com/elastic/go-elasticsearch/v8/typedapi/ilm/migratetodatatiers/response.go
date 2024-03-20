@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package migratetodatatiers
 
@@ -30,8 +30,7 @@ import (
 
 // Response holds the response body struct for the package migratetodatatiers
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/ilm/migrate_to_data_tiers/Response.ts#L22-L32
-
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/ilm/migrate_to_data_tiers/Response.ts#L22-L32
 type Response struct {
 	DryRun                      bool     `json:"dry_run"`
 	MigratedComponentTemplates  []string `json:"migrated_component_templates"`
@@ -117,7 +116,11 @@ func (s *Response) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.RemovedLegacyTemplate = o
 
 		}

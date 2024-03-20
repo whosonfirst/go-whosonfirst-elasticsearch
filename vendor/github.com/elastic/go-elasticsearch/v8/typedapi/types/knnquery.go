@@ -16,23 +16,21 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // KnnQuery type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/Knn.ts#L26-L41
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/Knn.ts#L26-L43
 type KnnQuery struct {
 	// Boost Boost value to apply to kNN scores
 	Boost *float32 `json:"boost,omitempty"`
@@ -49,6 +47,8 @@ type KnnQuery struct {
 	// QueryVectorBuilder The query vector builder. You must provide a query_vector_builder or
 	// query_vector, but not both.
 	QueryVectorBuilder *QueryVectorBuilder `json:"query_vector_builder,omitempty"`
+	// Similarity The minimum similarity for a vector to be considered a match
+	Similarity *float32 `json:"similarity,omitempty"`
 }
 
 func (s *KnnQuery) UnmarshalJSON(data []byte) error {
@@ -141,6 +141,22 @@ func (s *KnnQuery) UnmarshalJSON(data []byte) error {
 		case "query_vector_builder":
 			if err := dec.Decode(&s.QueryVectorBuilder); err != nil {
 				return err
+			}
+
+		case "similarity":
+			var tmp interface{}
+			dec.Decode(&tmp)
+			switch v := tmp.(type) {
+			case string:
+				value, err := strconv.ParseFloat(v, 32)
+				if err != nil {
+					return err
+				}
+				f := float32(value)
+				s.Similarity = &f
+			case float64:
+				f := float32(v)
+				s.Similarity = &f
 			}
 
 		}

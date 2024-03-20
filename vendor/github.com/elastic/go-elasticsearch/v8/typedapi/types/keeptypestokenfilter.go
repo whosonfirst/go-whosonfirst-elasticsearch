@@ -16,23 +16,22 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/keeptypesmode"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/keeptypesmode"
 )
 
 // KeepTypesTokenFilter type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/token_filters.ts#L218-L222
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/token_filters.ts#L218-L222
 type KeepTypesTokenFilter struct {
 	Mode    *keeptypesmode.KeepTypesMode `json:"mode,omitempty"`
 	Type    string                       `json:"type,omitempty"`
@@ -80,11 +79,24 @@ func (s *KeepTypesTokenFilter) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s KeepTypesTokenFilter) MarshalJSON() ([]byte, error) {
+	type innerKeepTypesTokenFilter KeepTypesTokenFilter
+	tmp := innerKeepTypesTokenFilter{
+		Mode:    s.Mode,
+		Type:    s.Type,
+		Types:   s.Types,
+		Version: s.Version,
+	}
+
+	tmp.Type = "keep_types"
+
+	return json.Marshal(tmp)
+}
+
 // NewKeepTypesTokenFilter returns a KeepTypesTokenFilter.
 func NewKeepTypesTokenFilter() *KeepTypesTokenFilter {
 	r := &KeepTypesTokenFilter{}
-
-	r.Type = "keep_types"
 
 	return r
 }

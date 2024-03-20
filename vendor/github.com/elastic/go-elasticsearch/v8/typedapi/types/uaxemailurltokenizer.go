@@ -16,23 +16,21 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // UaxEmailUrlTokenizer type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/tokenizers.ts#L109-L112
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/tokenizers.ts#L110-L113
 type UaxEmailUrlTokenizer struct {
 	MaxTokenLength *int    `json:"max_token_length,omitempty"`
 	Type           string  `json:"type,omitempty"`
@@ -85,11 +83,23 @@ func (s *UaxEmailUrlTokenizer) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s UaxEmailUrlTokenizer) MarshalJSON() ([]byte, error) {
+	type innerUaxEmailUrlTokenizer UaxEmailUrlTokenizer
+	tmp := innerUaxEmailUrlTokenizer{
+		MaxTokenLength: s.MaxTokenLength,
+		Type:           s.Type,
+		Version:        s.Version,
+	}
+
+	tmp.Type = "uax_url_email"
+
+	return json.Marshal(tmp)
+}
+
 // NewUaxEmailUrlTokenizer returns a UaxEmailUrlTokenizer.
 func NewUaxEmailUrlTokenizer() *UaxEmailUrlTokenizer {
 	r := &UaxEmailUrlTokenizer{}
-
-	r.Type = "uax_url_email"
 
 	return r
 }

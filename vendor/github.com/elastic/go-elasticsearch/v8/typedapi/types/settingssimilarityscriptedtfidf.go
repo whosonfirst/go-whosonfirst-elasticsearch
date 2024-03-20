@@ -16,21 +16,20 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
-	"encoding/json"
 )
 
 // SettingsSimilarityScriptedTfidf type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/indices/_types/IndexSettings.ts#L216-L219
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/indices/_types/IndexSettings.ts#L215-L218
 type SettingsSimilarityScriptedTfidf struct {
 	Script Script `json:"script"`
 	Type   string `json:"type,omitempty"`
@@ -52,8 +51,39 @@ func (s *SettingsSimilarityScriptedTfidf) UnmarshalJSON(data []byte) error {
 		switch t {
 
 		case "script":
-			if err := dec.Decode(&s.Script); err != nil {
+			message := json.RawMessage{}
+			if err := dec.Decode(&message); err != nil {
 				return err
+			}
+			keyDec := json.NewDecoder(bytes.NewReader(message))
+			for {
+				t, err := keyDec.Token()
+				if err != nil {
+					if errors.Is(err, io.EOF) {
+						break
+					}
+					return err
+				}
+
+				switch t {
+
+				case "lang", "options", "source":
+					o := NewInlineScript()
+					localDec := json.NewDecoder(bytes.NewReader(message))
+					if err := localDec.Decode(&o); err != nil {
+						return err
+					}
+					s.Script = o
+
+				case "id":
+					o := NewStoredScriptId()
+					localDec := json.NewDecoder(bytes.NewReader(message))
+					if err := localDec.Decode(&o); err != nil {
+						return err
+					}
+					s.Script = o
+
+				}
 			}
 
 		case "type":
@@ -66,11 +96,22 @@ func (s *SettingsSimilarityScriptedTfidf) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s SettingsSimilarityScriptedTfidf) MarshalJSON() ([]byte, error) {
+	type innerSettingsSimilarityScriptedTfidf SettingsSimilarityScriptedTfidf
+	tmp := innerSettingsSimilarityScriptedTfidf{
+		Script: s.Script,
+		Type:   s.Type,
+	}
+
+	tmp.Type = "scripted"
+
+	return json.Marshal(tmp)
+}
+
 // NewSettingsSimilarityScriptedTfidf returns a SettingsSimilarityScriptedTfidf.
 func NewSettingsSimilarityScriptedTfidf() *SettingsSimilarityScriptedTfidf {
 	r := &SettingsSimilarityScriptedTfidf{}
-
-	r.Type = "scripted"
 
 	return r
 }

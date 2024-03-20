@@ -16,13 +16,12 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Provides statistics on operations happening in an index.
 package stats
 
 import (
-	gobytes "bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -36,7 +35,7 @@ import (
 
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
-
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/expandwildcard"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/level"
 )
 
@@ -56,12 +55,16 @@ type Stats struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	metric string
 	index  string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewStats type alias for index.
@@ -79,13 +82,18 @@ func NewStatsFunc(tp elastictransport.Interface) NewStats {
 
 // Provides statistics on operations happening in an index.
 //
-// https://www.elastic.co/guide/en/elasticsearch/reference/master/indices-stats.html
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-stats.html
 func New(tp elastictransport.Interface) *Stats {
 	r := &Stats{
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -113,12 +121,18 @@ func (r *Stats) HttpRequest(ctx context.Context) (*http.Request, error) {
 		path.WriteString("_stats")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "metric", r.metric)
+		}
 		path.WriteString(r.metric)
 
 		method = http.MethodGet
 	case r.paramSet == indexMask:
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "index", r.index)
+		}
 		path.WriteString(r.index)
 		path.WriteString("/")
 		path.WriteString("_stats")
@@ -127,11 +141,17 @@ func (r *Stats) HttpRequest(ctx context.Context) (*http.Request, error) {
 	case r.paramSet == indexMask|metricMask:
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "index", r.index)
+		}
 		path.WriteString(r.index)
 		path.WriteString("/")
 		path.WriteString("_stats")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "metric", r.metric)
+		}
 		path.WriteString(r.metric)
 
 		method = http.MethodGet
@@ -145,9 +165,9 @@ func (r *Stats) HttpRequest(ctx context.Context) (*http.Request, error) {
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
@@ -164,27 +184,66 @@ func (r *Stats) HttpRequest(ctx context.Context) (*http.Request, error) {
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r Stats) Perform(ctx context.Context) (*http.Response, error) {
+func (r Stats) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "indices.stats")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "indices.stats")
+		if reader := instrument.RecordRequestBody(ctx, "indices.stats", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "indices.stats")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the Stats query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the Stats query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a stats.Response
-func (r Stats) Do(ctx context.Context) (*Response, error) {
+func (r Stats) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "indices.stats")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -192,6 +251,9 @@ func (r Stats) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -201,15 +263,35 @@ func (r Stats) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r Stats) IsSuccess(ctx context.Context) (bool, error) {
+func (r Stats) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "indices.stats")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -225,6 +307,14 @@ func (r Stats) IsSuccess(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the Stats query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -237,9 +327,9 @@ func (r *Stats) Header(key, value string) *Stats {
 
 // Metric Limit the information returned the specific metrics.
 // API Name: metric
-func (r *Stats) Metric(v string) *Stats {
+func (r *Stats) Metric(metric string) *Stats {
 	r.paramSet |= metricMask
-	r.metric = v
+	r.metric = metric
 
 	return r
 }
@@ -247,9 +337,9 @@ func (r *Stats) Metric(v string) *Stats {
 // Index A comma-separated list of index names; use `_all` or empty string to perform
 // the operation on all indices
 // API Name: index
-func (r *Stats) Index(v string) *Stats {
+func (r *Stats) Index(index string) *Stats {
 	r.paramSet |= indexMask
-	r.index = v
+	r.index = index
 
 	return r
 }
@@ -257,8 +347,8 @@ func (r *Stats) Index(v string) *Stats {
 // CompletionFields Comma-separated list or wildcard expressions of fields to include in
 // fielddata and suggest statistics.
 // API name: completion_fields
-func (r *Stats) CompletionFields(v string) *Stats {
-	r.values.Set("completion_fields", v)
+func (r *Stats) CompletionFields(fields ...string) *Stats {
+	r.values.Set("completion_fields", strings.Join(fields, ","))
 
 	return r
 }
@@ -269,8 +359,12 @@ func (r *Stats) CompletionFields(v string) *Stats {
 // comma-separated values,
 // such as `open,hidden`.
 // API name: expand_wildcards
-func (r *Stats) ExpandWildcards(v string) *Stats {
-	r.values.Set("expand_wildcards", v)
+func (r *Stats) ExpandWildcards(expandwildcards ...expandwildcard.ExpandWildcard) *Stats {
+	tmp := []string{}
+	for _, item := range expandwildcards {
+		tmp = append(tmp, item.String())
+	}
+	r.values.Set("expand_wildcards", strings.Join(tmp, ","))
 
 	return r
 }
@@ -278,8 +372,8 @@ func (r *Stats) ExpandWildcards(v string) *Stats {
 // FielddataFields Comma-separated list or wildcard expressions of fields to include in
 // fielddata statistics.
 // API name: fielddata_fields
-func (r *Stats) FielddataFields(v string) *Stats {
-	r.values.Set("fielddata_fields", v)
+func (r *Stats) FielddataFields(fields ...string) *Stats {
+	r.values.Set("fielddata_fields", strings.Join(fields, ","))
 
 	return r
 }
@@ -287,24 +381,28 @@ func (r *Stats) FielddataFields(v string) *Stats {
 // Fields Comma-separated list or wildcard expressions of fields to include in the
 // statistics.
 // API name: fields
-func (r *Stats) Fields(v string) *Stats {
-	r.values.Set("fields", v)
+func (r *Stats) Fields(fields ...string) *Stats {
+	r.values.Set("fields", strings.Join(fields, ","))
 
 	return r
 }
 
 // ForbidClosedIndices If true, statistics are not collected from closed indices.
 // API name: forbid_closed_indices
-func (r *Stats) ForbidClosedIndices(b bool) *Stats {
-	r.values.Set("forbid_closed_indices", strconv.FormatBool(b))
+func (r *Stats) ForbidClosedIndices(forbidclosedindices bool) *Stats {
+	r.values.Set("forbid_closed_indices", strconv.FormatBool(forbidclosedindices))
 
 	return r
 }
 
 // Groups Comma-separated list of search groups to include in the search statistics.
 // API name: groups
-func (r *Stats) Groups(v string) *Stats {
-	r.values.Set("groups", v)
+func (r *Stats) Groups(groups ...string) *Stats {
+	tmp := []string{}
+	for _, item := range groups {
+		tmp = append(tmp, fmt.Sprintf("%v", item))
+	}
+	r.values.Set("groups", strings.Join(tmp, ","))
 
 	return r
 }
@@ -312,8 +410,8 @@ func (r *Stats) Groups(v string) *Stats {
 // IncludeSegmentFileSizes If true, the call reports the aggregated disk usage of each one of the Lucene
 // index files (only applies if segment stats are requested).
 // API name: include_segment_file_sizes
-func (r *Stats) IncludeSegmentFileSizes(b bool) *Stats {
-	r.values.Set("include_segment_file_sizes", strconv.FormatBool(b))
+func (r *Stats) IncludeSegmentFileSizes(includesegmentfilesizes bool) *Stats {
+	r.values.Set("include_segment_file_sizes", strconv.FormatBool(includesegmentfilesizes))
 
 	return r
 }
@@ -321,8 +419,8 @@ func (r *Stats) IncludeSegmentFileSizes(b bool) *Stats {
 // IncludeUnloadedSegments If true, the response includes information from segments that are not loaded
 // into memory.
 // API name: include_unloaded_segments
-func (r *Stats) IncludeUnloadedSegments(b bool) *Stats {
-	r.values.Set("include_unloaded_segments", strconv.FormatBool(b))
+func (r *Stats) IncludeUnloadedSegments(includeunloadedsegments bool) *Stats {
+	r.values.Set("include_unloaded_segments", strconv.FormatBool(includeunloadedsegments))
 
 	return r
 }
@@ -330,8 +428,8 @@ func (r *Stats) IncludeUnloadedSegments(b bool) *Stats {
 // Level Indicates whether statistics are aggregated at the cluster, index, or shard
 // level.
 // API name: level
-func (r *Stats) Level(enum level.Level) *Stats {
-	r.values.Set("level", enum.String())
+func (r *Stats) Level(level level.Level) *Stats {
+	r.values.Set("level", level.String())
 
 	return r
 }

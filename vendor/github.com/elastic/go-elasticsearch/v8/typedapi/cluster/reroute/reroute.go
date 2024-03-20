@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Allows to manually change the allocation of individual shards in the cluster.
 package reroute
@@ -47,12 +47,17 @@ type Reroute struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
-
-	req *Request
 	raw io.Reader
 
+	req      *Request
+	deferred []func(request *Request) error
+	buf      *gobytes.Buffer
+
 	paramSet int
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewReroute type alias for index.
@@ -70,13 +75,22 @@ func NewRerouteFunc(tp elastictransport.Interface) NewReroute {
 
 // Allows to manually change the allocation of individual shards in the cluster.
 //
-// https://www.elastic.co/guide/en/elasticsearch/reference/{branch}/cluster-reroute.html
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-reroute.html
 func New(tp elastictransport.Interface) *Reroute {
 	r := &Reroute{
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+
+		buf: gobytes.NewBuffer(nil),
+
+		req: NewRequest(),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -106,9 +120,17 @@ func (r *Reroute) HttpRequest(ctx context.Context) (*http.Request, error) {
 
 	var err error
 
-	if r.raw != nil {
-		r.buf.ReadFrom(r.raw)
-	} else if r.req != nil {
+	if len(r.deferred) > 0 {
+		for _, f := range r.deferred {
+			deferredErr := f(r.req)
+			if deferredErr != nil {
+				return nil, deferredErr
+			}
+		}
+	}
+
+	if r.raw == nil && r.req != nil {
+
 		data, err := json.Marshal(r.req)
 
 		if err != nil {
@@ -116,6 +138,11 @@ func (r *Reroute) HttpRequest(ctx context.Context) (*http.Request, error) {
 		}
 
 		r.buf.Write(data)
+
+	}
+
+	if r.buf.Len() > 0 {
+		r.raw = r.buf
 	}
 
 	r.path.Scheme = "http"
@@ -138,15 +165,15 @@ func (r *Reroute) HttpRequest(ctx context.Context) (*http.Request, error) {
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
 
 	if req.Header.Get("Content-Type") == "" {
-		if r.buf.Len() > 0 {
+		if r.raw != nil {
 			req.Header.Set("Content-Type", "application/vnd.elasticsearch+json;compatible-with=8")
 		}
 	}
@@ -163,27 +190,66 @@ func (r *Reroute) HttpRequest(ctx context.Context) (*http.Request, error) {
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r Reroute) Perform(ctx context.Context) (*http.Response, error) {
+func (r Reroute) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "cluster.reroute")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "cluster.reroute")
+		if reader := instrument.RecordRequestBody(ctx, "cluster.reroute", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "cluster.reroute")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the Reroute query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the Reroute query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a reroute.Response
-func (r Reroute) Do(ctx context.Context) (*Response, error) {
+func (r Reroute) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "cluster.reroute")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -191,6 +257,9 @@ func (r Reroute) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -200,9 +269,19 @@ func (r Reroute) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
@@ -216,8 +295,8 @@ func (r *Reroute) Header(key, value string) *Reroute {
 // DryRun If true, then the request simulates the operation only and returns the
 // resulting state.
 // API name: dry_run
-func (r *Reroute) DryRun(b bool) *Reroute {
-	r.values.Set("dry_run", strconv.FormatBool(b))
+func (r *Reroute) DryRun(dryrun bool) *Reroute {
+	r.values.Set("dry_run", strconv.FormatBool(dryrun))
 
 	return r
 }
@@ -225,16 +304,16 @@ func (r *Reroute) DryRun(b bool) *Reroute {
 // Explain If true, then the response contains an explanation of why the commands can or
 // cannot be executed.
 // API name: explain
-func (r *Reroute) Explain(b bool) *Reroute {
-	r.values.Set("explain", strconv.FormatBool(b))
+func (r *Reroute) Explain(explain bool) *Reroute {
+	r.values.Set("explain", strconv.FormatBool(explain))
 
 	return r
 }
 
 // Metric Limits the information returned to the specified metrics.
 // API name: metric
-func (r *Reroute) Metric(v string) *Reroute {
-	r.values.Set("metric", v)
+func (r *Reroute) Metric(metrics ...string) *Reroute {
+	r.values.Set("metric", strings.Join(metrics, ","))
 
 	return r
 }
@@ -242,8 +321,8 @@ func (r *Reroute) Metric(v string) *Reroute {
 // RetryFailed If true, then retries allocation of shards that are blocked due to too many
 // subsequent allocation failures.
 // API name: retry_failed
-func (r *Reroute) RetryFailed(b bool) *Reroute {
-	r.values.Set("retry_failed", strconv.FormatBool(b))
+func (r *Reroute) RetryFailed(retryfailed bool) *Reroute {
+	r.values.Set("retry_failed", strconv.FormatBool(retryfailed))
 
 	return r
 }
@@ -251,8 +330,8 @@ func (r *Reroute) RetryFailed(b bool) *Reroute {
 // MasterTimeout Period to wait for a connection to the master node. If no response is
 // received before the timeout expires, the request fails and returns an error.
 // API name: master_timeout
-func (r *Reroute) MasterTimeout(v string) *Reroute {
-	r.values.Set("master_timeout", v)
+func (r *Reroute) MasterTimeout(duration string) *Reroute {
+	r.values.Set("master_timeout", duration)
 
 	return r
 }
@@ -260,8 +339,16 @@ func (r *Reroute) MasterTimeout(v string) *Reroute {
 // Timeout Period to wait for a response. If no response is received before the timeout
 // expires, the request fails and returns an error.
 // API name: timeout
-func (r *Reroute) Timeout(v string) *Reroute {
-	r.values.Set("timeout", v)
+func (r *Reroute) Timeout(duration string) *Reroute {
+	r.values.Set("timeout", duration)
+
+	return r
+}
+
+// Commands Defines the commands to perform.
+// API name: commands
+func (r *Reroute) Commands(commands ...types.Command) *Reroute {
+	r.req.Commands = commands
 
 	return r
 }

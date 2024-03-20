@@ -16,48 +16,15 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
-import (
-	"bytes"
-	"errors"
-	"io"
-
-	"encoding/json"
-)
-
 // GeoPolygonPoints type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/query_dsl/geo.ts#L59-L61
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/query_dsl/geo.ts#L87-L89
 type GeoPolygonPoints struct {
 	Points []GeoLocation `json:"points"`
-}
-
-func (s *GeoPolygonPoints) UnmarshalJSON(data []byte) error {
-
-	dec := json.NewDecoder(bytes.NewReader(data))
-
-	for {
-		t, err := dec.Token()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			return err
-		}
-
-		switch t {
-
-		case "points":
-			if err := dec.Decode(&s.Points); err != nil {
-				return err
-			}
-
-		}
-	}
-	return nil
 }
 
 // NewGeoPolygonPoints returns a GeoPolygonPoints.

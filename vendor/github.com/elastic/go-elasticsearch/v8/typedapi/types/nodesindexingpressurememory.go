@@ -16,28 +16,32 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // NodesIndexingPressureMemory type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/nodes/_types/Stats.ts#L59-L64
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/nodes/_types/Stats.ts#L123-L142
 type NodesIndexingPressureMemory struct {
-	Current      *PressureMemory `json:"current,omitempty"`
-	Limit        ByteSize        `json:"limit,omitempty"`
-	LimitInBytes *int64          `json:"limit_in_bytes,omitempty"`
-	Total        *PressureMemory `json:"total,omitempty"`
+	// Current Contains statistics for current indexing load.
+	Current *PressureMemory `json:"current,omitempty"`
+	// Limit Configured memory limit for the indexing requests.
+	// Replica requests have an automatic limit that is 1.5x this value.
+	Limit ByteSize `json:"limit,omitempty"`
+	// LimitInBytes Configured memory limit, in bytes, for the indexing requests.
+	// Replica requests have an automatic limit that is 1.5x this value.
+	LimitInBytes *int64 `json:"limit_in_bytes,omitempty"`
+	// Total Contains statistics for the cumulative indexing load since the node started.
+	Total *PressureMemory `json:"total,omitempty"`
 }
 
 func (s *NodesIndexingPressureMemory) UnmarshalJSON(data []byte) error {

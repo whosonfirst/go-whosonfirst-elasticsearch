@@ -16,13 +16,12 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Cancels a task, if it can be cancelled through an API.
 package cancel
 
 import (
-	gobytes "bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -52,11 +51,15 @@ type Cancel struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	taskid string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewCancel type alias for index.
@@ -74,13 +77,18 @@ func NewCancelFunc(tp elastictransport.Interface) NewCancel {
 
 // Cancels a task, if it can be cancelled through an API.
 //
-// https://www.elastic.co/guide/en/elasticsearch/reference/{branch}/tasks.html
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/tasks.html
 func New(tp elastictransport.Interface) *Cancel {
 	r := &Cancel{
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -110,6 +118,9 @@ func (r *Cancel) HttpRequest(ctx context.Context) (*http.Request, error) {
 		path.WriteString("_tasks")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "taskid", r.taskid)
+		}
 		path.WriteString(r.taskid)
 		path.WriteString("/")
 		path.WriteString("_cancel")
@@ -125,9 +136,9 @@ func (r *Cancel) HttpRequest(ctx context.Context) (*http.Request, error) {
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
@@ -144,27 +155,66 @@ func (r *Cancel) HttpRequest(ctx context.Context) (*http.Request, error) {
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r Cancel) Perform(ctx context.Context) (*http.Response, error) {
+func (r Cancel) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "tasks.cancel")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "tasks.cancel")
+		if reader := instrument.RecordRequestBody(ctx, "tasks.cancel", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "tasks.cancel")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the Cancel query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the Cancel query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a cancel.Response
-func (r Cancel) Do(ctx context.Context) (*Response, error) {
+func (r Cancel) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "tasks.cancel")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -172,6 +222,9 @@ func (r Cancel) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -181,15 +234,35 @@ func (r Cancel) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r Cancel) IsSuccess(ctx context.Context) (bool, error) {
+func (r Cancel) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "tasks.cancel")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -205,6 +278,14 @@ func (r Cancel) IsSuccess(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the Cancel query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -215,39 +296,44 @@ func (r *Cancel) Header(key, value string) *Cancel {
 	return r
 }
 
-// TaskId Cancel the task with specified task id (node_id:task_number)
+// TaskId ID of the task.
 // API Name: taskid
-func (r *Cancel) TaskId(v string) *Cancel {
+func (r *Cancel) TaskId(taskid string) *Cancel {
 	r.paramSet |= taskidMask
-	r.taskid = v
+	r.taskid = taskid
 
 	return r
 }
 
-// Actions A comma-separated list of actions that should be cancelled. Leave empty to
-// cancel all.
+// Actions Comma-separated list or wildcard expression of actions used to limit the
+// request.
 // API name: actions
-func (r *Cancel) Actions(v string) *Cancel {
-	r.values.Set("actions", v)
+func (r *Cancel) Actions(actions ...string) *Cancel {
+	tmp := []string{}
+	for _, item := range actions {
+		tmp = append(tmp, fmt.Sprintf("%v", item))
+	}
+	r.values.Set("actions", strings.Join(tmp, ","))
 
 	return r
 }
 
-// Nodes A comma-separated list of node IDs or names to limit the returned
-// information; use `_local` to return information from the node you're
-// connecting to, leave empty to get information from all nodes
+// Nodes Comma-separated list of node IDs or names used to limit the request.
 // API name: nodes
-func (r *Cancel) Nodes(v string) *Cancel {
-	r.values.Set("nodes", v)
+func (r *Cancel) Nodes(nodes ...string) *Cancel {
+	tmp := []string{}
+	for _, item := range nodes {
+		tmp = append(tmp, fmt.Sprintf("%v", item))
+	}
+	r.values.Set("nodes", strings.Join(tmp, ","))
 
 	return r
 }
 
-// ParentTaskId Cancel tasks with specified parent task id (node_id:task_number). Set to -1
-// to cancel all.
+// ParentTaskId Parent task ID used to limit the tasks.
 // API name: parent_task_id
-func (r *Cancel) ParentTaskId(v string) *Cancel {
-	r.values.Set("parent_task_id", v)
+func (r *Cancel) ParentTaskId(parenttaskid string) *Cancel {
+	r.values.Set("parent_task_id", parenttaskid)
 
 	return r
 }
@@ -255,8 +341,8 @@ func (r *Cancel) ParentTaskId(v string) *Cancel {
 // WaitForCompletion Should the request block until the cancellation of the task and its
 // descendant tasks is completed. Defaults to false
 // API name: wait_for_completion
-func (r *Cancel) WaitForCompletion(b bool) *Cancel {
-	r.values.Set("wait_for_completion", strconv.FormatBool(b))
+func (r *Cancel) WaitForCompletion(waitforcompletion bool) *Cancel {
+	r.values.Set("wait_for_completion", strconv.FormatBool(waitforcompletion))
 
 	return r
 }

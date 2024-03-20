@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Creates a trained model vocabulary
 package puttrainedmodelvocabulary
@@ -50,14 +50,19 @@ type PutTrainedModelVocabulary struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
-
-	req *Request
 	raw io.Reader
+
+	req      *Request
+	deferred []func(request *Request) error
+	buf      *gobytes.Buffer
 
 	paramSet int
 
 	modelid string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewPutTrainedModelVocabulary type alias for index.
@@ -69,7 +74,7 @@ func NewPutTrainedModelVocabularyFunc(tp elastictransport.Interface) NewPutTrain
 	return func(modelid string) *PutTrainedModelVocabulary {
 		n := New(tp)
 
-		n.ModelId(modelid)
+		n._modelid(modelid)
 
 		return n
 	}
@@ -83,7 +88,16 @@ func New(tp elastictransport.Interface) *PutTrainedModelVocabulary {
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+
+		buf: gobytes.NewBuffer(nil),
+
+		req: NewRequest(),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -113,9 +127,17 @@ func (r *PutTrainedModelVocabulary) HttpRequest(ctx context.Context) (*http.Requ
 
 	var err error
 
-	if r.raw != nil {
-		r.buf.ReadFrom(r.raw)
-	} else if r.req != nil {
+	if len(r.deferred) > 0 {
+		for _, f := range r.deferred {
+			deferredErr := f(r.req)
+			if deferredErr != nil {
+				return nil, deferredErr
+			}
+		}
+	}
+
+	if r.raw == nil && r.req != nil {
+
 		data, err := json.Marshal(r.req)
 
 		if err != nil {
@@ -123,6 +145,11 @@ func (r *PutTrainedModelVocabulary) HttpRequest(ctx context.Context) (*http.Requ
 		}
 
 		r.buf.Write(data)
+
+	}
+
+	if r.buf.Len() > 0 {
+		r.raw = r.buf
 	}
 
 	r.path.Scheme = "http"
@@ -135,6 +162,9 @@ func (r *PutTrainedModelVocabulary) HttpRequest(ctx context.Context) (*http.Requ
 		path.WriteString("trained_models")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "modelid", r.modelid)
+		}
 		path.WriteString(r.modelid)
 		path.WriteString("/")
 		path.WriteString("vocabulary")
@@ -150,15 +180,15 @@ func (r *PutTrainedModelVocabulary) HttpRequest(ctx context.Context) (*http.Requ
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
 
 	if req.Header.Get("Content-Type") == "" {
-		if r.buf.Len() > 0 {
+		if r.raw != nil {
 			req.Header.Set("Content-Type", "application/vnd.elasticsearch+json;compatible-with=8")
 		}
 	}
@@ -175,27 +205,66 @@ func (r *PutTrainedModelVocabulary) HttpRequest(ctx context.Context) (*http.Requ
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r PutTrainedModelVocabulary) Perform(ctx context.Context) (*http.Response, error) {
+func (r PutTrainedModelVocabulary) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "ml.put_trained_model_vocabulary")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "ml.put_trained_model_vocabulary")
+		if reader := instrument.RecordRequestBody(ctx, "ml.put_trained_model_vocabulary", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "ml.put_trained_model_vocabulary")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the PutTrainedModelVocabulary query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the PutTrainedModelVocabulary query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a puttrainedmodelvocabulary.Response
-func (r PutTrainedModelVocabulary) Do(ctx context.Context) (*Response, error) {
+func (r PutTrainedModelVocabulary) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "ml.put_trained_model_vocabulary")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -203,6 +272,9 @@ func (r PutTrainedModelVocabulary) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -212,9 +284,19 @@ func (r PutTrainedModelVocabulary) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
@@ -227,9 +309,33 @@ func (r *PutTrainedModelVocabulary) Header(key, value string) *PutTrainedModelVo
 
 // ModelId The unique identifier of the trained model.
 // API Name: modelid
-func (r *PutTrainedModelVocabulary) ModelId(v string) *PutTrainedModelVocabulary {
+func (r *PutTrainedModelVocabulary) _modelid(modelid string) *PutTrainedModelVocabulary {
 	r.paramSet |= modelidMask
-	r.modelid = v
+	r.modelid = modelid
+
+	return r
+}
+
+// Merges The optional model merges if required by the tokenizer.
+// API name: merges
+func (r *PutTrainedModelVocabulary) Merges(merges ...string) *PutTrainedModelVocabulary {
+	r.req.Merges = merges
+
+	return r
+}
+
+// Scores The optional vocabulary value scores if required by the tokenizer.
+// API name: scores
+func (r *PutTrainedModelVocabulary) Scores(scores ...types.Float64) *PutTrainedModelVocabulary {
+	r.req.Scores = scores
+
+	return r
+}
+
+// Vocabulary The model vocabulary, which must not be empty.
+// API name: vocabulary
+func (r *PutTrainedModelVocabulary) Vocabulary(vocabularies ...string) *PutTrainedModelVocabulary {
+	r.req.Vocabulary = vocabularies
 
 	return r
 }

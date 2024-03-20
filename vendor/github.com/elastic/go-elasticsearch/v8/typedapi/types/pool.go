@@ -16,28 +16,30 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // Pool type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/nodes/_types/Stats.ts#L345-L350
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/nodes/_types/Stats.ts#L878-L895
 type Pool struct {
-	MaxInBytes      *int64 `json:"max_in_bytes,omitempty"`
-	PeakMaxInBytes  *int64 `json:"peak_max_in_bytes,omitempty"`
+	// MaxInBytes Maximum amount of memory, in bytes, available for use by the heap.
+	MaxInBytes *int64 `json:"max_in_bytes,omitempty"`
+	// PeakMaxInBytes Largest amount of memory, in bytes, historically used by the heap.
+	PeakMaxInBytes *int64 `json:"peak_max_in_bytes,omitempty"`
+	// PeakUsedInBytes Largest amount of memory, in bytes, historically used by the heap.
 	PeakUsedInBytes *int64 `json:"peak_used_in_bytes,omitempty"`
-	UsedInBytes     *int64 `json:"used_in_bytes,omitempty"`
+	// UsedInBytes Memory, in bytes, used by the heap.
+	UsedInBytes *int64 `json:"used_in_bytes,omitempty"`
 }
 
 func (s *Pool) UnmarshalJSON(data []byte) error {

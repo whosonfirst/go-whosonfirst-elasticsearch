@@ -16,19 +16,20 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 // Indicators type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_global/health_report/types.ts#L32-L39
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_global/health_report/types.ts#L32-L40
 type Indicators struct {
 	Disk                *DiskIndicator                `json:"disk,omitempty"`
 	Ilm                 *IlmIndicator                 `json:"ilm,omitempty"`
 	MasterIsStable      *MasterIsStableIndicator      `json:"master_is_stable,omitempty"`
 	RepositoryIntegrity *RepositoryIntegrityIndicator `json:"repository_integrity,omitempty"`
 	ShardsAvailability  *ShardsAvailabilityIndicator  `json:"shards_availability,omitempty"`
+	ShardsCapacity      *ShardsCapacityIndicator      `json:"shards_capacity,omitempty"`
 	Slm                 *SlmIndicator                 `json:"slm,omitempty"`
 }
 

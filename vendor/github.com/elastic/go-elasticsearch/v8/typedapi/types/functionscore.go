@@ -16,32 +16,46 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // FunctionScore type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/query_dsl/compound.ts#L107-L127
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/query_dsl/compound.ts#L201-L241
 type FunctionScore struct {
-	Exp              DecayFunction                  `json:"exp,omitempty"`
+	// Exp Function that scores a document with a exponential decay, depending on the
+	// distance of a numeric field value of the document from an origin.
+	Exp DecayFunction `json:"exp,omitempty"`
+	// FieldValueFactor Function allows you to use a field from a document to influence the score.
+	// It’s similar to using the script_score function, however, it avoids the
+	// overhead of scripting.
 	FieldValueFactor *FieldValueFactorScoreFunction `json:"field_value_factor,omitempty"`
 	Filter           *Query                         `json:"filter,omitempty"`
-	Gauss            DecayFunction                  `json:"gauss,omitempty"`
-	Linear           DecayFunction                  `json:"linear,omitempty"`
-	RandomScore      *RandomScoreFunction           `json:"random_score,omitempty"`
-	ScriptScore      *ScriptScoreFunction           `json:"script_score,omitempty"`
-	Weight           *Float64                       `json:"weight,omitempty"`
+	// Gauss Function that scores a document with a normal decay, depending on the
+	// distance of a numeric field value of the document from an origin.
+	Gauss DecayFunction `json:"gauss,omitempty"`
+	// Linear Function that scores a document with a linear decay, depending on the
+	// distance of a numeric field value of the document from an origin.
+	Linear DecayFunction `json:"linear,omitempty"`
+	// RandomScore Generates scores that are uniformly distributed from 0 up to but not
+	// including 1.
+	// In case you want scores to be reproducible, it is possible to provide a
+	// `seed` and `field`.
+	RandomScore *RandomScoreFunction `json:"random_score,omitempty"`
+	// ScriptScore Enables you to wrap another query and customize the scoring of it optionally
+	// with a computation derived from other numeric field values in the doc using a
+	// script expression.
+	ScriptScore *ScriptScoreFunction `json:"script_score,omitempty"`
+	Weight      *Float64             `json:"weight,omitempty"`
 }
 
 func (s *FunctionScore) UnmarshalJSON(data []byte) error {

@@ -16,25 +16,23 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/dynamicmapping"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/dynamicmapping"
 )
 
 // BooleanProperty type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/mapping/core.ts#L53-L59
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/mapping/core.ts#L53-L59
 type BooleanProperty struct {
 	Boost       *Float64                       `json:"boost,omitempty"`
 	CopyTo      []string                       `json:"copy_to,omitempty"`
@@ -136,7 +134,9 @@ func (s *BooleanProperty) UnmarshalJSON(data []byte) error {
 				localDec := json.NewDecoder(buf)
 				localDec.Decode(&kind)
 				buf.Seek(0, io.SeekStart)
-
+				if _, ok := kind["type"]; !ok {
+					kind["type"] = "object"
+				}
 				switch kind["type"] {
 				case "binary":
 					oo := NewBinaryProperty()
@@ -236,6 +236,12 @@ func (s *BooleanProperty) UnmarshalJSON(data []byte) error {
 					s.Fields[key] = oo
 				case "dense_vector":
 					oo := NewDenseVectorProperty()
+					if err := localDec.Decode(&oo); err != nil {
+						return err
+					}
+					s.Fields[key] = oo
+				case "sparse_vector":
+					oo := NewSparseVectorProperty()
 					if err := localDec.Decode(&oo); err != nil {
 						return err
 					}
@@ -415,9 +421,11 @@ func (s *BooleanProperty) UnmarshalJSON(data []byte) error {
 					}
 					s.Fields[key] = oo
 				default:
-					if err := localDec.Decode(&s.Fields); err != nil {
+					oo := new(Property)
+					if err := localDec.Decode(&oo); err != nil {
 						return err
 					}
+					s.Fields[key] = oo
 				}
 			}
 
@@ -485,7 +493,9 @@ func (s *BooleanProperty) UnmarshalJSON(data []byte) error {
 				localDec := json.NewDecoder(buf)
 				localDec.Decode(&kind)
 				buf.Seek(0, io.SeekStart)
-
+				if _, ok := kind["type"]; !ok {
+					kind["type"] = "object"
+				}
 				switch kind["type"] {
 				case "binary":
 					oo := NewBinaryProperty()
@@ -585,6 +595,12 @@ func (s *BooleanProperty) UnmarshalJSON(data []byte) error {
 					s.Properties[key] = oo
 				case "dense_vector":
 					oo := NewDenseVectorProperty()
+					if err := localDec.Decode(&oo); err != nil {
+						return err
+					}
+					s.Properties[key] = oo
+				case "sparse_vector":
+					oo := NewSparseVectorProperty()
 					if err := localDec.Decode(&oo); err != nil {
 						return err
 					}
@@ -764,9 +780,11 @@ func (s *BooleanProperty) UnmarshalJSON(data []byte) error {
 					}
 					s.Properties[key] = oo
 				default:
-					if err := localDec.Decode(&s.Properties); err != nil {
+					oo := new(Property)
+					if err := localDec.Decode(&oo); err != nil {
 						return err
 					}
+					s.Properties[key] = oo
 				}
 			}
 
@@ -775,7 +793,11 @@ func (s *BooleanProperty) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Similarity = &o
 
 		case "store":
@@ -802,6 +824,31 @@ func (s *BooleanProperty) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s BooleanProperty) MarshalJSON() ([]byte, error) {
+	type innerBooleanProperty BooleanProperty
+	tmp := innerBooleanProperty{
+		Boost:       s.Boost,
+		CopyTo:      s.CopyTo,
+		DocValues:   s.DocValues,
+		Dynamic:     s.Dynamic,
+		Fielddata:   s.Fielddata,
+		Fields:      s.Fields,
+		IgnoreAbove: s.IgnoreAbove,
+		Index:       s.Index,
+		Meta:        s.Meta,
+		NullValue:   s.NullValue,
+		Properties:  s.Properties,
+		Similarity:  s.Similarity,
+		Store:       s.Store,
+		Type:        s.Type,
+	}
+
+	tmp.Type = "boolean"
+
+	return json.Marshal(tmp)
+}
+
 // NewBooleanProperty returns a BooleanProperty.
 func NewBooleanProperty() *BooleanProperty {
 	r := &BooleanProperty{
@@ -809,8 +856,6 @@ func NewBooleanProperty() *BooleanProperty {
 		Meta:       make(map[string]string, 0),
 		Properties: make(map[string]Property, 0),
 	}
-
-	r.Type = "boolean"
 
 	return r
 }

@@ -70,7 +70,7 @@ func IterateWithWriterAndCallback(ctx context.Context, wr writer.Writer, iter_cb
 	err = wr.Close(ctx)
 
 	if err != nil {
-		return fmt.Errorf("Failed to close ES writer, %w", err)
+		return fmt.Errorf("Failed to close writer, %w", err)
 	}
 
 	return nil

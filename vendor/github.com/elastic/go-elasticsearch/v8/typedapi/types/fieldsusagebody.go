@@ -16,64 +16,21 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"fmt"
-
-	"bytes"
-	"errors"
-	"io"
-
 	"encoding/json"
+	"fmt"
 )
 
 // FieldsUsageBody type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/indices/field_usage_stats/IndicesFieldUsageStatsResponse.ts#L32-L36
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/indices/field_usage_stats/IndicesFieldUsageStatsResponse.ts#L32-L36
 type FieldsUsageBody struct {
 	FieldsUsageBody map[string]UsageStatsIndex `json:"-"`
 	Shards_         ShardStatistics            `json:"_shards"`
-}
-
-func (s *FieldsUsageBody) UnmarshalJSON(data []byte) error {
-
-	dec := json.NewDecoder(bytes.NewReader(data))
-
-	for {
-		t, err := dec.Token()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			return err
-		}
-
-		switch t {
-
-		case "_shards":
-			if err := dec.Decode(&s.Shards_); err != nil {
-				return err
-			}
-
-		default:
-
-			if key, ok := t.(string); ok {
-				if s.FieldsUsageBody == nil {
-					s.FieldsUsageBody = make(map[string]UsageStatsIndex, 0)
-				}
-				raw := NewUsageStatsIndex()
-				if err := dec.Decode(&raw); err != nil {
-					return err
-				}
-				s.FieldsUsageBody[key] = *raw
-			}
-
-		}
-	}
-	return nil
 }
 
 // MarhsalJSON overrides marshalling for types with additional properties

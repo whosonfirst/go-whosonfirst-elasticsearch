@@ -16,25 +16,22 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
-	"strings"
-
 	"strconv"
-
-	"encoding/json"
+	"strings"
 )
 
 // ResponseBody type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_global/search/SearchResponse.ts#L38-L54
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_global/search/SearchResponse.ts#L38-L54
 type ResponseBody struct {
 	Aggregations    map[string]Aggregate       `json:"aggregations,omitempty"`
 	Clusters_       *ClusterStatistics         `json:"_clusters,omitempty"`
@@ -488,6 +485,13 @@ func (s *ResponseBody) UnmarshalJSON(data []byte) error {
 								}
 								s.Aggregations[elems[1]] = o
 
+							case "frequent_item_sets":
+								o := NewFrequentItemSetsAggregate()
+								if err := dec.Decode(&o); err != nil {
+									return err
+								}
+								s.Aggregations[elems[1]] = o
+
 							case "scripted_metric":
 								o := NewScriptedMetricAggregate()
 								if err := dec.Decode(&o); err != nil {
@@ -658,8 +662,63 @@ func (s *ResponseBody) UnmarshalJSON(data []byte) error {
 			if s.Suggest == nil {
 				s.Suggest = make(map[string][]Suggest, 0)
 			}
-			if err := dec.Decode(&s.Suggest); err != nil {
-				return err
+
+			for dec.More() {
+				tt, err := dec.Token()
+				if err != nil {
+					if errors.Is(err, io.EOF) {
+						break
+					}
+					return err
+				}
+				if value, ok := tt.(string); ok {
+					if strings.Contains(value, "#") {
+						elems := strings.Split(value, "#")
+						if len(elems) == 2 {
+							if s.Suggest == nil {
+								s.Suggest = make(map[string][]Suggest, 0)
+							}
+							switch elems[0] {
+
+							case "completion":
+								o := NewCompletionSuggest()
+								if err := dec.Decode(&o); err != nil {
+									return err
+								}
+								s.Suggest[elems[1]] = append(s.Suggest[elems[1]], o)
+
+							case "phrase":
+								o := NewPhraseSuggest()
+								if err := dec.Decode(&o); err != nil {
+									return err
+								}
+								s.Suggest[elems[1]] = append(s.Suggest[elems[1]], o)
+
+							case "term":
+								o := NewTermSuggest()
+								if err := dec.Decode(&o); err != nil {
+									return err
+								}
+								s.Suggest[elems[1]] = append(s.Suggest[elems[1]], o)
+
+							default:
+								o := make(map[string]interface{}, 0)
+								if err := dec.Decode(&o); err != nil {
+									return err
+								}
+								s.Suggest[elems[1]] = append(s.Suggest[elems[1]], o)
+							}
+						} else {
+							return errors.New("cannot decode JSON for field Suggest")
+						}
+					} else {
+						o := make(map[string]interface{}, 0)
+						if err := dec.Decode(&o); err != nil {
+							return err
+						}
+						s.Suggest[value] = append(s.Suggest[value], o)
+					}
+				}
 			}
 
 		case "terminated_early":

@@ -16,29 +16,27 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // ElisionTokenFilter type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/token_filters.ts#L187-L192
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/token_filters.ts#L187-L192
 type ElisionTokenFilter struct {
-	Articles     []string `json:"articles,omitempty"`
-	ArticlesCase *bool    `json:"articles_case,omitempty"`
-	ArticlesPath *string  `json:"articles_path,omitempty"`
-	Type         string   `json:"type,omitempty"`
-	Version      *string  `json:"version,omitempty"`
+	Articles     []string           `json:"articles,omitempty"`
+	ArticlesCase Stringifiedboolean `json:"articles_case,omitempty"`
+	ArticlesPath *string            `json:"articles_path,omitempty"`
+	Type         string             `json:"type,omitempty"`
+	Version      *string            `json:"version,omitempty"`
 }
 
 func (s *ElisionTokenFilter) UnmarshalJSON(data []byte) error {
@@ -62,17 +60,8 @@ func (s *ElisionTokenFilter) UnmarshalJSON(data []byte) error {
 			}
 
 		case "articles_case":
-			var tmp interface{}
-			dec.Decode(&tmp)
-			switch v := tmp.(type) {
-			case string:
-				value, err := strconv.ParseBool(v)
-				if err != nil {
-					return err
-				}
-				s.ArticlesCase = &value
-			case bool:
-				s.ArticlesCase = &v
+			if err := dec.Decode(&s.ArticlesCase); err != nil {
+				return err
 			}
 
 		case "articles_path":
@@ -80,7 +69,11 @@ func (s *ElisionTokenFilter) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.ArticlesPath = &o
 
 		case "type":
@@ -98,11 +91,25 @@ func (s *ElisionTokenFilter) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s ElisionTokenFilter) MarshalJSON() ([]byte, error) {
+	type innerElisionTokenFilter ElisionTokenFilter
+	tmp := innerElisionTokenFilter{
+		Articles:     s.Articles,
+		ArticlesCase: s.ArticlesCase,
+		ArticlesPath: s.ArticlesPath,
+		Type:         s.Type,
+		Version:      s.Version,
+	}
+
+	tmp.Type = "elision"
+
+	return json.Marshal(tmp)
+}
+
 // NewElisionTokenFilter returns a ElisionTokenFilter.
 func NewElisionTokenFilter() *ElisionTokenFilter {
 	r := &ElisionTokenFilter{}
-
-	r.Type = "elision"
 
 	return r
 }

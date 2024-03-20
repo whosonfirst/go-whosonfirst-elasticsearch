@@ -16,7 +16,7 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Allows you to split an existing index into a new index with more primary
 // shards.
@@ -53,15 +53,20 @@ type Split struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
-
-	req *Request
 	raw io.Reader
+
+	req      *Request
+	deferred []func(request *Request) error
+	buf      *gobytes.Buffer
 
 	paramSet int
 
 	index  string
 	target string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewSplit type alias for index.
@@ -73,9 +78,9 @@ func NewSplitFunc(tp elastictransport.Interface) NewSplit {
 	return func(index, target string) *Split {
 		n := New(tp)
 
-		n.Index(index)
+		n._index(index)
 
-		n.Target(target)
+		n._target(target)
 
 		return n
 	}
@@ -84,13 +89,22 @@ func NewSplitFunc(tp elastictransport.Interface) NewSplit {
 // Allows you to split an existing index into a new index with more primary
 // shards.
 //
-// https://www.elastic.co/guide/en/elasticsearch/reference/master/indices-split-index.html
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-split-index.html
 func New(tp elastictransport.Interface) *Split {
 	r := &Split{
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+
+		buf: gobytes.NewBuffer(nil),
+
+		req: NewRequest(),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -120,9 +134,17 @@ func (r *Split) HttpRequest(ctx context.Context) (*http.Request, error) {
 
 	var err error
 
-	if r.raw != nil {
-		r.buf.ReadFrom(r.raw)
-	} else if r.req != nil {
+	if len(r.deferred) > 0 {
+		for _, f := range r.deferred {
+			deferredErr := f(r.req)
+			if deferredErr != nil {
+				return nil, deferredErr
+			}
+		}
+	}
+
+	if r.raw == nil && r.req != nil {
+
 		data, err := json.Marshal(r.req)
 
 		if err != nil {
@@ -130,6 +152,11 @@ func (r *Split) HttpRequest(ctx context.Context) (*http.Request, error) {
 		}
 
 		r.buf.Write(data)
+
+	}
+
+	if r.buf.Len() > 0 {
+		r.raw = r.buf
 	}
 
 	r.path.Scheme = "http"
@@ -138,11 +165,17 @@ func (r *Split) HttpRequest(ctx context.Context) (*http.Request, error) {
 	case r.paramSet == indexMask|targetMask:
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "index", r.index)
+		}
 		path.WriteString(r.index)
 		path.WriteString("/")
 		path.WriteString("_split")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "target", r.target)
+		}
 		path.WriteString(r.target)
 
 		method = http.MethodPut
@@ -156,15 +189,15 @@ func (r *Split) HttpRequest(ctx context.Context) (*http.Request, error) {
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
 
 	if req.Header.Get("Content-Type") == "" {
-		if r.buf.Len() > 0 {
+		if r.raw != nil {
 			req.Header.Set("Content-Type", "application/vnd.elasticsearch+json;compatible-with=8")
 		}
 	}
@@ -181,27 +214,66 @@ func (r *Split) HttpRequest(ctx context.Context) (*http.Request, error) {
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r Split) Perform(ctx context.Context) (*http.Response, error) {
+func (r Split) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "indices.split")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "indices.split")
+		if reader := instrument.RecordRequestBody(ctx, "indices.split", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "indices.split")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the Split query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the Split query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
 // Do runs the request through the transport, handle the response and returns a split.Response
-func (r Split) Do(ctx context.Context) (*Response, error) {
+func (r Split) Do(providedCtx context.Context) (*Response, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "indices.split")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
 
 	response := NewResponse()
 
 	res, err := r.Perform(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -209,6 +281,9 @@ func (r Split) Do(ctx context.Context) (*Response, error) {
 	if res.StatusCode < 299 {
 		err = json.NewDecoder(res.Body).Decode(response)
 		if err != nil {
+			if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+				instrument.RecordError(ctx, err)
+			}
 			return nil, err
 		}
 
@@ -218,9 +293,19 @@ func (r Split) Do(ctx context.Context) (*Response, error) {
 	errorResponse := types.NewElasticsearchError()
 	err = json.NewDecoder(res.Body).Decode(errorResponse)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if errorResponse.Status == 0 {
+		errorResponse.Status = res.StatusCode
+	}
+
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.RecordError(ctx, errorResponse)
+	}
 	return nil, errorResponse
 }
 
@@ -231,45 +316,69 @@ func (r *Split) Header(key, value string) *Split {
 	return r
 }
 
-// Index The name of the source index to split
+// Index Name of the source index to split.
 // API Name: index
-func (r *Split) Index(v string) *Split {
+func (r *Split) _index(index string) *Split {
 	r.paramSet |= indexMask
-	r.index = v
+	r.index = index
 
 	return r
 }
 
-// Target The name of the target index to split into
+// Target Name of the target index to create.
 // API Name: target
-func (r *Split) Target(v string) *Split {
+func (r *Split) _target(target string) *Split {
 	r.paramSet |= targetMask
-	r.target = v
+	r.target = target
 
 	return r
 }
 
-// MasterTimeout Specify timeout for connection to master
+// MasterTimeout Period to wait for a connection to the master node.
+// If no response is received before the timeout expires, the request fails and
+// returns an error.
 // API name: master_timeout
-func (r *Split) MasterTimeout(v string) *Split {
-	r.values.Set("master_timeout", v)
+func (r *Split) MasterTimeout(duration string) *Split {
+	r.values.Set("master_timeout", duration)
 
 	return r
 }
 
-// Timeout Explicit operation timeout
+// Timeout Period to wait for a response.
+// If no response is received before the timeout expires, the request fails and
+// returns an error.
 // API name: timeout
-func (r *Split) Timeout(v string) *Split {
-	r.values.Set("timeout", v)
+func (r *Split) Timeout(duration string) *Split {
+	r.values.Set("timeout", duration)
 
 	return r
 }
 
-// WaitForActiveShards Set the number of active shards to wait for on the shrunken index before the
-// operation returns.
+// WaitForActiveShards The number of shard copies that must be active before proceeding with the
+// operation.
+// Set to `all` or any positive integer up to the total number of shards in the
+// index (`number_of_replicas+1`).
 // API name: wait_for_active_shards
-func (r *Split) WaitForActiveShards(v string) *Split {
-	r.values.Set("wait_for_active_shards", v)
+func (r *Split) WaitForActiveShards(waitforactiveshards string) *Split {
+	r.values.Set("wait_for_active_shards", waitforactiveshards)
+
+	return r
+}
+
+// Aliases Aliases for the resulting index.
+// API name: aliases
+func (r *Split) Aliases(aliases map[string]types.Alias) *Split {
+
+	r.req.Aliases = aliases
+
+	return r
+}
+
+// Settings Configuration options for the target index.
+// API name: settings
+func (r *Split) Settings(settings map[string]json.RawMessage) *Split {
+
+	r.req.Settings = settings
 
 	return r
 }

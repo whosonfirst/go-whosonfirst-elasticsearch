@@ -16,29 +16,32 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // Scripting type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/nodes/_types/Stats.ts#L389-L395
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/nodes/_types/Stats.ts#L977-L995
 type Scripting struct {
-	CacheEvictions            *int64           `json:"cache_evictions,omitempty"`
-	CompilationLimitTriggered *int64           `json:"compilation_limit_triggered,omitempty"`
-	Compilations              *int64           `json:"compilations,omitempty"`
-	CompilationsHistory       map[string]int64 `json:"compilations_history,omitempty"`
-	Contexts                  []NodesContext   `json:"contexts,omitempty"`
+	// CacheEvictions Total number of times the script cache has evicted old data.
+	CacheEvictions *int64 `json:"cache_evictions,omitempty"`
+	// CompilationLimitTriggered Total number of times the script compilation circuit breaker has limited
+	// inline script compilations.
+	CompilationLimitTriggered *int64 `json:"compilation_limit_triggered,omitempty"`
+	// Compilations Total number of inline script compilations performed by the node.
+	Compilations *int64 `json:"compilations,omitempty"`
+	// CompilationsHistory Contains this recent history of script compilations.
+	CompilationsHistory map[string]int64 `json:"compilations_history,omitempty"`
+	Contexts            []NodesContext   `json:"contexts,omitempty"`
 }
 
 func (s *Scripting) UnmarshalJSON(data []byte) error {

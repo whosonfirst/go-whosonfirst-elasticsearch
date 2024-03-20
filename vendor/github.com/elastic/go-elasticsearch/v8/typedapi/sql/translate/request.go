@@ -16,25 +16,34 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package translate
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"strconv"
 
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
 )
 
 // Request holds the request body struct for the package translate
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/sql/translate/TranslateSqlRequest.ts#L25-L37
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/sql/translate/TranslateSqlRequest.ts#L25-L54
 type Request struct {
-	FetchSize *int         `json:"fetch_size,omitempty"`
-	Filter    *types.Query `json:"filter,omitempty"`
-	Query     string       `json:"query"`
-	TimeZone  *string      `json:"time_zone,omitempty"`
+
+	// FetchSize The maximum number of rows (or entries) to return in one response.
+	FetchSize *int `json:"fetch_size,omitempty"`
+	// Filter Elasticsearch query DSL for additional filtering.
+	Filter *types.Query `json:"filter,omitempty"`
+	// Query SQL query to run.
+	Query string `json:"query"`
+	// TimeZone ISO-8601 time zone ID for the search.
+	TimeZone *string `json:"time_zone,omitempty"`
 }
 
 // NewRequest returns a Request
@@ -53,4 +62,61 @@ func (r *Request) FromJSON(data string) (*Request, error) {
 	}
 
 	return &req, nil
+}
+
+func (s *Request) UnmarshalJSON(data []byte) error {
+	dec := json.NewDecoder(bytes.NewReader(data))
+
+	for {
+		t, err := dec.Token()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return err
+		}
+
+		switch t {
+
+		case "fetch_size":
+
+			var tmp interface{}
+			dec.Decode(&tmp)
+			switch v := tmp.(type) {
+			case string:
+				value, err := strconv.Atoi(v)
+				if err != nil {
+					return err
+				}
+				s.FetchSize = &value
+			case float64:
+				f := int(v)
+				s.FetchSize = &f
+			}
+
+		case "filter":
+			if err := dec.Decode(&s.Filter); err != nil {
+				return err
+			}
+
+		case "query":
+			var tmp json.RawMessage
+			if err := dec.Decode(&tmp); err != nil {
+				return err
+			}
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
+			s.Query = o
+
+		case "time_zone":
+			if err := dec.Decode(&s.TimeZone); err != nil {
+				return err
+			}
+
+		}
+	}
+	return nil
 }

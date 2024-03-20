@@ -16,27 +16,31 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // Http type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/nodes/_types/Stats.ts#L266-L270
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/nodes/_types/Stats.ts#L633-L647
 type Http struct {
-	Clients     []Client `json:"clients,omitempty"`
-	CurrentOpen *int     `json:"current_open,omitempty"`
-	TotalOpened *int64   `json:"total_opened,omitempty"`
+	// Clients Information on current and recently-closed HTTP client connections.
+	// Clients that have been closed longer than the
+	// `http.client_stats.closed_channels.max_age` setting will not be represented
+	// here.
+	Clients []Client `json:"clients,omitempty"`
+	// CurrentOpen Current number of open HTTP connections for the node.
+	CurrentOpen *int `json:"current_open,omitempty"`
+	// TotalOpened Total number of HTTP connections opened for the node.
+	TotalOpened *int64 `json:"total_opened,omitempty"`
 }
 
 func (s *Http) UnmarshalJSON(data []byte) error {

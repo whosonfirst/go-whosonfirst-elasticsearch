@@ -16,27 +16,28 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // GarbageCollectorTotal type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/nodes/_types/Stats.ts#L367-L371
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/nodes/_types/Stats.ts#L930-L943
 type GarbageCollectorTotal struct {
-	CollectionCount        *int64  `json:"collection_count,omitempty"`
-	CollectionTime         *string `json:"collection_time,omitempty"`
-	CollectionTimeInMillis *int64  `json:"collection_time_in_millis,omitempty"`
+	// CollectionCount Total number of JVM garbage collectors that collect objects.
+	CollectionCount *int64 `json:"collection_count,omitempty"`
+	// CollectionTime Total time spent by JVM collecting objects.
+	CollectionTime *string `json:"collection_time,omitempty"`
+	// CollectionTimeInMillis Total time, in milliseconds, spent by JVM collecting objects.
+	CollectionTimeInMillis *int64 `json:"collection_time_in_millis,omitempty"`
 }
 
 func (s *GarbageCollectorTotal) UnmarshalJSON(data []byte) error {
@@ -74,7 +75,11 @@ func (s *GarbageCollectorTotal) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.CollectionTime = &o
 
 		case "collection_time_in_millis":

@@ -1,8 +1,14 @@
-# github.com/Microsoft/go-winio v0.5.2
+# dario.cat/mergo v1.0.0
 ## explicit; go 1.13
+dario.cat/mergo
+# github.com/Microsoft/go-winio v0.6.1
+## explicit; go 1.17
 github.com/Microsoft/go-winio
+github.com/Microsoft/go-winio/internal/fs
+github.com/Microsoft/go-winio/internal/socket
+github.com/Microsoft/go-winio/internal/stringbuffer
 github.com/Microsoft/go-winio/pkg/guid
-# github.com/ProtonMail/go-crypto v0.0.0-20221026131551-cf6655e29de4
+# github.com/ProtonMail/go-crypto v0.0.0-20230828082145-3c4c8a2d2371
 ## explicit; go 1.13
 github.com/ProtonMail/go-crypto/bitcurves
 github.com/ProtonMail/go-crypto/brainpool
@@ -22,23 +28,17 @@ github.com/ProtonMail/go-crypto/openpgp/internal/ecc
 github.com/ProtonMail/go-crypto/openpgp/internal/encoding
 github.com/ProtonMail/go-crypto/openpgp/packet
 github.com/ProtonMail/go-crypto/openpgp/s2k
-# github.com/aaronland/go-aws-session v0.2.1
+# github.com/aaronland/go-aws-auth v1.3.1
 ## explicit; go 1.18
-github.com/aaronland/go-aws-session
+github.com/aaronland/go-aws-auth
 # github.com/aaronland/go-json-query v0.1.4
 ## explicit; go 1.18
 github.com/aaronland/go-json-query
 # github.com/aaronland/go-roster v1.0.0
 ## explicit; go 1.16
 github.com/aaronland/go-roster
-# github.com/aaronland/go-string v1.0.0
-## explicit; go 1.16
-github.com/aaronland/go-string/dsn
-# github.com/acomagu/bufpipe v1.0.3
-## explicit; go 1.12
-github.com/acomagu/bufpipe
-# github.com/aws/aws-sdk-go v1.44.314
-## explicit; go 1.11
+# github.com/aws/aws-sdk-go v1.49.0
+## explicit; go 1.19
 github.com/aws/aws-sdk-go/aws
 github.com/aws/aws-sdk-go/aws/auth/bearer
 github.com/aws/aws-sdk-go/aws/awserr
@@ -82,12 +82,12 @@ github.com/aws/aws-sdk-go/service/sso/ssoiface
 github.com/aws/aws-sdk-go/service/ssooidc
 github.com/aws/aws-sdk-go/service/sts
 github.com/aws/aws-sdk-go/service/sts/stsiface
-# github.com/aws/aws-sdk-go-v2 v1.20.0
-## explicit; go 1.15
-github.com/aws/aws-sdk-go-v2
+# github.com/aws/aws-sdk-go-v2 v1.24.1
+## explicit; go 1.19
 github.com/aws/aws-sdk-go-v2/aws
 github.com/aws/aws-sdk-go-v2/aws/defaults
 github.com/aws/aws-sdk-go-v2/aws/middleware
+github.com/aws/aws-sdk-go-v2/aws/middleware/private/metrics
 github.com/aws/aws-sdk-go-v2/aws/protocol/query
 github.com/aws/aws-sdk-go-v2/aws/protocol/restjson
 github.com/aws/aws-sdk-go-v2/aws/protocol/xml
@@ -97,6 +97,8 @@ github.com/aws/aws-sdk-go-v2/aws/signer/internal/v4
 github.com/aws/aws-sdk-go-v2/aws/signer/v4
 github.com/aws/aws-sdk-go-v2/aws/transport/http
 github.com/aws/aws-sdk-go-v2/internal/auth
+github.com/aws/aws-sdk-go-v2/internal/auth/smithy
+github.com/aws/aws-sdk-go-v2/internal/endpoints
 github.com/aws/aws-sdk-go-v2/internal/endpoints/awsrulesfn
 github.com/aws/aws-sdk-go-v2/internal/rand
 github.com/aws/aws-sdk-go-v2/internal/sdk
@@ -105,11 +107,11 @@ github.com/aws/aws-sdk-go-v2/internal/shareddefaults
 github.com/aws/aws-sdk-go-v2/internal/strings
 github.com/aws/aws-sdk-go-v2/internal/sync/singleflight
 github.com/aws/aws-sdk-go-v2/internal/timeconv
-# github.com/aws/aws-sdk-go-v2/config v1.18.32
-## explicit; go 1.15
+# github.com/aws/aws-sdk-go-v2/config v1.26.6
+## explicit; go 1.19
 github.com/aws/aws-sdk-go-v2/config
-# github.com/aws/aws-sdk-go-v2/credentials v1.13.31
-## explicit; go 1.15
+# github.com/aws/aws-sdk-go-v2/credentials v1.16.16
+## explicit; go 1.19
 github.com/aws/aws-sdk-go-v2/credentials
 github.com/aws/aws-sdk-go-v2/credentials/ec2rolecreds
 github.com/aws/aws-sdk-go-v2/credentials/endpointcreds
@@ -117,45 +119,59 @@ github.com/aws/aws-sdk-go-v2/credentials/endpointcreds/internal/client
 github.com/aws/aws-sdk-go-v2/credentials/processcreds
 github.com/aws/aws-sdk-go-v2/credentials/ssocreds
 github.com/aws/aws-sdk-go-v2/credentials/stscreds
-# github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.13.7
-## explicit; go 1.15
+# github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.14.11
+## explicit; go 1.19
 github.com/aws/aws-sdk-go-v2/feature/ec2/imds
 github.com/aws/aws-sdk-go-v2/feature/ec2/imds/internal/config
-# github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.37
-## explicit; go 1.15
+# github.com/aws/aws-sdk-go-v2/internal/configsources v1.2.10
+## explicit; go 1.19
 github.com/aws/aws-sdk-go-v2/internal/configsources
-# github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.31
-## explicit; go 1.15
+# github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.5.10
+## explicit; go 1.19
 github.com/aws/aws-sdk-go-v2/internal/endpoints/v2
-# github.com/aws/aws-sdk-go-v2/internal/ini v1.3.38
-## explicit; go 1.15
+# github.com/aws/aws-sdk-go-v2/internal/ini v1.7.3
+## explicit; go 1.19
 github.com/aws/aws-sdk-go-v2/internal/ini
-# github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.31
-## explicit; go 1.15
+# github.com/aws/aws-sdk-go-v2/service/cognitoidentity v1.21.7
+## explicit; go 1.19
+github.com/aws/aws-sdk-go-v2/service/cognitoidentity
+github.com/aws/aws-sdk-go-v2/service/cognitoidentity/internal/endpoints
+github.com/aws/aws-sdk-go-v2/service/cognitoidentity/types
+# github.com/aws/aws-sdk-go-v2/service/iam v1.28.7
+## explicit; go 1.19
+github.com/aws/aws-sdk-go-v2/service/iam
+github.com/aws/aws-sdk-go-v2/service/iam/internal/endpoints
+github.com/aws/aws-sdk-go-v2/service/iam/types
+# github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.10.4
+## explicit; go 1.19
+github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding
+# github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.10.10
+## explicit; go 1.19
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url
-# github.com/aws/aws-sdk-go-v2/service/ssm v1.37.1
-## explicit; go 1.15
+# github.com/aws/aws-sdk-go-v2/service/ssm v1.45.0
+## explicit; go 1.19
 github.com/aws/aws-sdk-go-v2/service/ssm
 github.com/aws/aws-sdk-go-v2/service/ssm/internal/endpoints
 github.com/aws/aws-sdk-go-v2/service/ssm/types
-# github.com/aws/aws-sdk-go-v2/service/sso v1.13.1
-## explicit; go 1.15
+# github.com/aws/aws-sdk-go-v2/service/sso v1.18.7
+## explicit; go 1.19
 github.com/aws/aws-sdk-go-v2/service/sso
 github.com/aws/aws-sdk-go-v2/service/sso/internal/endpoints
 github.com/aws/aws-sdk-go-v2/service/sso/types
-# github.com/aws/aws-sdk-go-v2/service/ssooidc v1.15.1
-## explicit; go 1.15
+# github.com/aws/aws-sdk-go-v2/service/ssooidc v1.21.7
+## explicit; go 1.19
 github.com/aws/aws-sdk-go-v2/service/ssooidc
 github.com/aws/aws-sdk-go-v2/service/ssooidc/internal/endpoints
 github.com/aws/aws-sdk-go-v2/service/ssooidc/types
-# github.com/aws/aws-sdk-go-v2/service/sts v1.21.1
-## explicit; go 1.15
+# github.com/aws/aws-sdk-go-v2/service/sts v1.26.7
+## explicit; go 1.19
 github.com/aws/aws-sdk-go-v2/service/sts
 github.com/aws/aws-sdk-go-v2/service/sts/internal/endpoints
 github.com/aws/aws-sdk-go-v2/service/sts/types
-# github.com/aws/smithy-go v1.14.0
-## explicit; go 1.15
+# github.com/aws/smithy-go v1.19.0
+## explicit; go 1.19
 github.com/aws/smithy-go
+github.com/aws/smithy-go/auth
 github.com/aws/smithy-go/auth/bearer
 github.com/aws/smithy-go/context
 github.com/aws/smithy-go/document
@@ -168,6 +184,7 @@ github.com/aws/smithy-go/internal/sync/singleflight
 github.com/aws/smithy-go/io
 github.com/aws/smithy-go/logging
 github.com/aws/smithy-go/middleware
+github.com/aws/smithy-go/private/requestcompression
 github.com/aws/smithy-go/ptr
 github.com/aws/smithy-go/rand
 github.com/aws/smithy-go/time
@@ -177,8 +194,8 @@ github.com/aws/smithy-go/waiter
 # github.com/cenkalti/backoff/v4 v4.2.1
 ## explicit; go 1.18
 github.com/cenkalti/backoff/v4
-# github.com/cloudflare/circl v1.1.0
-## explicit; go 1.15
+# github.com/cloudflare/circl v1.3.3
+## explicit; go 1.19
 github.com/cloudflare/circl/dh/x25519
 github.com/cloudflare/circl/dh/x448
 github.com/cloudflare/circl/ecc/goldilocks
@@ -191,23 +208,26 @@ github.com/cloudflare/circl/math/mlsbset
 github.com/cloudflare/circl/sign
 github.com/cloudflare/circl/sign/ed25519
 github.com/cloudflare/circl/sign/ed448
-# github.com/dominikbraun/graph v0.16.1
+# github.com/cyphar/filepath-securejoin v0.2.4
+## explicit; go 1.13
+github.com/cyphar/filepath-securejoin
+# github.com/dominikbraun/graph v0.23.0
 ## explicit; go 1.18
 github.com/dominikbraun/graph
 github.com/dominikbraun/graph/draw
-# github.com/elastic/elastic-transport-go/v8 v8.2.0
-## explicit; go 1.13
+# github.com/elastic/elastic-transport-go/v8 v8.4.0
+## explicit; go 1.20
 github.com/elastic/elastic-transport-go/v8/elastictransport
 github.com/elastic/elastic-transport-go/v8/elastictransport/version
-# github.com/elastic/go-elasticsearch/v7 v7.13.0
+# github.com/elastic/go-elasticsearch/v7 v7.17.10
 ## explicit; go 1.11
 github.com/elastic/go-elasticsearch/v7
 github.com/elastic/go-elasticsearch/v7/esapi
 github.com/elastic/go-elasticsearch/v7/estransport
 github.com/elastic/go-elasticsearch/v7/esutil
 github.com/elastic/go-elasticsearch/v7/internal/version
-# github.com/elastic/go-elasticsearch/v8 v8.7.1
-## explicit; go 1.13
+# github.com/elastic/go-elasticsearch/v8 v8.12.1
+## explicit; go 1.20
 github.com/elastic/go-elasticsearch/v8
 github.com/elastic/go-elasticsearch/v8/esapi
 github.com/elastic/go-elasticsearch/v8/esutil
@@ -267,6 +287,7 @@ github.com/elastic/go-elasticsearch/v8/typedapi/cluster/existscomponenttemplate
 github.com/elastic/go-elasticsearch/v8/typedapi/cluster/getcomponenttemplate
 github.com/elastic/go-elasticsearch/v8/typedapi/cluster/getsettings
 github.com/elastic/go-elasticsearch/v8/typedapi/cluster/health
+github.com/elastic/go-elasticsearch/v8/typedapi/cluster/info
 github.com/elastic/go-elasticsearch/v8/typedapi/cluster/pendingtasks
 github.com/elastic/go-elasticsearch/v8/typedapi/cluster/postvotingconfigexclusions
 github.com/elastic/go-elasticsearch/v8/typedapi/cluster/putcomponenttemplate
@@ -275,6 +296,7 @@ github.com/elastic/go-elasticsearch/v8/typedapi/cluster/remoteinfo
 github.com/elastic/go-elasticsearch/v8/typedapi/cluster/reroute
 github.com/elastic/go-elasticsearch/v8/typedapi/cluster/state
 github.com/elastic/go-elasticsearch/v8/typedapi/cluster/stats
+github.com/elastic/go-elasticsearch/v8/typedapi/core/bulk
 github.com/elastic/go-elasticsearch/v8/typedapi/core/clearscroll
 github.com/elastic/go-elasticsearch/v8/typedapi/core/closepointintime
 github.com/elastic/go-elasticsearch/v8/typedapi/core/count
@@ -297,6 +319,8 @@ github.com/elastic/go-elasticsearch/v8/typedapi/core/index
 github.com/elastic/go-elasticsearch/v8/typedapi/core/info
 github.com/elastic/go-elasticsearch/v8/typedapi/core/knnsearch
 github.com/elastic/go-elasticsearch/v8/typedapi/core/mget
+github.com/elastic/go-elasticsearch/v8/typedapi/core/msearch
+github.com/elastic/go-elasticsearch/v8/typedapi/core/msearchtemplate
 github.com/elastic/go-elasticsearch/v8/typedapi/core/mtermvectors
 github.com/elastic/go-elasticsearch/v8/typedapi/core/openpointintime
 github.com/elastic/go-elasticsearch/v8/typedapi/core/ping
@@ -328,9 +352,12 @@ github.com/elastic/go-elasticsearch/v8/typedapi/eql/delete
 github.com/elastic/go-elasticsearch/v8/typedapi/eql/get
 github.com/elastic/go-elasticsearch/v8/typedapi/eql/getstatus
 github.com/elastic/go-elasticsearch/v8/typedapi/eql/search
+github.com/elastic/go-elasticsearch/v8/typedapi/esql/query
 github.com/elastic/go-elasticsearch/v8/typedapi/features/getfeatures
 github.com/elastic/go-elasticsearch/v8/typedapi/features/resetfeatures
 github.com/elastic/go-elasticsearch/v8/typedapi/fleet/globalcheckpoints
+github.com/elastic/go-elasticsearch/v8/typedapi/fleet/msearch
+github.com/elastic/go-elasticsearch/v8/typedapi/fleet/postsecret
 github.com/elastic/go-elasticsearch/v8/typedapi/fleet/search
 github.com/elastic/go-elasticsearch/v8/typedapi/graph/explore
 github.com/elastic/go-elasticsearch/v8/typedapi/ilm/deletelifecycle
@@ -354,6 +381,7 @@ github.com/elastic/go-elasticsearch/v8/typedapi/indices/createdatastream
 github.com/elastic/go-elasticsearch/v8/typedapi/indices/datastreamsstats
 github.com/elastic/go-elasticsearch/v8/typedapi/indices/delete
 github.com/elastic/go-elasticsearch/v8/typedapi/indices/deletealias
+github.com/elastic/go-elasticsearch/v8/typedapi/indices/deletedatalifecycle
 github.com/elastic/go-elasticsearch/v8/typedapi/indices/deletedatastream
 github.com/elastic/go-elasticsearch/v8/typedapi/indices/deleteindextemplate
 github.com/elastic/go-elasticsearch/v8/typedapi/indices/deletetemplate
@@ -363,11 +391,13 @@ github.com/elastic/go-elasticsearch/v8/typedapi/indices/exists
 github.com/elastic/go-elasticsearch/v8/typedapi/indices/existsalias
 github.com/elastic/go-elasticsearch/v8/typedapi/indices/existsindextemplate
 github.com/elastic/go-elasticsearch/v8/typedapi/indices/existstemplate
+github.com/elastic/go-elasticsearch/v8/typedapi/indices/explaindatalifecycle
 github.com/elastic/go-elasticsearch/v8/typedapi/indices/fieldusagestats
 github.com/elastic/go-elasticsearch/v8/typedapi/indices/flush
 github.com/elastic/go-elasticsearch/v8/typedapi/indices/forcemerge
 github.com/elastic/go-elasticsearch/v8/typedapi/indices/get
 github.com/elastic/go-elasticsearch/v8/typedapi/indices/getalias
+github.com/elastic/go-elasticsearch/v8/typedapi/indices/getdatalifecycle
 github.com/elastic/go-elasticsearch/v8/typedapi/indices/getdatastream
 github.com/elastic/go-elasticsearch/v8/typedapi/indices/getfieldmapping
 github.com/elastic/go-elasticsearch/v8/typedapi/indices/getindextemplate
@@ -379,6 +409,7 @@ github.com/elastic/go-elasticsearch/v8/typedapi/indices/modifydatastream
 github.com/elastic/go-elasticsearch/v8/typedapi/indices/open
 github.com/elastic/go-elasticsearch/v8/typedapi/indices/promotedatastream
 github.com/elastic/go-elasticsearch/v8/typedapi/indices/putalias
+github.com/elastic/go-elasticsearch/v8/typedapi/indices/putdatalifecycle
 github.com/elastic/go-elasticsearch/v8/typedapi/indices/putindextemplate
 github.com/elastic/go-elasticsearch/v8/typedapi/indices/putmapping
 github.com/elastic/go-elasticsearch/v8/typedapi/indices/putsettings
@@ -398,6 +429,10 @@ github.com/elastic/go-elasticsearch/v8/typedapi/indices/stats
 github.com/elastic/go-elasticsearch/v8/typedapi/indices/unfreeze
 github.com/elastic/go-elasticsearch/v8/typedapi/indices/updatealiases
 github.com/elastic/go-elasticsearch/v8/typedapi/indices/validatequery
+github.com/elastic/go-elasticsearch/v8/typedapi/inference/deletemodel
+github.com/elastic/go-elasticsearch/v8/typedapi/inference/getmodel
+github.com/elastic/go-elasticsearch/v8/typedapi/inference/inference
+github.com/elastic/go-elasticsearch/v8/typedapi/inference/putmodel
 github.com/elastic/go-elasticsearch/v8/typedapi/ingest/deletepipeline
 github.com/elastic/go-elasticsearch/v8/typedapi/ingest/geoipstats
 github.com/elastic/go-elasticsearch/v8/typedapi/ingest/getpipeline
@@ -459,6 +494,7 @@ github.com/elastic/go-elasticsearch/v8/typedapi/ml/infertrainedmodel
 github.com/elastic/go-elasticsearch/v8/typedapi/ml/info
 github.com/elastic/go-elasticsearch/v8/typedapi/ml/openjob
 github.com/elastic/go-elasticsearch/v8/typedapi/ml/postcalendarevents
+github.com/elastic/go-elasticsearch/v8/typedapi/ml/postdata
 github.com/elastic/go-elasticsearch/v8/typedapi/ml/previewdatafeed
 github.com/elastic/go-elasticsearch/v8/typedapi/ml/previewdataframeanalytics
 github.com/elastic/go-elasticsearch/v8/typedapi/ml/putcalendar
@@ -488,6 +524,7 @@ github.com/elastic/go-elasticsearch/v8/typedapi/ml/updatemodelsnapshot
 github.com/elastic/go-elasticsearch/v8/typedapi/ml/upgradejobsnapshot
 github.com/elastic/go-elasticsearch/v8/typedapi/ml/validate
 github.com/elastic/go-elasticsearch/v8/typedapi/ml/validatedetector
+github.com/elastic/go-elasticsearch/v8/typedapi/monitoring/bulk
 github.com/elastic/go-elasticsearch/v8/typedapi/nodes/clearrepositoriesmeteringarchive
 github.com/elastic/go-elasticsearch/v8/typedapi/nodes/getrepositoriesmeteringinfo
 github.com/elastic/go-elasticsearch/v8/typedapi/nodes/hotthreads
@@ -495,6 +532,10 @@ github.com/elastic/go-elasticsearch/v8/typedapi/nodes/info
 github.com/elastic/go-elasticsearch/v8/typedapi/nodes/reloadsecuresettings
 github.com/elastic/go-elasticsearch/v8/typedapi/nodes/stats
 github.com/elastic/go-elasticsearch/v8/typedapi/nodes/usage
+github.com/elastic/go-elasticsearch/v8/typedapi/queryruleset/delete
+github.com/elastic/go-elasticsearch/v8/typedapi/queryruleset/get
+github.com/elastic/go-elasticsearch/v8/typedapi/queryruleset/list
+github.com/elastic/go-elasticsearch/v8/typedapi/queryruleset/put
 github.com/elastic/go-elasticsearch/v8/typedapi/rollup/deletejob
 github.com/elastic/go-elasticsearch/v8/typedapi/rollup/getjobs
 github.com/elastic/go-elasticsearch/v8/typedapi/rollup/getrollupcaps
@@ -507,6 +548,14 @@ github.com/elastic/go-elasticsearch/v8/typedapi/searchablesnapshots/cachestats
 github.com/elastic/go-elasticsearch/v8/typedapi/searchablesnapshots/clearcache
 github.com/elastic/go-elasticsearch/v8/typedapi/searchablesnapshots/mount
 github.com/elastic/go-elasticsearch/v8/typedapi/searchablesnapshots/stats
+github.com/elastic/go-elasticsearch/v8/typedapi/searchapplication/delete
+github.com/elastic/go-elasticsearch/v8/typedapi/searchapplication/deletebehavioralanalytics
+github.com/elastic/go-elasticsearch/v8/typedapi/searchapplication/get
+github.com/elastic/go-elasticsearch/v8/typedapi/searchapplication/getbehavioralanalytics
+github.com/elastic/go-elasticsearch/v8/typedapi/searchapplication/list
+github.com/elastic/go-elasticsearch/v8/typedapi/searchapplication/put
+github.com/elastic/go-elasticsearch/v8/typedapi/searchapplication/putbehavioralanalytics
+github.com/elastic/go-elasticsearch/v8/typedapi/searchapplication/search
 github.com/elastic/go-elasticsearch/v8/typedapi/security/activateuserprofile
 github.com/elastic/go-elasticsearch/v8/typedapi/security/authenticate
 github.com/elastic/go-elasticsearch/v8/typedapi/security/bulkupdateapikeys
@@ -517,6 +566,7 @@ github.com/elastic/go-elasticsearch/v8/typedapi/security/clearcachedrealms
 github.com/elastic/go-elasticsearch/v8/typedapi/security/clearcachedroles
 github.com/elastic/go-elasticsearch/v8/typedapi/security/clearcachedservicetokens
 github.com/elastic/go-elasticsearch/v8/typedapi/security/createapikey
+github.com/elastic/go-elasticsearch/v8/typedapi/security/createcrossclusterapikey
 github.com/elastic/go-elasticsearch/v8/typedapi/security/createservicetoken
 github.com/elastic/go-elasticsearch/v8/typedapi/security/deleteprivileges
 github.com/elastic/go-elasticsearch/v8/typedapi/security/deleterole
@@ -536,6 +586,7 @@ github.com/elastic/go-elasticsearch/v8/typedapi/security/getrole
 github.com/elastic/go-elasticsearch/v8/typedapi/security/getrolemapping
 github.com/elastic/go-elasticsearch/v8/typedapi/security/getserviceaccounts
 github.com/elastic/go-elasticsearch/v8/typedapi/security/getservicecredentials
+github.com/elastic/go-elasticsearch/v8/typedapi/security/getsettings
 github.com/elastic/go-elasticsearch/v8/typedapi/security/gettoken
 github.com/elastic/go-elasticsearch/v8/typedapi/security/getuser
 github.com/elastic/go-elasticsearch/v8/typedapi/security/getuserprivileges
@@ -561,6 +612,7 @@ github.com/elastic/go-elasticsearch/v8/typedapi/security/samlprepareauthenticati
 github.com/elastic/go-elasticsearch/v8/typedapi/security/samlserviceprovidermetadata
 github.com/elastic/go-elasticsearch/v8/typedapi/security/suggestuserprofiles
 github.com/elastic/go-elasticsearch/v8/typedapi/security/updateapikey
+github.com/elastic/go-elasticsearch/v8/typedapi/security/updatesettings
 github.com/elastic/go-elasticsearch/v8/typedapi/security/updateuserprofiledata
 github.com/elastic/go-elasticsearch/v8/typedapi/shutdown/deletenode
 github.com/elastic/go-elasticsearch/v8/typedapi/shutdown/getnode
@@ -592,9 +644,17 @@ github.com/elastic/go-elasticsearch/v8/typedapi/sql/getasyncstatus
 github.com/elastic/go-elasticsearch/v8/typedapi/sql/query
 github.com/elastic/go-elasticsearch/v8/typedapi/sql/translate
 github.com/elastic/go-elasticsearch/v8/typedapi/ssl/certificates
+github.com/elastic/go-elasticsearch/v8/typedapi/synonyms/deletesynonym
+github.com/elastic/go-elasticsearch/v8/typedapi/synonyms/deletesynonymrule
+github.com/elastic/go-elasticsearch/v8/typedapi/synonyms/getsynonym
+github.com/elastic/go-elasticsearch/v8/typedapi/synonyms/getsynonymrule
+github.com/elastic/go-elasticsearch/v8/typedapi/synonyms/getsynonymssets
+github.com/elastic/go-elasticsearch/v8/typedapi/synonyms/putsynonym
+github.com/elastic/go-elasticsearch/v8/typedapi/synonyms/putsynonymrule
 github.com/elastic/go-elasticsearch/v8/typedapi/tasks/cancel
 github.com/elastic/go-elasticsearch/v8/typedapi/tasks/get
 github.com/elastic/go-elasticsearch/v8/typedapi/tasks/list
+github.com/elastic/go-elasticsearch/v8/typedapi/textstructure/findstructure
 github.com/elastic/go-elasticsearch/v8/typedapi/transform/deletetransform
 github.com/elastic/go-elasticsearch/v8/typedapi/transform/gettransform
 github.com/elastic/go-elasticsearch/v8/typedapi/transform/gettransformstats
@@ -627,7 +687,9 @@ github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/cattrainedmodelscolu
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/cattransformcolumn
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/childscoremode
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/chunkingmode
+github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/clusterinfotarget
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/clusterprivilege
+github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/clustersearchstatus
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/combinedfieldsoperator
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/combinedfieldszeroterms
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/conditionop
@@ -715,6 +777,7 @@ github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/level
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/licensestatus
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/licensetype
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/lifecycleoperationmode
+github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/managedby
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/matchtype
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/memorystatus
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/metric
@@ -729,6 +792,7 @@ github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/normalization
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/normalizemethod
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/numericfielddataformat
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/onscripterror
+github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/operationtype
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/operator
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/optype
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/pagerdutycontexttype
@@ -739,6 +803,8 @@ github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/phoneticnametype
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/phoneticruletype
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/policytype
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/quantifier
+github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/queryrulecriteriatype
+github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/queryruletype
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/rangerelation
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/ratemode
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/refresh
@@ -760,9 +826,9 @@ github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/shapetype
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/shardroutingstate
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/shardsstatsstage
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/shardstoreallocation
+github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/shardstorestatus
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/shutdownstatus
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/shutdowntype
-github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/simplequerystringflag
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/snapshotsort
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/snapshotupgradestate
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/snowballlanguage
@@ -775,6 +841,7 @@ github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/stringdistance
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/suggestmode
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/suggestsort
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/synonymformat
+github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/tasktype
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/templateformat
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/termsaggregationcollectmode
 github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/termsaggregationexecutionhint
@@ -803,12 +870,14 @@ github.com/elastic/go-elasticsearch/v8/typedapi/watcher/activatewatch
 github.com/elastic/go-elasticsearch/v8/typedapi/watcher/deactivatewatch
 github.com/elastic/go-elasticsearch/v8/typedapi/watcher/deletewatch
 github.com/elastic/go-elasticsearch/v8/typedapi/watcher/executewatch
+github.com/elastic/go-elasticsearch/v8/typedapi/watcher/getsettings
 github.com/elastic/go-elasticsearch/v8/typedapi/watcher/getwatch
 github.com/elastic/go-elasticsearch/v8/typedapi/watcher/putwatch
 github.com/elastic/go-elasticsearch/v8/typedapi/watcher/querywatches
 github.com/elastic/go-elasticsearch/v8/typedapi/watcher/start
 github.com/elastic/go-elasticsearch/v8/typedapi/watcher/stats
 github.com/elastic/go-elasticsearch/v8/typedapi/watcher/stop
+github.com/elastic/go-elasticsearch/v8/typedapi/watcher/updatesettings
 github.com/elastic/go-elasticsearch/v8/typedapi/xpack/info
 github.com/elastic/go-elasticsearch/v8/typedapi/xpack/usage
 # github.com/emirpasic/gods v1.18.1
@@ -821,30 +890,31 @@ github.com/emirpasic/gods/trees/binaryheap
 github.com/emirpasic/gods/utils
 # github.com/fortytw2/leaktest v1.3.0
 ## explicit
-# github.com/fsnotify/fsnotify v1.6.0
-## explicit; go 1.16
+# github.com/fsnotify/fsnotify v1.7.0
+## explicit; go 1.17
 github.com/fsnotify/fsnotify
 # github.com/g8rswimmer/error-chain v1.0.0
 ## explicit
 github.com/g8rswimmer/error-chain
-# github.com/go-git/gcfg v1.5.0
-## explicit
+# github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376
+## explicit; go 1.13
 github.com/go-git/gcfg
 github.com/go-git/gcfg/scanner
 github.com/go-git/gcfg/token
 github.com/go-git/gcfg/types
-# github.com/go-git/go-billy/v5 v5.4.0
-## explicit; go 1.13
+# github.com/go-git/go-billy/v5 v5.5.0
+## explicit; go 1.19
 github.com/go-git/go-billy/v5
 github.com/go-git/go-billy/v5/helper/chroot
 github.com/go-git/go-billy/v5/helper/polyfill
 github.com/go-git/go-billy/v5/memfs
 github.com/go-git/go-billy/v5/osfs
 github.com/go-git/go-billy/v5/util
-# github.com/go-git/go-git/v5 v5.5.2
-## explicit; go 1.13
+# github.com/go-git/go-git/v5 v5.11.0
+## explicit; go 1.19
 github.com/go-git/go-git/v5
 github.com/go-git/go-git/v5/config
+github.com/go-git/go-git/v5/internal/path_util
 github.com/go-git/go-git/v5/internal/revision
 github.com/go-git/go-git/v5/internal/url
 github.com/go-git/go-git/v5/plumbing
@@ -887,6 +957,17 @@ github.com/go-git/go-git/v5/utils/merkletrie/index
 github.com/go-git/go-git/v5/utils/merkletrie/internal/frame
 github.com/go-git/go-git/v5/utils/merkletrie/noder
 github.com/go-git/go-git/v5/utils/sync
+github.com/go-git/go-git/v5/utils/trace
+# github.com/go-ini/ini v1.67.0
+## explicit
+github.com/go-ini/ini
+# github.com/go-logr/logr v1.3.0
+## explicit; go 1.18
+github.com/go-logr/logr
+github.com/go-logr/logr/funcr
+# github.com/go-logr/stdr v1.2.2
+## explicit; go 1.16
+github.com/go-logr/stdr
 # github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
 ## explicit
 github.com/golang/groupcache/lru
@@ -914,9 +995,6 @@ github.com/googleapis/gax-go/v2/apierror
 github.com/googleapis/gax-go/v2/apierror/internal/proto
 github.com/googleapis/gax-go/v2/callctx
 github.com/googleapis/gax-go/v2/internal
-# github.com/imdario/mergo v0.3.13
-## explicit; go 1.13
-github.com/imdario/mergo
 # github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99
 ## explicit
 github.com/jbenet/go-context/io
@@ -929,13 +1007,13 @@ github.com/kevinburke/ssh_config
 # github.com/natefinch/atomic v1.0.1
 ## explicit; go 1.12
 github.com/natefinch/atomic
-# github.com/paulmach/orb v0.8.0
+# github.com/paulmach/orb v0.10.0
 ## explicit; go 1.15
 github.com/paulmach/orb
-# github.com/pjbgf/sha1cd v0.2.3
-## explicit; go 1.15
+# github.com/pjbgf/sha1cd v0.3.0
+## explicit; go 1.19
 github.com/pjbgf/sha1cd
-github.com/pjbgf/sha1cd/cgo
+github.com/pjbgf/sha1cd/internal
 github.com/pjbgf/sha1cd/ubc
 # github.com/sergi/go-diff v1.1.0
 ## explicit; go 1.12
@@ -962,13 +1040,13 @@ github.com/sfomuseum/go-timings
 # github.com/sfomuseum/iso8601duration v1.1.0
 ## explicit; go 1.18
 github.com/sfomuseum/iso8601duration
-# github.com/sfomuseum/runtimevar v1.1.2
+# github.com/sfomuseum/runtimevar v1.2.0
 ## explicit; go 1.18
 github.com/sfomuseum/runtimevar
-# github.com/skeema/knownhosts v1.1.0
+# github.com/skeema/knownhosts v1.2.1
 ## explicit; go 1.17
 github.com/skeema/knownhosts
-# github.com/tidwall/gjson v1.16.0
+# github.com/tidwall/gjson v1.17.1
 ## explicit; go 1.12
 github.com/tidwall/gjson
 # github.com/tidwall/match v1.1.1
@@ -986,18 +1064,18 @@ github.com/whosonfirst/go-ioutil
 # github.com/whosonfirst/go-whosonfirst-crawl v0.2.2
 ## explicit; go 1.18
 github.com/whosonfirst/go-whosonfirst-crawl
-# github.com/whosonfirst/go-whosonfirst-feature v0.0.26
+# github.com/whosonfirst/go-whosonfirst-feature v0.0.27
 ## explicit; go 1.18
 github.com/whosonfirst/go-whosonfirst-feature/properties
-# github.com/whosonfirst/go-whosonfirst-flags v0.4.4
-## explicit; go 1.16
+# github.com/whosonfirst/go-whosonfirst-flags v0.5.1
+## explicit; go 1.18
 github.com/whosonfirst/go-whosonfirst-flags
 github.com/whosonfirst/go-whosonfirst-flags/existential
 # github.com/whosonfirst/go-whosonfirst-github v0.5.4
 ## explicit; go 1.18
 github.com/whosonfirst/go-whosonfirst-github/organizations
 github.com/whosonfirst/go-whosonfirst-github/util
-# github.com/whosonfirst/go-whosonfirst-iterate-git/v2 v2.1.3
+# github.com/whosonfirst/go-whosonfirst-iterate-git/v2 v2.1.4
 ## explicit; go 1.18
 github.com/whosonfirst/go-whosonfirst-iterate-git/v2
 # github.com/whosonfirst/go-whosonfirst-iterate-organization v1.1.1
@@ -1008,11 +1086,11 @@ github.com/whosonfirst/go-whosonfirst-iterate-organization
 github.com/whosonfirst/go-whosonfirst-iterate/v2/emitter
 github.com/whosonfirst/go-whosonfirst-iterate/v2/filters
 github.com/whosonfirst/go-whosonfirst-iterate/v2/iterator
-# github.com/whosonfirst/go-whosonfirst-iterwriter v0.0.13
+# github.com/whosonfirst/go-whosonfirst-iterwriter v0.0.17
 ## explicit; go 1.18
 github.com/whosonfirst/go-whosonfirst-iterwriter
 github.com/whosonfirst/go-whosonfirst-iterwriter/application/iterwriter
-# github.com/whosonfirst/go-whosonfirst-placetypes v0.7.0
+# github.com/whosonfirst/go-whosonfirst-placetypes v0.7.1
 ## explicit; go 1.18
 github.com/whosonfirst/go-whosonfirst-placetypes
 # github.com/whosonfirst/go-whosonfirst-sources v0.1.0
@@ -1048,7 +1126,26 @@ go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/propagation
 go.opencensus.io/trace/tracestate
-# gocloud.dev v0.34.0
+# go.opentelemetry.io/otel v1.21.0
+## explicit; go 1.20
+go.opentelemetry.io/otel
+go.opentelemetry.io/otel/attribute
+go.opentelemetry.io/otel/baggage
+go.opentelemetry.io/otel/codes
+go.opentelemetry.io/otel/internal
+go.opentelemetry.io/otel/internal/attribute
+go.opentelemetry.io/otel/internal/baggage
+go.opentelemetry.io/otel/internal/global
+go.opentelemetry.io/otel/propagation
+# go.opentelemetry.io/otel/metric v1.21.0
+## explicit; go 1.20
+go.opentelemetry.io/otel/metric
+go.opentelemetry.io/otel/metric/embedded
+# go.opentelemetry.io/otel/trace v1.21.0
+## explicit; go 1.20
+go.opentelemetry.io/otel/trace
+go.opentelemetry.io/otel/trace/embedded
+# gocloud.dev v0.36.0
 ## explicit; go 1.20
 gocloud.dev/aws
 gocloud.dev/gcerrors
@@ -1063,14 +1160,16 @@ gocloud.dev/runtimevar/driver
 gocloud.dev/runtimevar/filevar
 gocloud.dev/secrets
 gocloud.dev/secrets/driver
-# golang.org/x/crypto v0.11.0
-## explicit; go 1.17
+# golang.org/x/crypto v0.17.0
+## explicit; go 1.18
+golang.org/x/crypto/argon2
+golang.org/x/crypto/blake2b
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
 golang.org/x/crypto/chacha20
 golang.org/x/crypto/curve25519
 golang.org/x/crypto/curve25519/internal/field
-golang.org/x/crypto/ed25519
+golang.org/x/crypto/hkdf
 golang.org/x/crypto/internal/alias
 golang.org/x/crypto/internal/poly1305
 golang.org/x/crypto/openpgp
@@ -1079,12 +1178,16 @@ golang.org/x/crypto/openpgp/elgamal
 golang.org/x/crypto/openpgp/errors
 golang.org/x/crypto/openpgp/packet
 golang.org/x/crypto/openpgp/s2k
+golang.org/x/crypto/sha3
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/agent
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
 golang.org/x/crypto/ssh/knownhosts
-# golang.org/x/net v0.13.0
+# golang.org/x/mod v0.12.0
 ## explicit; go 1.17
+golang.org/x/mod/semver
+# golang.org/x/net v0.19.0
+## explicit; go 1.18
 golang.org/x/net/context
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2
@@ -1094,32 +1197,50 @@ golang.org/x/net/internal/socks
 golang.org/x/net/internal/timeseries
 golang.org/x/net/proxy
 golang.org/x/net/trace
-# golang.org/x/oauth2 v0.10.0
-## explicit; go 1.17
+# golang.org/x/oauth2 v0.14.0
+## explicit; go 1.18
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
-# golang.org/x/sys v0.10.0
-## explicit; go 1.17
+# golang.org/x/sys v0.15.0
+## explicit; go 1.18
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
-golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/text v0.11.0
-## explicit; go 1.17
+# golang.org/x/text v0.14.0
+## explicit; go 1.18
 golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
-# golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2
-## explicit; go 1.17
+# golang.org/x/tools v0.13.0
+## explicit; go 1.18
+golang.org/x/tools/cmd/stringer
+golang.org/x/tools/go/gcexportdata
+golang.org/x/tools/go/internal/packagesdriver
+golang.org/x/tools/go/packages
+golang.org/x/tools/go/types/objectpath
+golang.org/x/tools/internal/event
+golang.org/x/tools/internal/event/core
+golang.org/x/tools/internal/event/keys
+golang.org/x/tools/internal/event/label
+golang.org/x/tools/internal/event/tag
+golang.org/x/tools/internal/gcimporter
+golang.org/x/tools/internal/gocommand
+golang.org/x/tools/internal/packagesinternal
+golang.org/x/tools/internal/pkgbits
+golang.org/x/tools/internal/tokeninternal
+golang.org/x/tools/internal/typeparams
+golang.org/x/tools/internal/typesinternal
+# golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028
+## explicit; go 1.18
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
-# google.golang.org/api v0.134.0
+# google.golang.org/api v0.151.0
 ## explicit; go 1.19
 google.golang.org/api/googleapi
 google.golang.org/api/internal/third_party/uritemplates
-# google.golang.org/appengine v1.6.7
+# google.golang.org/appengine v1.6.8
 ## explicit; go 1.11
 google.golang.org/appengine/internal
 google.golang.org/appengine/internal/base
@@ -1128,13 +1249,13 @@ google.golang.org/appengine/internal/log
 google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto/googleapis/rpc v0.0.0-20230731193218-e0aa005b6bdf
+# google.golang.org/genproto/googleapis/rpc v0.0.0-20231120223509-83a465c0220f
 ## explicit; go 1.19
 google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/rpc/errdetails
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.57.0
-## explicit; go 1.17
+# google.golang.org/grpc v1.59.0
+## explicit; go 1.19
 google.golang.org/grpc
 google.golang.org/grpc/attributes
 google.golang.org/grpc/backoff
@@ -1164,6 +1285,7 @@ google.golang.org/grpc/internal/grpclog
 google.golang.org/grpc/internal/grpcrand
 google.golang.org/grpc/internal/grpcsync
 google.golang.org/grpc/internal/grpcutil
+google.golang.org/grpc/internal/idle
 google.golang.org/grpc/internal/metadata
 google.golang.org/grpc/internal/pretty
 google.golang.org/grpc/internal/resolver

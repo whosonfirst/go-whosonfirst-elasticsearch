@@ -16,21 +16,13 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
-import (
-	"bytes"
-	"errors"
-	"io"
-
-	"encoding/json"
-)
-
 // ClusterNodes type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/cluster/stats/types.ts#L201-L228
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/cluster/stats/types.ts#L369-L402
 type ClusterNodes struct {
 	// Count Contains counts for nodes selected by the request’s node filters.
 	Count ClusterNodeCount `json:"count"`
@@ -52,94 +44,12 @@ type ClusterNodes struct {
 	// nodes.
 	PackagingTypes []NodePackagingType `json:"packaging_types"`
 	// Plugins Contains statistics about installed plugins and modules by selected nodes.
+	// If no plugins or modules are installed, this array is empty.
 	Plugins []PluginStats `json:"plugins"`
 	// Process Contains statistics about processes used by selected nodes.
 	Process ClusterProcess `json:"process"`
 	// Versions Array of Elasticsearch versions used on selected nodes.
 	Versions []string `json:"versions"`
-}
-
-func (s *ClusterNodes) UnmarshalJSON(data []byte) error {
-
-	dec := json.NewDecoder(bytes.NewReader(data))
-
-	for {
-		t, err := dec.Token()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			return err
-		}
-
-		switch t {
-
-		case "count":
-			if err := dec.Decode(&s.Count); err != nil {
-				return err
-			}
-
-		case "discovery_types":
-			if s.DiscoveryTypes == nil {
-				s.DiscoveryTypes = make(map[string]int, 0)
-			}
-			if err := dec.Decode(&s.DiscoveryTypes); err != nil {
-				return err
-			}
-
-		case "fs":
-			if err := dec.Decode(&s.Fs); err != nil {
-				return err
-			}
-
-		case "indexing_pressure":
-			if err := dec.Decode(&s.IndexingPressure); err != nil {
-				return err
-			}
-
-		case "ingest":
-			if err := dec.Decode(&s.Ingest); err != nil {
-				return err
-			}
-
-		case "jvm":
-			if err := dec.Decode(&s.Jvm); err != nil {
-				return err
-			}
-
-		case "network_types":
-			if err := dec.Decode(&s.NetworkTypes); err != nil {
-				return err
-			}
-
-		case "os":
-			if err := dec.Decode(&s.Os); err != nil {
-				return err
-			}
-
-		case "packaging_types":
-			if err := dec.Decode(&s.PackagingTypes); err != nil {
-				return err
-			}
-
-		case "plugins":
-			if err := dec.Decode(&s.Plugins); err != nil {
-				return err
-			}
-
-		case "process":
-			if err := dec.Decode(&s.Process); err != nil {
-				return err
-			}
-
-		case "versions":
-			if err := dec.Decode(&s.Versions); err != nil {
-				return err
-			}
-
-		}
-	}
-	return nil
 }
 
 // NewClusterNodes returns a ClusterNodes.

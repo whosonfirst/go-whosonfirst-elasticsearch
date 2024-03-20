@@ -16,54 +16,95 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/operator"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/textquerytype"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
 
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/operator"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/textquerytype"
 )
 
 // QueryStringQuery type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/query_dsl/fulltext.ts#L233-L269
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/query_dsl/fulltext.ts#L580-L700
 type QueryStringQuery struct {
-	AllowLeadingWildcard            *bool                        `json:"allow_leading_wildcard,omitempty"`
-	AnalyzeWildcard                 *bool                        `json:"analyze_wildcard,omitempty"`
-	Analyzer                        *string                      `json:"analyzer,omitempty"`
-	AutoGenerateSynonymsPhraseQuery *bool                        `json:"auto_generate_synonyms_phrase_query,omitempty"`
-	Boost                           *float32                     `json:"boost,omitempty"`
-	DefaultField                    *string                      `json:"default_field,omitempty"`
-	DefaultOperator                 *operator.Operator           `json:"default_operator,omitempty"`
-	EnablePositionIncrements        *bool                        `json:"enable_position_increments,omitempty"`
-	Escape                          *bool                        `json:"escape,omitempty"`
-	Fields                          []string                     `json:"fields,omitempty"`
-	Fuzziness                       Fuzziness                    `json:"fuzziness,omitempty"`
-	FuzzyMaxExpansions              *int                         `json:"fuzzy_max_expansions,omitempty"`
-	FuzzyPrefixLength               *int                         `json:"fuzzy_prefix_length,omitempty"`
-	FuzzyRewrite                    *string                      `json:"fuzzy_rewrite,omitempty"`
-	FuzzyTranspositions             *bool                        `json:"fuzzy_transpositions,omitempty"`
-	Lenient                         *bool                        `json:"lenient,omitempty"`
-	MaxDeterminizedStates           *int                         `json:"max_determinized_states,omitempty"`
-	MinimumShouldMatch              MinimumShouldMatch           `json:"minimum_should_match,omitempty"`
-	PhraseSlop                      *Float64                     `json:"phrase_slop,omitempty"`
-	Query                           string                       `json:"query"`
-	QueryName_                      *string                      `json:"_name,omitempty"`
-	QuoteAnalyzer                   *string                      `json:"quote_analyzer,omitempty"`
-	QuoteFieldSuffix                *string                      `json:"quote_field_suffix,omitempty"`
-	Rewrite                         *string                      `json:"rewrite,omitempty"`
-	TieBreaker                      *Float64                     `json:"tie_breaker,omitempty"`
-	TimeZone                        *string                      `json:"time_zone,omitempty"`
-	Type                            *textquerytype.TextQueryType `json:"type,omitempty"`
+	// AllowLeadingWildcard If `true`, the wildcard characters `*` and `?` are allowed as the first
+	// character of the query string.
+	AllowLeadingWildcard *bool `json:"allow_leading_wildcard,omitempty"`
+	// AnalyzeWildcard If `true`, the query attempts to analyze wildcard terms in the query string.
+	AnalyzeWildcard *bool `json:"analyze_wildcard,omitempty"`
+	// Analyzer Analyzer used to convert text in the query string into tokens.
+	Analyzer *string `json:"analyzer,omitempty"`
+	// AutoGenerateSynonymsPhraseQuery If `true`, match phrase queries are automatically created for multi-term
+	// synonyms.
+	AutoGenerateSynonymsPhraseQuery *bool `json:"auto_generate_synonyms_phrase_query,omitempty"`
+	// Boost Floating point number used to decrease or increase the relevance scores of
+	// the query.
+	// Boost values are relative to the default value of 1.0.
+	// A boost value between 0 and 1.0 decreases the relevance score.
+	// A value greater than 1.0 increases the relevance score.
+	Boost *float32 `json:"boost,omitempty"`
+	// DefaultField Default field to search if no field is provided in the query string.
+	// Supports wildcards (`*`).
+	// Defaults to the `index.query.default_field` index setting, which has a
+	// default value of `*`.
+	DefaultField *string `json:"default_field,omitempty"`
+	// DefaultOperator Default boolean logic used to interpret text in the query string if no
+	// operators are specified.
+	DefaultOperator *operator.Operator `json:"default_operator,omitempty"`
+	// EnablePositionIncrements If `true`, enable position increments in queries constructed from a
+	// `query_string` search.
+	EnablePositionIncrements *bool `json:"enable_position_increments,omitempty"`
+	Escape                   *bool `json:"escape,omitempty"`
+	// Fields Array of fields to search. Supports wildcards (`*`).
+	Fields []string `json:"fields,omitempty"`
+	// Fuzziness Maximum edit distance allowed for fuzzy matching.
+	Fuzziness Fuzziness `json:"fuzziness,omitempty"`
+	// FuzzyMaxExpansions Maximum number of terms to which the query expands for fuzzy matching.
+	FuzzyMaxExpansions *int `json:"fuzzy_max_expansions,omitempty"`
+	// FuzzyPrefixLength Number of beginning characters left unchanged for fuzzy matching.
+	FuzzyPrefixLength *int `json:"fuzzy_prefix_length,omitempty"`
+	// FuzzyRewrite Method used to rewrite the query.
+	FuzzyRewrite *string `json:"fuzzy_rewrite,omitempty"`
+	// FuzzyTranspositions If `true`, edits for fuzzy matching include transpositions of two adjacent
+	// characters (for example, `ab` to `ba`).
+	FuzzyTranspositions *bool `json:"fuzzy_transpositions,omitempty"`
+	// Lenient If `true`, format-based errors, such as providing a text value for a numeric
+	// field, are ignored.
+	Lenient *bool `json:"lenient,omitempty"`
+	// MaxDeterminizedStates Maximum number of automaton states required for the query.
+	MaxDeterminizedStates *int `json:"max_determinized_states,omitempty"`
+	// MinimumShouldMatch Minimum number of clauses that must match for a document to be returned.
+	MinimumShouldMatch MinimumShouldMatch `json:"minimum_should_match,omitempty"`
+	// PhraseSlop Maximum number of positions allowed between matching tokens for phrases.
+	PhraseSlop *Float64 `json:"phrase_slop,omitempty"`
+	// Query Query string you wish to parse and use for search.
+	Query      string  `json:"query"`
+	QueryName_ *string `json:"_name,omitempty"`
+	// QuoteAnalyzer Analyzer used to convert quoted text in the query string into tokens.
+	// For quoted text, this parameter overrides the analyzer specified in the
+	// `analyzer` parameter.
+	QuoteAnalyzer *string `json:"quote_analyzer,omitempty"`
+	// QuoteFieldSuffix Suffix appended to quoted text in the query string.
+	// You can use this suffix to use a different analysis method for exact matches.
+	QuoteFieldSuffix *string `json:"quote_field_suffix,omitempty"`
+	// Rewrite Method used to rewrite the query.
+	Rewrite *string `json:"rewrite,omitempty"`
+	// TieBreaker How to combine the queries generated from the individual search terms in the
+	// resulting `dis_max` query.
+	TieBreaker *Float64 `json:"tie_breaker,omitempty"`
+	// TimeZone Coordinated Universal Time (UTC) offset or IANA time zone used to convert
+	// date values in the query string to UTC.
+	TimeZone *string `json:"time_zone,omitempty"`
+	// Type Determines how the query matches and scores documents.
+	Type *textquerytype.TextQueryType `json:"type,omitempty"`
 }
 
 func (s *QueryStringQuery) UnmarshalJSON(data []byte) error {
@@ -114,7 +155,11 @@ func (s *QueryStringQuery) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Analyzer = &o
 
 		case "auto_generate_synonyms_phrase_query":
@@ -302,7 +347,11 @@ func (s *QueryStringQuery) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Query = o
 
 		case "_name":
@@ -310,7 +359,11 @@ func (s *QueryStringQuery) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.QueryName_ = &o
 
 		case "quote_analyzer":
@@ -318,7 +371,11 @@ func (s *QueryStringQuery) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.QuoteAnalyzer = &o
 
 		case "quote_field_suffix":
@@ -326,7 +383,11 @@ func (s *QueryStringQuery) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.QuoteFieldSuffix = &o
 
 		case "rewrite":

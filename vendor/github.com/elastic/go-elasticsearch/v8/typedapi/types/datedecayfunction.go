@@ -16,63 +16,25 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/multivaluemode"
-
+	"encoding/json"
 	"fmt"
 
-	"bytes"
-	"errors"
-	"io"
-
-	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/multivaluemode"
 )
 
 // DateDecayFunction type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/query_dsl/compound.ts#L92-L94
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/query_dsl/compound.ts#L186-L188
 type DateDecayFunction struct {
 	DateDecayFunction map[string]DecayPlacementDateMathDuration `json:"DateDecayFunction,omitempty"`
-	MultiValueMode    *multivaluemode.MultiValueMode            `json:"multi_value_mode,omitempty"`
-}
-
-func (s *DateDecayFunction) UnmarshalJSON(data []byte) error {
-
-	dec := json.NewDecoder(bytes.NewReader(data))
-
-	for {
-		t, err := dec.Token()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			return err
-		}
-
-		switch t {
-
-		case "DateDecayFunction":
-			if s.DateDecayFunction == nil {
-				s.DateDecayFunction = make(map[string]DecayPlacementDateMathDuration, 0)
-			}
-			if err := dec.Decode(&s.DateDecayFunction); err != nil {
-				return err
-			}
-
-		case "multi_value_mode":
-			if err := dec.Decode(&s.MultiValueMode); err != nil {
-				return err
-			}
-
-		default:
-
-		}
-	}
-	return nil
+	// MultiValueMode Determines how the distance is calculated when a field used for computing the
+	// decay contains multiple values.
+	MultiValueMode *multivaluemode.MultiValueMode `json:"multi_value_mode,omitempty"`
 }
 
 // MarhsalJSON overrides marshalling for types with additional properties

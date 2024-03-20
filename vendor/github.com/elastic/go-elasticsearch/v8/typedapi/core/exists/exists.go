@@ -16,13 +16,12 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 // Returns information about whether a document exists in an index.
 package exists
 
 import (
-	gobytes "bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -34,7 +33,6 @@ import (
 	"strings"
 
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
-
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/versiontype"
 )
 
@@ -54,12 +52,16 @@ type Exists struct {
 	values  url.Values
 	path    url.URL
 
-	buf *gobytes.Buffer
+	raw io.Reader
 
 	paramSet int
 
 	id    string
 	index string
+
+	spanStarted bool
+
+	instrument elastictransport.Instrumentation
 }
 
 // NewExists type alias for index.
@@ -71,9 +73,9 @@ func NewExistsFunc(tp elastictransport.Interface) NewExists {
 	return func(index, id string) *Exists {
 		n := New(tp)
 
-		n.Id(id)
+		n._id(id)
 
-		n.Index(index)
+		n._index(index)
 
 		return n
 	}
@@ -81,13 +83,18 @@ func NewExistsFunc(tp elastictransport.Interface) NewExists {
 
 // Returns information about whether a document exists in an index.
 //
-// https://www.elastic.co/guide/en/elasticsearch/reference/master/docs-get.html
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-get.html
 func New(tp elastictransport.Interface) *Exists {
 	r := &Exists{
 		transport: tp,
 		values:    make(url.Values),
 		headers:   make(http.Header),
-		buf:       gobytes.NewBuffer(nil),
+	}
+
+	if instrumented, ok := r.transport.(elastictransport.Instrumented); ok {
+		if instrument := instrumented.InstrumentationEnabled(); instrument != nil {
+			r.instrument = instrument
+		}
 	}
 
 	return r
@@ -108,11 +115,17 @@ func (r *Exists) HttpRequest(ctx context.Context) (*http.Request, error) {
 	case r.paramSet == indexMask|idMask:
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "index", r.index)
+		}
 		path.WriteString(r.index)
 		path.WriteString("/")
 		path.WriteString("_doc")
 		path.WriteString("/")
 
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordPathPart(ctx, "id", r.id)
+		}
 		path.WriteString(r.id)
 
 		method = http.MethodHead
@@ -126,9 +139,9 @@ func (r *Exists) HttpRequest(ctx context.Context) (*http.Request, error) {
 	}
 
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.buf)
+		req, err = http.NewRequestWithContext(ctx, method, r.path.String(), r.raw)
 	} else {
-		req, err = http.NewRequest(method, r.path.String(), r.buf)
+		req, err = http.NewRequest(method, r.path.String(), r.raw)
 	}
 
 	req.Header = r.headers.Clone()
@@ -145,23 +158,65 @@ func (r *Exists) HttpRequest(ctx context.Context) (*http.Request, error) {
 }
 
 // Perform runs the http.Request through the provided transport and returns an http.Response.
-func (r Exists) Perform(ctx context.Context) (*http.Response, error) {
+func (r Exists) Perform(providedCtx context.Context) (*http.Response, error) {
+	var ctx context.Context
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		if r.spanStarted == false {
+			ctx := instrument.Start(providedCtx, "exists")
+			defer instrument.Close(ctx)
+		}
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	req, err := r.HttpRequest(ctx)
 	if err != nil {
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
 		return nil, err
 	}
 
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.BeforeRequest(req, "exists")
+		if reader := instrument.RecordRequestBody(ctx, "exists", r.raw); reader != nil {
+			req.Body = reader
+		}
+	}
 	res, err := r.transport.Perform(req)
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		instrument.AfterRequest(req, "elasticsearch", "exists")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("an error happened during the Exists query execution: %w", err)
+		localErr := fmt.Errorf("an error happened during the Exists query execution: %w", err)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, localErr)
+		}
+		return nil, localErr
 	}
 
 	return res, nil
 }
 
+// Do runs the request through the transport, handle the response and returns a exists.Response
+func (r Exists) Do(ctx context.Context) (bool, error) {
+	return r.IsSuccess(ctx)
+}
+
 // IsSuccess allows to run a query with a context and retrieve the result as a boolean.
 // This only exists for endpoints without a request payload and allows for quick control flow.
-func (r Exists) IsSuccess(ctx context.Context) (bool, error) {
+func (r Exists) IsSuccess(providedCtx context.Context) (bool, error) {
+	var ctx context.Context
+	r.spanStarted = true
+	if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+		ctx = instrument.Start(providedCtx, "exists")
+		defer instrument.Close(ctx)
+	}
+	if ctx == nil {
+		ctx = providedCtx
+	}
+
 	res, err := r.Perform(ctx)
 
 	if err != nil {
@@ -177,6 +232,14 @@ func (r Exists) IsSuccess(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
+	if res.StatusCode != 404 {
+		err := fmt.Errorf("an error happened during the Exists query execution, status code: %d", res.StatusCode)
+		if instrument, ok := r.instrument.(elastictransport.Instrumentation); ok {
+			instrument.RecordError(ctx, err)
+		}
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -187,102 +250,108 @@ func (r *Exists) Header(key, value string) *Exists {
 	return r
 }
 
-// Id The document ID
+// Id Identifier of the document.
 // API Name: id
-func (r *Exists) Id(v string) *Exists {
+func (r *Exists) _id(id string) *Exists {
 	r.paramSet |= idMask
-	r.id = v
+	r.id = id
 
 	return r
 }
 
-// Index The name of the index
+// Index Comma-separated list of data streams, indices, and aliases.
+// Supports wildcards (`*`).
 // API Name: index
-func (r *Exists) Index(v string) *Exists {
+func (r *Exists) _index(index string) *Exists {
 	r.paramSet |= indexMask
-	r.index = v
+	r.index = index
 
 	return r
 }
 
-// Preference Specify the node or shard the operation should be performed on (default:
-// random)
+// Preference Specifies the node or shard the operation should be performed on.
+// Random by default.
 // API name: preference
-func (r *Exists) Preference(v string) *Exists {
-	r.values.Set("preference", v)
+func (r *Exists) Preference(preference string) *Exists {
+	r.values.Set("preference", preference)
 
 	return r
 }
 
-// Realtime Specify whether to perform the operation in realtime or search mode
+// Realtime If `true`, the request is real-time as opposed to near-real-time.
 // API name: realtime
-func (r *Exists) Realtime(b bool) *Exists {
-	r.values.Set("realtime", strconv.FormatBool(b))
+func (r *Exists) Realtime(realtime bool) *Exists {
+	r.values.Set("realtime", strconv.FormatBool(realtime))
 
 	return r
 }
 
-// Refresh Refresh the shard containing the document before performing the operation
+// Refresh If `true`, Elasticsearch refreshes all shards involved in the delete by query
+// after the request completes.
 // API name: refresh
-func (r *Exists) Refresh(b bool) *Exists {
-	r.values.Set("refresh", strconv.FormatBool(b))
+func (r *Exists) Refresh(refresh bool) *Exists {
+	r.values.Set("refresh", strconv.FormatBool(refresh))
 
 	return r
 }
 
-// Routing Specific routing value
+// Routing Target the specified primary shard.
 // API name: routing
-func (r *Exists) Routing(v string) *Exists {
-	r.values.Set("routing", v)
+func (r *Exists) Routing(routing string) *Exists {
+	r.values.Set("routing", routing)
 
 	return r
 }
 
-// Source_ True or false to return the _source field or not, or a list of fields to
-// return
+// Source_ `true` or `false` to return the `_source` field or not, or a list of fields
+// to return.
 // API name: _source
-func (r *Exists) Source_(v string) *Exists {
-	r.values.Set("_source", v)
+func (r *Exists) Source_(sourceconfigparam string) *Exists {
+	r.values.Set("_source", sourceconfigparam)
 
 	return r
 }
 
-// SourceExcludes_ A list of fields to exclude from the returned _source field
+// SourceExcludes_ A comma-separated list of source fields to exclude in the response.
 // API name: _source_excludes
-func (r *Exists) SourceExcludes_(v string) *Exists {
-	r.values.Set("_source_excludes", v)
+func (r *Exists) SourceExcludes_(fields ...string) *Exists {
+	r.values.Set("_source_excludes", strings.Join(fields, ","))
 
 	return r
 }
 
-// SourceIncludes_ A list of fields to extract and return from the _source field
+// SourceIncludes_ A comma-separated list of source fields to include in the response.
 // API name: _source_includes
-func (r *Exists) SourceIncludes_(v string) *Exists {
-	r.values.Set("_source_includes", v)
+func (r *Exists) SourceIncludes_(fields ...string) *Exists {
+	r.values.Set("_source_includes", strings.Join(fields, ","))
 
 	return r
 }
 
-// StoredFields A comma-separated list of stored fields to return in the response
+// StoredFields List of stored fields to return as part of a hit.
+// If no fields are specified, no stored fields are included in the response.
+// If this field is specified, the `_source` parameter defaults to false.
 // API name: stored_fields
-func (r *Exists) StoredFields(v string) *Exists {
-	r.values.Set("stored_fields", v)
+func (r *Exists) StoredFields(fields ...string) *Exists {
+	r.values.Set("stored_fields", strings.Join(fields, ","))
 
 	return r
 }
 
-// Version Explicit version number for concurrency control
+// Version Explicit version number for concurrency control.
+// The specified version must match the current version of the document for the
+// request to succeed.
 // API name: version
-func (r *Exists) Version(v string) *Exists {
-	r.values.Set("version", v)
+func (r *Exists) Version(versionnumber string) *Exists {
+	r.values.Set("version", versionnumber)
 
 	return r
 }
 
-// VersionType Specific version type
+// VersionType Specific version type: `external`, `external_gte`.
 // API name: version_type
-func (r *Exists) VersionType(enum versiontype.VersionType) *Exists {
-	r.values.Set("version_type", enum.String())
+func (r *Exists) VersionType(versiontype versiontype.VersionType) *Exists {
+	r.values.Set("version_type", versiontype.String())
 
 	return r
 }

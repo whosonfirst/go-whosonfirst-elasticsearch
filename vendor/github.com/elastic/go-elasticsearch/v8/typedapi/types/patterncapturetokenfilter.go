@@ -16,28 +16,25 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
-	"strconv"
-
-	"encoding/json"
 )
 
 // PatternCaptureTokenFilter type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/analysis/token_filters.ts#L278-L282
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/analysis/token_filters.ts#L278-L282
 type PatternCaptureTokenFilter struct {
-	Patterns         []string `json:"patterns"`
-	PreserveOriginal *bool    `json:"preserve_original,omitempty"`
-	Type             string   `json:"type,omitempty"`
-	Version          *string  `json:"version,omitempty"`
+	Patterns         []string           `json:"patterns"`
+	PreserveOriginal Stringifiedboolean `json:"preserve_original,omitempty"`
+	Type             string             `json:"type,omitempty"`
+	Version          *string            `json:"version,omitempty"`
 }
 
 func (s *PatternCaptureTokenFilter) UnmarshalJSON(data []byte) error {
@@ -61,17 +58,8 @@ func (s *PatternCaptureTokenFilter) UnmarshalJSON(data []byte) error {
 			}
 
 		case "preserve_original":
-			var tmp interface{}
-			dec.Decode(&tmp)
-			switch v := tmp.(type) {
-			case string:
-				value, err := strconv.ParseBool(v)
-				if err != nil {
-					return err
-				}
-				s.PreserveOriginal = &value
-			case bool:
-				s.PreserveOriginal = &v
+			if err := dec.Decode(&s.PreserveOriginal); err != nil {
+				return err
 			}
 
 		case "type":
@@ -89,11 +77,24 @@ func (s *PatternCaptureTokenFilter) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON override marshalling to include literal value
+func (s PatternCaptureTokenFilter) MarshalJSON() ([]byte, error) {
+	type innerPatternCaptureTokenFilter PatternCaptureTokenFilter
+	tmp := innerPatternCaptureTokenFilter{
+		Patterns:         s.Patterns,
+		PreserveOriginal: s.PreserveOriginal,
+		Type:             s.Type,
+		Version:          s.Version,
+	}
+
+	tmp.Type = "pattern_capture"
+
+	return json.Marshal(tmp)
+}
+
 // NewPatternCaptureTokenFilter returns a PatternCaptureTokenFilter.
 func NewPatternCaptureTokenFilter() *PatternCaptureTokenFilter {
 	r := &PatternCaptureTokenFilter{}
-
-	r.Type = "pattern_capture"
 
 	return r
 }

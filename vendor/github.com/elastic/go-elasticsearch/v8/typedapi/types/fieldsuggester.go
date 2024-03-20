@@ -16,20 +16,107 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
+import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"io"
+	"strconv"
+)
+
 // FieldSuggester type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_global/search/_types/suggester.ts#L106-L120
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_global/search/_types/suggester.ts#L106-L139
 type FieldSuggester struct {
+	// Completion Provides auto-complete/search-as-you-type functionality.
 	Completion *CompletionSuggester `json:"completion,omitempty"`
-	Phrase     *PhraseSuggester     `json:"phrase,omitempty"`
-	Prefix     *string              `json:"prefix,omitempty"`
-	Regex      *string              `json:"regex,omitempty"`
-	Term       *TermSuggester       `json:"term,omitempty"`
-	Text       *string              `json:"text,omitempty"`
+	// Phrase Provides access to word alternatives on a per token basis within a certain
+	// string distance.
+	Phrase *PhraseSuggester `json:"phrase,omitempty"`
+	// Prefix Prefix used to search for suggestions.
+	Prefix *string `json:"prefix,omitempty"`
+	// Regex A prefix expressed as a regular expression.
+	Regex *string `json:"regex,omitempty"`
+	// Term Suggests terms based on edit distance.
+	Term *TermSuggester `json:"term,omitempty"`
+	// Text The text to use as input for the suggester.
+	// Needs to be set globally or per suggestion.
+	Text *string `json:"text,omitempty"`
+}
+
+func (s *FieldSuggester) UnmarshalJSON(data []byte) error {
+
+	dec := json.NewDecoder(bytes.NewReader(data))
+
+	for {
+		t, err := dec.Token()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return err
+		}
+
+		switch t {
+
+		case "completion":
+			if err := dec.Decode(&s.Completion); err != nil {
+				return err
+			}
+
+		case "phrase":
+			if err := dec.Decode(&s.Phrase); err != nil {
+				return err
+			}
+
+		case "prefix":
+			var tmp json.RawMessage
+			if err := dec.Decode(&tmp); err != nil {
+				return err
+			}
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
+			s.Prefix = &o
+
+		case "regex":
+			var tmp json.RawMessage
+			if err := dec.Decode(&tmp); err != nil {
+				return err
+			}
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
+			s.Regex = &o
+
+		case "term":
+			if err := dec.Decode(&s.Term); err != nil {
+				return err
+			}
+
+		case "text":
+			var tmp json.RawMessage
+			if err := dec.Decode(&tmp); err != nil {
+				return err
+			}
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
+			s.Text = &o
+
+		}
+	}
+	return nil
 }
 
 // NewFieldSuggester returns a FieldSuggester.

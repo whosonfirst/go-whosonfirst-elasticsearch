@@ -16,29 +16,32 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // NodeBufferPool type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/nodes/_types/Stats.ts#L316-L322
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/nodes/_types/Stats.ts#L788-L809
 type NodeBufferPool struct {
-	Count                *int64  `json:"count,omitempty"`
-	TotalCapacity        *string `json:"total_capacity,omitempty"`
-	TotalCapacityInBytes *int64  `json:"total_capacity_in_bytes,omitempty"`
-	Used                 *string `json:"used,omitempty"`
-	UsedInBytes          *int64  `json:"used_in_bytes,omitempty"`
+	// Count Number of buffer pools.
+	Count *int64 `json:"count,omitempty"`
+	// TotalCapacity Total capacity of buffer pools.
+	TotalCapacity *string `json:"total_capacity,omitempty"`
+	// TotalCapacityInBytes Total capacity of buffer pools in bytes.
+	TotalCapacityInBytes *int64 `json:"total_capacity_in_bytes,omitempty"`
+	// Used Size of buffer pools.
+	Used *string `json:"used,omitempty"`
+	// UsedInBytes Size of buffer pools in bytes.
+	UsedInBytes *int64 `json:"used_in_bytes,omitempty"`
 }
 
 func (s *NodeBufferPool) UnmarshalJSON(data []byte) error {
@@ -76,7 +79,11 @@ func (s *NodeBufferPool) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.TotalCapacity = &o
 
 		case "total_capacity_in_bytes":
@@ -99,7 +106,11 @@ func (s *NodeBufferPool) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Used = &o
 
 		case "used_in_bytes":

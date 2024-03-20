@@ -16,29 +16,26 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
-
 	"strconv"
-
-	"encoding/json"
 )
 
 // IpPrefixAggregation type.
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_types/aggregations/bucket.ts#L514-L543
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_types/aggregations/bucket.ts#L1114-L1143
 type IpPrefixAggregation struct {
 	// AppendPrefixLength Defines whether the prefix length is appended to IP address keys in the
 	// response.
 	AppendPrefixLength *bool `json:"append_prefix_length,omitempty"`
-	// Field The document IP address field to aggregation on. The field mapping type must
-	// be `ip`
+	// Field The IP address field to aggregation on. The field mapping type must be `ip`.
 	Field string `json:"field"`
 	// IsIpv6 Defines whether the prefix applies to IPv6 addresses.
 	IsIpv6 *bool `json:"is_ipv6,omitempty"`
@@ -46,7 +43,8 @@ type IpPrefixAggregation struct {
 	// response.
 	Keyed *bool    `json:"keyed,omitempty"`
 	Meta  Metadata `json:"meta,omitempty"`
-	// MinDocCount Minimum number of documents for buckets to be included in the response.
+	// MinDocCount Minimum number of documents in a bucket for it to be included in the
+	// response.
 	MinDocCount *int64  `json:"min_doc_count,omitempty"`
 	Name        *string `json:"name,omitempty"`
 	// PrefixLength Length of the network prefix. For IPv4 addresses the accepted range is [0,
@@ -142,7 +140,11 @@ func (s *IpPrefixAggregation) UnmarshalJSON(data []byte) error {
 			if err := dec.Decode(&tmp); err != nil {
 				return err
 			}
-			o := string(tmp)
+			o := string(tmp[:])
+			o, err = strconv.Unquote(o)
+			if err != nil {
+				o = string(tmp[:])
+			}
 			s.Name = &o
 
 		case "prefix_length":

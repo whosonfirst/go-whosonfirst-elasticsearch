@@ -16,16 +16,17 @@
 // under the License.
 
 // Code generated from the elasticsearch-specification DO NOT EDIT.
-// https://github.com/elastic/elasticsearch-specification/tree/a4f7b5a7f95dad95712a6bbce449241cbb84698d
+// https://github.com/elastic/elasticsearch-specification/tree/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67
 
 package rendersearchtemplate
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 // Response holds the response body struct for the package rendersearchtemplate
 //
-// https://github.com/elastic/elasticsearch-specification/blob/a4f7b5a7f95dad95712a6bbce449241cbb84698d/specification/_global/render_search_template/RenderSearchTemplateResponse.ts#L23-L25
-
+// https://github.com/elastic/elasticsearch-specification/blob/b7d4fb5356784b8bcde8d3a2d62a1fd5621ffd67/specification/_global/render_search_template/RenderSearchTemplateResponse.ts#L23-L25
 type Response struct {
 	TemplateOutput map[string]json.RawMessage `json:"template_output"`
 }
