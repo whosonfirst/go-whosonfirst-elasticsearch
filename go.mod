@@ -1,21 +1,18 @@
 module github.com/whosonfirst/go-whosonfirst-elasticsearch
 
-go 1.18
+go 1.22
 
 require (
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/elastic/elastic-transport-go/v8 v8.4.0
 	github.com/elastic/go-elasticsearch/v7 v7.17.10
 	github.com/elastic/go-elasticsearch/v8 v8.12.1
-	github.com/sfomuseum/go-edtf v1.1.1
 	github.com/sfomuseum/runtimevar v1.2.0
-	github.com/tidwall/gjson v1.17.1
-	github.com/tidwall/sjson v1.2.5
 	github.com/whosonfirst/go-whosonfirst-feature v0.0.27
 	github.com/whosonfirst/go-whosonfirst-iterate-git/v2 v2.1.4
 	github.com/whosonfirst/go-whosonfirst-iterate-organization v1.1.1
 	github.com/whosonfirst/go-whosonfirst-iterwriter v0.0.17
-	github.com/whosonfirst/go-whosonfirst-placetypes v0.7.1
+	github.com/whosonfirst/go-whosonfirst-spelunker v0.0.0-20240320192355-9b5a32a26365
 	github.com/whosonfirst/go-writer/v3 v3.1.0
 	gopkg.in/olivere/elastic.v3 v3.0.75
 )
@@ -70,17 +67,21 @@ require (
 	github.com/paulmach/orb v0.10.0 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/sergi/go-diff v1.1.0 // indirect
+	github.com/sfomuseum/go-edtf v1.1.1 // indirect
 	github.com/sfomuseum/go-flags v0.10.0 // indirect
 	github.com/sfomuseum/go-timings v1.2.1 // indirect
 	github.com/sfomuseum/iso8601duration v1.1.0 // indirect
 	github.com/skeema/knownhosts v1.2.1 // indirect
+	github.com/tidwall/gjson v1.17.1 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
+	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/whosonfirst/go-ioutil v1.0.2 // indirect
 	github.com/whosonfirst/go-whosonfirst-crawl v0.2.2 // indirect
 	github.com/whosonfirst/go-whosonfirst-flags v0.5.1 // indirect
 	github.com/whosonfirst/go-whosonfirst-github v0.5.4 // indirect
 	github.com/whosonfirst/go-whosonfirst-iterate/v2 v2.3.4 // indirect
+	github.com/whosonfirst/go-whosonfirst-placetypes v0.7.1 // indirect
 	github.com/whosonfirst/go-whosonfirst-sources v0.1.0 // indirect
 	github.com/whosonfirst/go-whosonfirst-uri v1.3.0 // indirect
 	github.com/whosonfirst/walk v0.0.2 // indirect

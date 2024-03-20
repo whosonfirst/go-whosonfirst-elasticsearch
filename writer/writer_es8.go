@@ -29,6 +29,7 @@ import (
 	"github.com/sfomuseum/runtimevar"
 	"github.com/whosonfirst/go-whosonfirst-elasticsearch/document"
 	"github.com/whosonfirst/go-whosonfirst-feature/properties"
+	sp_document "github.com/whosonfirst/go-whosonfirst-spelunker/document"
 	wof_writer "github.com/whosonfirst/go-writer/v3"
 )
 
@@ -250,7 +251,7 @@ func NewElasticsearchV8Writer(ctx context.Context, uri string) (wof_writer.Write
 
 	prepare_funcs := make([]document.PrepareDocumentFunc, 0)
 
-	prepare_funcs = append(prepare_funcs, document.PrepareSpelunkerV1Document)
+	prepare_funcs = append(prepare_funcs, sp_document.PrepareSpelunkerV1Document)
 
 	wr.prepare_funcs = prepare_funcs
 
